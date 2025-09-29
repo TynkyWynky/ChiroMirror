@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="nl">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Contact • Chiro Negenmanneke</title>
   <link rel="icon" href="assets/Chirologo_700px.png" type="image/png" />
-
   <link rel="stylesheet" href="assets/styles.css" />
   <script defer src="assets/script.js"></script>
 </head>
@@ -26,38 +24,66 @@
         <a href="groepen.html">Groepen</a>
         <a href="verhuur.html">Verhuur</a>
         <a href="privacy.html">Privacy</a>
-        <a href="contact.html">Contact</a>
+        <a href="contact.html" aria-current="page">Contact</a>
       </div>
     </div>
   </nav>
-  <main class="container">
 
+  <main class="container">
     <section class="hero">
       <h1>Contact</h1>
       <div class="grid">
+
+        <!-- Linker kolom: formulier + kanalen -->
         <div class="card span-6">
           <h2>Algemeen</h2>
-          <p>E-mail: <a href="mailto:chiro.9manneke@gmail.com">chiro.9manneke@gmail.com</a><br />
-            Facebook: <a target="_blank" rel="noreferrer"
-              href="https://www.facebook.com/chiro9manneke">facebook.com/chiro9manneke</a><br />
-            Instagram: <a target="_blank" rel="noreferrer"
-              href="https://www.instagram.com/chiro9manneke">@chiro9manneke</a></p>
+          <p>
+            E-mail: <a href="mailto:chiro.9manneke@gmail.com">chiro.9manneke@gmail.com</a><br />
+            Facebook: <a target="_blank" rel="noreferrer" href="https://www.facebook.com/chiro9manneke">facebook.com/chiro9manneke</a><br />
+            Instagram: <a target="_blank" rel="noreferrer" href="https://www.instagram.com/chiro9manneke">@chiro9manneke</a>
+          </p>
+
           <h3>Contactformulier</h3>
-          <form action="mailto:chiro.9manneke@gmail.com" method="post" enctype="text/plain">
-            <label>Uw naam *</label><input required name="naam" />
-            <label>Uw e-mailadres *</label><input required type="email" name="email" />
-            <label>Onderwerp *</label><input required name="onderwerp" />
+          <!-- Netlify Forms -->
+          <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/bedankt.html">
+            <!-- verplicht hidden veld -->
+            <input type="hidden" name="form-name" value="contact" />
+            <!-- honeypot (antispam) -->
+            <p style="display:none;">
+              <label>Laat leeg: <input name="bot-field" /></label>
+            </p>
+
+            <label>Uw naam *</label>
+            <input required name="naam" />
+
+            <label>Uw e-mailadres *</label>
+            <input required type="email" name="email" />
+
+            <label>Onderwerp *</label>
+            <input required name="onderwerp" />
+
             <label>Categorie *</label>
             <select name="categorie" required>
               <option>Contacteer de leiding</option>
               <option>Verhuur</option>
               <option>Contacteer de groepsleiding</option>
             </select>
-            <label>Bericht *</label><textarea required rows="6" name="bericht"></textarea>
-            <p class="muted"><span class="kbd">ℹ</span> Dit formulier gebruikt je e-mailprogramma (mailto).</p>
+
+            <label>Bericht *</label>
+            <textarea required rows="6" name="bericht"></textarea>
+
+            <!-- (optioneel) reCAPTCHA: uncomment als je wil -->
+            <!-- <div data-netlify-recaptcha="true"></div> -->
+
             <button class="btn" type="submit">Verstuur</button>
           </form>
+
+          <p class="muted" style="margin-top:10px;">
+            <span class="kbd">ℹ</span> Je bericht komt aan in ons Netlify Forms dashboard.
+          </p>
         </div>
+
+        <!-- Rechter kolom: leiding/telefoons -->
         <div class="card span-6">
           <h2>Contacteer de leiding</h2>
           <div class="grid">
@@ -95,6 +121,7 @@
             </div>
           </div>
         </div>
+
       </div>
     </section>
 
@@ -102,16 +129,14 @@
       <div class="grid">
         <div class="card span-6">
           <div class="section-title">
-            <h3>Adres</h3>
-            <div class="line"></div>
+            <h3>Adres</h3><div class="line"></div>
           </div>
           Gustave Gibonstraat 1A, 1600 Sint-Pieters-Leeuw<br />
           <small>(op de speelplaats van de Sint-Stevensschool)</small>
         </div>
         <div class="card span-6">
           <div class="section-title">
-            <h3>Volg ons</h3>
-            <div class="line"></div>
+            <h3>Volg ons</h3><div class="line"></div>
           </div>
           <div class="logo-row">
             <a href="https://www.facebook.com/chiro9manneke" target="_blank" rel="noreferrer">Facebook</a> ·
@@ -120,11 +145,8 @@
           </div>
         </div>
       </div>
-      <p class="muted">© 2025 Chiro Negenmanneke. Gebouwd met ❤. Content gespiegeld van de vorige website.</p>
-      <p class="muted">Deze website werd ontwikkeld door Atypique.</p>
-
+      <p class="muted">© 2025 Chiro Negenmanneke.</p>
     </footer>
   </main>
 </body>
-
 </html>
