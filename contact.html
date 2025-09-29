@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="nl">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,6 +8,26 @@
   <link rel="icon" href="assets/Chirologo_700px.png" type="image/png" />
   <link rel="stylesheet" href="assets/styles.css" />
   <script defer src="assets/script.js"></script>
+  <style>
+    /* Kleine styling voor inline meldingen */
+    .form-alert {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .form-alert.success {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.35);
+      color: #065f46;
+    }
+    .form-alert.error {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #7f1d1d;
+    }
+  </style>
 </head>
 
 <body>
@@ -44,9 +65,10 @@
           </p>
 
           <h3>Contactformulier</h3>
-          <!-- Netlify Forms -->
-          <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/bedankt.html">
-            <!-- verplicht hidden veld -->
+
+          <!-- Netlify Forms zonder redirect; JS toont inline melding -->
+          <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+            <!-- verplicht hidden veld voor Netlify detectie -->
             <input type="hidden" name="form-name" value="contact" />
             <!-- honeypot (antispam) -->
             <p style="display:none;">
@@ -76,10 +98,18 @@
             <!-- <div data-netlify-recaptcha="true"></div> -->
 
             <button class="btn" type="submit">Verstuur</button>
+
+            <!-- Inline meldingen -->
+            <div id="form-success" class="form-alert success" hidden>
+              ✅ Bedankt! Je bericht is verzonden. We antwoorden zo snel mogelijk.
+            </div>
+            <div id="form-error" class="form-alert error" hidden>
+              ❌ Oeps, verzenden lukt niet. Probeer later opnieuw of mail ons rechtstreeks.
+            </div>
           </form>
 
           <p class="muted" style="margin-top:10px;">
-            <span class="kbd">ℹ</span> Je bericht komt aan in ons Netlify Forms dashboard.
+            <span class="kbd">ℹ</span> Inzendingen verschijnen ook in ons Netlify Forms-dashboard.
           </p>
         </div>
 
@@ -148,5 +178,46 @@
       <p class="muted">© 2025 Chiro Negenmanneke.</p>
     </footer>
   </main>
+
+  <!-- Alleen op deze pagina: JS om inline succes/fout te tonen -->
+  <script>
+    (function () {
+      const form = document.getElementById("contact-form");
+      if (!form) return;
+
+      const success = document.getElementById("form-success");
+      const errorMsg = document.getElementById("form-error");
+
+      function encode(data) {
+        return Object.keys(data)
+          .map((k) => encodeURIComponent(k) + "=" + encodeURIComponent(data[k]))
+          .join("&");
+      }
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        // Netlify vereist "form-name" in de payload
+        const data = { "form-name": form.getAttribute("name") };
+        formData.forEach((value, key) => (data[key] = value));
+
+        fetch("/", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: encode(data),
+        })
+          .then(() => {
+            form.reset();
+            if (errorMsg) errorMsg.hidden = true;
+            if (success) success.hidden = false;
+          })
+          .catch(() => {
+            if (success) success.hidden = true;
+            if (errorMsg) errorMsg.hidden = false;
+          });
+      });
+    })();
+  </script>
 </body>
 </html>
