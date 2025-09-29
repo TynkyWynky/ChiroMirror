@@ -1,0 +1,507 @@
+:root {
+  --bg: #ffffff;
+  --card: #ffffff;
+  --text: #0f172a; /* slate-900 */
+  --muted: #475569; /* slate-600 */
+  --primary: #d81d1d; /* hoofdaccent (rood) */
+  --accent: #2563eb; /* blauw link/accent */
+  --ring: rgba(37, 99, 235, 0.35);
+  --radius: 16px;
+
+  /* Groep kleuren */
+  --ribbels: #7c3aed; /* paars */
+  --speelclub: #f59e0b; /* geel/amber */
+  --rakwi: #22c55e; /* groen */
+  --tito: #ef4444; /* rood */
+  --keti: #2563eb; /* blauw */
+  --aspi: #f97316; /* oranje */
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell,
+    "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol";
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+.container {
+  width: min(1100px, 92%);
+  margin: 0 auto;
+}
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.75);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+.navbar .inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: var(--text);
+}
+.brand .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 6px var(--ring);
+}
+.menu {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.menu a {
+  padding: 8px 12px;
+  border-radius: 999px;
+  transition: background 0.2s ease, color 0.2s ease;
+  color: var(--text);
+}
+.menu a:hover {
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.hero {
+  padding: 72px 0 32px;
+  display: grid;
+  gap: 16px;
+}
+.hero h1 {
+  font-size: clamp(28px, 4vw, 44px);
+  margin: 0;
+  line-height: 1.05;
+}
+.hero p.lead {
+  font-size: clamp(16px, 2.2vw, 20px);
+  color: var(--muted);
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 18px;
+}
+.card {
+  grid-column: span 12;
+  background: var(--card);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.05);
+}
+@media (min-width: 720px) {
+  .card.span-6 {
+    grid-column: span 6;
+  }
+  .card.span-4 {
+    grid-column: span 4;
+  }
+}
+
+.card h2,
+.card h3 {
+  margin-top: 0;
+  color: var(--text);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  color: #1e3a8a;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.table th,
+.table td {
+  padding: 12px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+.table th {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+footer {
+  margin-top: 48px;
+  padding: 24px 0 48px;
+  color: var(--muted);
+}
+
+.callout {
+  padding: 14px 16px;
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px dashed rgba(37, 99, 235, 0.35);
+  border-radius: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--primary);
+  color: #ffffff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+}
+.btn:focus {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.kbd {
+  padding: 2px 6px;
+  border: 1px solid rgba(2, 6, 23, 0.2);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+form input,
+form select,
+form textarea {
+  width: 100%;
+  padding: 12px 12px;
+  background: #f8fafc;
+  color: var(--text);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
+}
+form label {
+  display: block;
+  margin: 14px 0 8px;
+  color: #0f172a;
+  font-weight: 700;
+}
+small,
+.muted {
+  color: var(--muted);
+}
+hr {
+  border: 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  margin: 18px 0;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+}
+.section-title .line {
+  height: 1px;
+  flex: 1;
+  background: rgba(15, 23, 42, 0.12);
+}
+.logo-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  opacity: 0.85;
+}
+
+/* ---------- HOME: Photo grid ---------- */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+}
+.gallery .photo {
+  grid-column: span 12;
+  width: 100%;
+  aspect-ratio: 16/9; /* vaste verhouding */
+  object-fit: cover; /* mooi bijsnijden */
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+@media (min-width: 720px) {
+  .gallery .photo.span-6 {
+    grid-column: span 6;
+  }
+  .gallery .photo.span-4 {
+    grid-column: span 4;
+  }
+}
+.gallery .photo:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.1);
+}
+
+/* ---------- GROEPEN ---------- */
+.groepen-grid .groep {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 14px;
+  padding: 0; /* header neemt de bovenruimte */
+  overflow: hidden;
+}
+
+/* 2 kolommen vanaf tablet */
+@media (min-width: 880px) {
+  .groepen-grid .groep {
+    grid-column: span 6;
+  }
+}
+
+/* Header-balk met kleurverloop op basis van groepkleur */
+.groep-head {
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
+  color: #0b1220;
+}
+.groep-head h2 {
+  margin: 0;
+  font-size: clamp(20px, 2.6vw, 26px);
+  line-height: 1.1;
+}
+.groep .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+/* Cover-foto */
+.groep .cover {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  display: block;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.06);
+  background: #f1f5f9; /* fallback vóór het laden */
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.groep .cover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.1);
+}
+
+.groep-body {
+  padding: 0 18px 18px;
+}
+.groep .meta {
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.groep .groep-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+.groep .groep-list li {
+  margin: 4px 0;
+}
+
+.groep {
+  border: 1.5px solid
+    color-mix(in srgb, var(--groepkleur) 26%, rgba(15, 23, 42, 0.08));
+}
+/* Logo naast de sitenaam in de navbar */
+:root {
+  --brand-logo-size: 28px;
+} /* pas maat hier aan indien gewenst */
+
+.brand .brand-logo {
+  width: var(--brand-logo-size);
+  height: var(--brand-logo-size);
+  object-fit: contain; /* netjes schalen, geen vervorming */
+  display: inline-block;
+  border-radius: 6px; /* mag je weglaten als je geen afgeronde hoeken wil */
+}
+
+/* Als sommige pagina's nog <span class="dot"> hebben en je wil die verbergen: */
+.brand .dot {
+  display: none;
+}
+
+/* --- Banner layering fix: tekst boven overlay --- */
+.banner{
+  position: relative;
+  isolation: isolate;          
+}
+.banner-image {
+  width: 100%;
+  height: clamp(280px, 45vw, 520px);
+  object-fit: cover;
+  display: block;
+  filter: saturate(105%) contrast(103%);
+}
+.banner::after{
+  content:"";
+  position: absolute;
+  inset: 0;
+  z-index: 1;                   
+  background:
+    linear-gradient(90deg,
+      rgba(0,0,0,.65) 0%,
+      rgba(0,0,0,.48) 38%,
+      rgba(0,0,0,.22) 62%,
+      rgba(0,0,0,0) 86%);
+  pointer-events: none;
+}
+.banner-content{
+  position: absolute;
+  inset: 0;
+  z-index: 2;                    /* tekst boven overlay */
+  display: flex;
+  align-items: center;
+  padding: 16px 0;
+}
+
+/* --- Tekst contrastrijker op foto --- */
+.banner-title{
+  color: #fff;
+  text-shadow: 0 2px 14px rgba(0,0,0,.55);
+}
+.banner-sub, .banner-eyebrow{
+  color: rgba(255,255,255,.96);
+  text-shadow: 0 1px 10px rgba(0,0,0,.45);
+}
+
+/* (optioneel) knoppen iets sterker zichtbaar op donkere foto */
+.btn{
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
+.btn.btn-light{
+  background: rgba(255,255,255,.98);
+  color: #0f172a;
+  border: 1px solid rgba(15,23,42,.1);
+}
+
+#contact-ribbels {
+  border-top: 4px solid var(--ribbels);
+}
+#contact-speelclub {
+  border-top: 4px solid var(--speelclub);
+}
+#contact-rakwi {
+  border-top: 4px solid var(--rakwi);
+}
+#contact-tito {
+  border-top: 4px solid var(--tito);    
+}
+#contact-keti {
+  border-top: 4px solid var(--keti);
+}
+#contact-aspi {
+  border-top: 4px solid var(--aspi);
+}
+#contact-groepsleiding {
+  border-top: 4px solid pink;
+}
+/* --- Liedjes dropdown (details/summary) --- */
+.song{
+  border: 1px solid rgba(15,23,42,.12);
+  border-radius: 12px;
+  padding: 0;
+  margin: 10px 0;
+  background: #fff;
+  overflow: hidden;
+}
+.song summary{
+  list-style: none;           /* verberg default marker */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  padding: 12px 14px;
+  font-weight: 700;
+}
+.song summary::-webkit-details-marker{ display: none; } /* Safari/Chrome marker uit */
+.song summary::after{
+  content: "▸";
+  font-size: 14px;
+  opacity: .7;
+  transition: transform .2s ease;
+}
+.song[open] summary::after{
+  transform: rotate(90deg);
+}
+
+.song .song-title{ color:#0f172a; }
+.song .song-meta{ color:#64748b; font-weight:600; font-size: 13px; }
+
+.song .song-body{
+  padding: 0 14px 12px;
+  border-top: 1px solid rgba(15,23,42,.08);
+}
+.song .lyrics{
+  margin: 10px 0 0;
+  white-space: pre-wrap;     /* regels netjes afbreken */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: #f8fafc;
+  border: 1px dashed rgba(15,23,42,.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #0f172a;
+}
+
