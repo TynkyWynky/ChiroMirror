@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="assets/styles.css" />
   <script defer src="assets/script.js"></script>
   <style>
-    /* Kleine styling voor inline meldingen */
     .form-alert {
       margin-top: 10px;
       padding: 10px 12px;
@@ -55,7 +54,6 @@
       <h1>Contact</h1>
       <div class="grid">
 
-        <!-- Linker kolom: formulier + kanalen -->
         <div class="card span-6">
           <h2>Algemeen</h2>
           <p>
@@ -66,11 +64,8 @@
 
           <h3>Contactformulier</h3>
 
-          <!-- Netlify Forms zonder redirect; JS toont inline melding -->
           <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
-            <!-- verplicht hidden veld voor Netlify detectie -->
             <input type="hidden" name="form-name" value="contact" />
-            <!-- honeypot (antispam) -->
             <p style="display:none;">
               <label>Laat leeg: <input name="bot-field" /></label>
             </p>
@@ -94,8 +89,6 @@
             <label>Bericht *</label>
             <textarea required rows="6" name="bericht"></textarea>
 
-            <!-- (optioneel) reCAPTCHA: uncomment als je wil -->
-            <!-- <div data-netlify-recaptcha="true"></div> -->
 
             <button class="btn" type="submit">Verstuur</button>
 
@@ -111,7 +104,6 @@
 
         </div>
 
-        <!-- Rechter kolom: leiding/telefoons -->
         <div class="card span-6">
           <h2>Contacteer de leiding</h2>
           <div class="grid">
@@ -177,7 +169,6 @@
     </footer>
   </main>
 
-  <!-- Alleen op deze pagina: JS om inline succes/fout te tonen -->
   <script>
     (function () {
       const form = document.getElementById("contact-form");

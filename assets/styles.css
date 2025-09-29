@@ -1,20 +1,20 @@
 :root {
   --bg: #ffffff;
   --card: #ffffff;
-  --text: #0f172a; /* slate-900 */
-  --muted: #475569; /* slate-600 */
-  --primary: #d81d1d; /* hoofdaccent (rood) */
-  --accent: #2563eb; /* blauw link/accent */
+  --text: #0f172a; 
+  --muted: #475569; 
+  --primary: #d81d1d;
+  --accent: #2563eb; 
   --ring: rgba(37, 99, 235, 0.35);
   --radius: 16px;
 
   /* Groep kleuren */
-  --ribbels: #7c3aed; /* paars */
-  --speelclub: #f59e0b; /* geel/amber */
-  --rakwi: #22c55e; /* groen */
-  --tito: #ef4444; /* rood */
-  --keti: #2563eb; /* blauw */
-  --aspi: #f97316; /* oranje */
+  --ribbels: #7c3aed; 
+  --speelclub: #f59e0b;
+  --rakwi: #22c55e; 
+  --tito: #ef4444; 
+  --keti: #2563eb; 
+  --aspi: #f97316; 
 }
 
 * {
@@ -261,8 +261,8 @@ hr {
 .gallery .photo {
   grid-column: span 12;
   width: 100%;
-  aspect-ratio: 16/9; /* vaste verhouding */
-  object-fit: cover; /* mooi bijsnijden */
+  aspect-ratio: 16/9; 
+  object-fit: cover; 
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid rgba(15, 23, 42, 0.08);
@@ -287,18 +287,16 @@ hr {
   display: grid;
   grid-template-rows: auto auto 1fr;
   gap: 14px;
-  padding: 0; /* header neemt de bovenruimte */
+  padding: 0; 
   overflow: hidden;
 }
 
-/* 2 kolommen vanaf tablet */
 @media (min-width: 880px) {
   .groepen-grid .groep {
     grid-column: span 6;
   }
 }
 
-/* Header-balk met kleurverloop op basis van groepkleur */
 .groep-head {
   padding: 16px 18px;
   display: flex;
@@ -337,7 +335,7 @@ hr {
   overflow: hidden;
   border: 1px solid rgba(15, 23, 42, 0.08);
   box-shadow: 0 8px 24px rgba(2, 6, 23, 0.06);
-  background: #f1f5f9; /* fallback vóór het laden */
+  background: #f1f5f9; 
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 .groep .cover:hover {
@@ -364,25 +362,23 @@ hr {
   border: 1.5px solid
     color-mix(in srgb, var(--groepkleur) 26%, rgba(15, 23, 42, 0.08));
 }
-/* Logo naast de sitenaam in de navbar */
+
 :root {
   --brand-logo-size: 28px;
-} /* pas maat hier aan indien gewenst */
+} 
 
 .brand .brand-logo {
   width: var(--brand-logo-size);
   height: var(--brand-logo-size);
-  object-fit: contain; /* netjes schalen, geen vervorming */
+  object-fit: contain; 
   display: inline-block;
-  border-radius: 6px; /* mag je weglaten als je geen afgeronde hoeken wil */
+  border-radius: 6px; 
 }
 
-/* Als sommige pagina's nog <span class="dot"> hebben en je wil die verbergen: */
 .brand .dot {
   display: none;
 }
 
-/* --- Banner layering fix: tekst boven overlay --- */
 .banner{
   position: relative;
   isolation: isolate;          
@@ -410,13 +406,12 @@ hr {
 .banner-content{
   position: absolute;
   inset: 0;
-  z-index: 2;                    /* tekst boven overlay */
+  z-index: 2;                   
   display: flex;
   align-items: center;
   padding: 16px 0;
 }
 
-/* --- Tekst contrastrijker op foto --- */
 .banner-title{
   color: #fff;
   text-shadow: 0 2px 14px rgba(0,0,0,.55);
@@ -426,7 +421,6 @@ hr {
   text-shadow: 0 1px 10px rgba(0,0,0,.45);
 }
 
-/* (optioneel) knoppen iets sterker zichtbaar op donkere foto */
 .btn{
   box-shadow: 0 8px 24px rgba(0,0,0,.18);
 }
@@ -457,7 +451,6 @@ hr {
 #contact-groepsleiding {
   border-top: 4px solid pink;
 }
-/* --- Liedjes dropdown (details/summary) --- */
 .song{
   border: 1px solid rgba(15,23,42,.12);
   border-radius: 12px;
@@ -467,7 +460,7 @@ hr {
   overflow: hidden;
 }
 .song summary{
-  list-style: none;           /* verberg default marker */
+  list-style: none;          
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -476,7 +469,7 @@ hr {
   padding: 12px 14px;
   font-weight: 700;
 }
-.song summary::-webkit-details-marker{ display: none; } /* Safari/Chrome marker uit */
+.song summary::-webkit-details-marker{ display: none; } /
 .song summary::after{
   content: "▸";
   font-size: 14px;
@@ -496,7 +489,7 @@ hr {
 }
 .song .lyrics{
   margin: 10px 0 0;
-  white-space: pre-wrap;     /* regels netjes afbreken */
+  white-space: pre-wrap;     
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   background: #f8fafc;
   border: 1px dashed rgba(15,23,42,.12);
