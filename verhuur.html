@@ -7,29 +7,56 @@
   <title>Verhuur • Chiro Negenmanneke</title>
   <link rel="icon" href="assets/Chirologo_700px.png" type="image/png" />
 
-  <link rel="stylesheet" href="assets/styles.css" />
+    <link rel="stylesheet" href="assets/styles.css" />
   <script defer src="assets/script.js"></script>
 </head>
 
 <body>
   <nav class="navbar">
-    <div class="container inner">
-      <a class="brand" href="index.html">
+  <div class="container inner">
+    <a class="brand" href="index.html">
+      <img class="brand-logo" src="assets/Chirologo_700px.png" alt="Chiro logo" />
+      Chiro Negenmanneke
+    </a>
+    <div class="menu desktop">
+      <a href="inschrijven.html">Inschrijven</a>
+      <a href="activiteiten.html">Activiteiten</a>
+      <a href="groepen.html">Groepen</a>
+      <a href="chiroliedjes.html">Chiroliedjes</a>
+      <a href="verhuur.html">Verhuur</a>
+      <a href="verzekering.html">Verzekering</a>
+      <a href="contact.html">Contact</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+    <button class="burger" id="burger" aria-label="Menu" aria-controls="mobile-nav" aria-expanded="false">
+      <span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-overlay" id="mobile-nav" role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title" hidden>
+  <div class="mobile-nav-content">
+    <div class="mobile-nav-header">
+      <a class="brand" href="index.html" id="mobile-nav-title">
         <img class="brand-logo" src="assets/Chirologo_700px.png" alt="" />
         Chiro Negenmanneke
       </a>
-      <div class="menu">
-        <a href="inschrijven.html">Inschrijven</a>
-        <a href="activiteiten.html">Activiteiten</a>
-        <a href="chiroliedjes.html">Chiroliedjes</a>
-        <a href="verzekering.html">Verzekering</a>
-        <a href="groepen.html">Groepen</a>
-        <a href="verhuur.html">Verhuur</a>
-        <a href="privacy.html">Privacy</a>
-        <a href="contact.html">Contact</a>
-      </div>
+      <button class="burger" id="mobile-close" aria-label="Close">
+        <span></span>
+      </button>
     </div>
-  </nav>
+    <nav class="mobile-menu">
+      <a href="inschrijven.html">Inschrijven</a>
+      <a href="activiteiten.html">Activiteiten</a>
+      <a href="groepen.html">Groepen</a>
+      <a href="chiroliedjes.html">Chiroliedjes</a>
+      <a href="verhuur.html">Verhuur</a>
+      <a href="verzekering.html">Verzekering</a>
+      <a href="contact.html">Contact</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+  </div>
+</div>
   <main class="container">
 
     <section class="hero">

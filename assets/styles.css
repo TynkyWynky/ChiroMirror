@@ -498,3 +498,173 @@ hr {
   color: #0f172a;
 }
 
+/* =====================================================
+   Atypique — Nav/Burger (clean, fixed, no-scroll overlay)
+   ===================================================== */
+:root{
+  --accent: #2563eb;
+  --text: #0f172a;
+  --muted: #64748b;
+  --surface: #ffffff;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+/* Container helper (keeps layout intact) */
+.container{
+  width: min(1100px, 92%);
+  margin: 0 auto;
+}
+
+/* Navbar */
+.navbar{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #fff;
+  border-bottom: 1px solid rgba(15,23,42,.08);
+}
+.navbar .inner{
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.brand{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  color: var(--text);
+  text-decoration: none;
+}
+.brand-logo{
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+/* Desktop menu */
+.menu.desktop{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.menu.desktop a{
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+.menu.desktop a:hover{
+  border-color: rgba(15,23,42,.08);
+  background: rgba(15,23,42,.03);
+}
+
+/* Burger */
+.burger{
+  appearance: none;
+  border: 1px solid rgba(15,23,42,.12);
+  background: #fff;
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  display: none; /* hidden on desktop */
+  align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.burger span{
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--text);
+  position: relative;
+}
+.burger span::before,
+.burger span::after{
+  content:"";
+  position: absolute;
+  left: 0; width: 18px; height: 2px;
+  background: var(--text);
+  transition: transform .2s ease, opacity .2s ease;
+}
+.burger span::before{ top: -6px; }
+.burger span::after{ top: 6px; }
+
+/* Cross state */
+html.nav-open .burger span{ background: transparent; }
+html.nav-open .burger span::before{ transform: translateY(6px) rotate(45deg); }
+html.nav-open .burger span::after{ transform: translateY(-6px) rotate(-45deg); }
+
+/* Mobile overlay (no scroll) */
+.mobile-overlay[hidden]{ display: none !important; }
+.mobile-overlay{
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;            /* NO SCROLL inside */
+}
+html.nav-open .mobile-overlay{ display: flex; }
+
+.mobile-nav-content{
+  width: min(92%, 520px);
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 18px;
+  align-items: start;
+  justify-items: center;
+}
+
+.mobile-nav-header{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-menu{
+  width: 100%;
+  display: grid;
+  gap: 10px;
+}
+.mobile-menu a{
+  display: block;
+  padding: 14px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(15,23,42,.1);
+  background: #fff;
+  text-align: center;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 800;
+}
+
+/* Lock background when open (NO SCROLL) */
+html.nav-open, body.nav-open{
+  position: fixed;
+  width: 100%;
+  overflow: hidden !important;
+  height: 100dvh;
+  inset: 0;
+}
+
+/* Responsive behavior */
+@media (max-width: 860px){
+  .menu.desktop{ display: none; }
+  .burger{ display: inline-flex; }
+}
+
+@media (min-width: 861px){
+  .mobile-overlay{ display: none !important; }
+}
