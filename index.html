@@ -1,155 +1,148 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chiro Negenmanneke – Jeugdbeweging in Sint-Pieters-Leeuw</title>
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/home.css">
-  <link rel="icon" type="image/png" href="images/icon.png" />
-
-  <link rel="canonical" href="https://www.chironegenmanneke.be/">
-  <meta name="description" content="Chiro Negenmanneke: elke zondag 14–18u voor 6–18 jaar in Sint-Pieters-Leeuw. Inschrijven, activiteiten, groepen en contact.">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Chiro Negenmanneke">
-  <meta property="og:title" content="Chiro Negenmanneke – Jeugdbeweging in Sint-Pieters-Leeuw">
-  <meta property="og:description" content="Chiro Negenmanneke: elke zondag 14–18u voor 6–18 jaar in Sint-Pieters-Leeuw. Inschrijven, activiteiten, groepen en contact.">
-  <meta property="og:url" content="https://www.chironegenmanneke.be/">
-  <meta property="og:image" content="https://www.chironegenmanneke.be/assets/Chirologo_700px.png">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Chiro Negenmanneke – Jeugdbeweging in Sint-Pieters-Leeuw">
-  <meta name="twitter:description" content="Chiro Negenmanneke: elke zondag 14–18u voor 6–18 jaar in Sint-Pieters-Leeuw. Inschrijven, activiteiten, groepen en contact.">
-  <meta name="twitter:image" content="https://www.chironegenmanneke.be/assets/Chirologo_700px.png">
-  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Organization", "name": "Chiro Negenmanneke", "url": "https://www.chironegenmanneke.be/", "logo": "https://www.chironegenmanneke.be/assets/Chirologo_700px.png", "sameAs": ["https://www.facebook.com/chiro9manneke", "https://www.instagram.com/chiro9manneke"], "address": {"@type": "PostalAddress", "streetAddress": "Gustave Gibonstraat 1A", "addressLocality": "Sint-Pieters-Leeuw", "postalCode": "1600", "addressCountry": "BE"}}</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chiro Negenmanneke</title>
+  <link rel="icon" href="assets/Chirologo_700px.png" type="image/png" />
+    <link rel="stylesheet" href="assets/styles.css" />
+  <script defer src="assets/script.js"></script>
 </head>
 
-<body class="main-page">
+<body>
   <nav class="navbar">
-    <div class="logo">Atypique</div>
-    <ul class="nav-links" id="navLinks">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="about.html">About Us</a></li>
-      <li><a href="services.html">Services</a></li>
-      <li><a href="products.html">Products</a></li>
-      <li><a href="contact.html">Contact</a></li>
-    </ul>
-    <div class="hamburger" onclick="toggleMenu()">
-      <div class="bar"></div>
-      <div class="bar"></div>
-      <div class="bar"></div>
-    </div>
-  </nav>
-
-  <!-- Main Content Section with Logo -->
-  <section class="hero fade-in">
-    <h1>Welcome to Atypique</h1>
-    <!-- Logo inside the main content -->
-    <img src="images/Atypique_logo.png" alt="Atypique Logo" class="main-logo" />
-    <p class="tagline">A unique solution for every unique business.</p>
-  </section>
-
-  <section class="intro fade-in delay-1">
-    <p>We build tailored digital tools for entrepreneurs, artists, creators, and local businesses.</p>
-  </section>
-  <div class="flowy-divider">
-    <svg viewBox="0 0 1200 100" preserveAspectRatio="none">
-      <path d="M0,50 Q300,0 600,50 T1200,50" fill="transparent" stroke="#b57edc" stroke-width="2.5" />
-    </svg>
-  </div>
-  <section class="products-preview fade-in delay-2">
-    <h2>Our Products</h2>
-    <div class="product-cards">
-      <a href="products.html#facturamate" class="product-card-link">
-        <div class="product-card-preview">
-          <img src="images/FMLogo.png" alt="FacturaMate Logo" class="product-preview-logo">
-          <h3>FacturaMate</h3>
-          <p>Intuitive invoicing assistant built for entrepreneurs and small businesses.</p>
-        </div>
-      </a>
-
-      <!-- Later you can add more products here like below:
-    <a href="products.html#yourNextProduct" class="product-card-link">
-      <div class="product-card-preview">
-        <img src="images/your_product_logo.png" alt="Your Product Logo" class="product-preview-logo">
-        <h3>Your Next Product</h3>
-        <p>Short description of your new awesome tool.</p>
-      </div>
+  <div class="container inner">
+    <a class="brand" href="index.html">
+      <img class="brand-logo" src="assets/Chirologo_700px.png" alt="Chiro logo" />
+      Chiro Negenmanneke
     </a>
-    -->
+    <div class="menu desktop">
+      <a href="inschrijven.html">Inschrijven</a>
+      <a href="activiteiten.html">Activiteiten</a>
+      <a href="groepen.html">Groepen</a>
+      <a href="chiroliedjes.html">Chiroliedjes</a>
+      <a href="verhuur.html">Verhuur</a>
+      <a href="verzekering.html">Verzekering</a>
+      <a href="contact.html">Contact</a>
+      <a href="privacy.html">Privacy</a>
     </div>
-  </section>
+    <button class="burger" id="burger" aria-label="Menu" aria-controls="mobile-nav" aria-expanded="false">
+      <span></span>
+    </button>
+  </div>
+</nav>
 
+<div class="mobile-overlay" id="mobile-nav" role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title" hidden>
+  <div class="mobile-nav-content">
+    <div class="mobile-nav-header">
+      <a class="brand" href="index.html" id="mobile-nav-title">
+        <img class="brand-logo" src="assets/Chirologo_700px.png" alt="" />
+        Chiro Negenmanneke
+      </a>
+      <button class="burger" id="mobile-close" aria-label="Close">
+        <span></span>
+      </button>
+    </div>
+    <nav class="mobile-menu">
+      <a href="inschrijven.html">Inschrijven</a>
+      <a href="activiteiten.html">Activiteiten</a>
+      <a href="groepen.html">Groepen</a>
+      <a href="chiroliedjes.html">Chiroliedjes</a>
+      <a href="verhuur.html">Verhuur</a>
+      <a href="verzekering.html">Verzekering</a>
+      <a href="contact.html">Contact</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+  </div>
+</div>
 
-  <!-- Footer Section -->
-  <footer class="footer">
-    <div class="footer-content">
-      <!-- Logo Section -->
-      <div class="footer-logo">
-        <img src="images/Atypique_logo.png" alt="Atypique Logo" class="footer-logo-img" />
-      </div>
-
-      <!-- Navigation Section -->
-      <div class="footer-nav">
-        <h3>Quick Links</h3>
-        <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="about.html">About Us</a></li>
-          <li><a href="services.html">Services</a></li>
-          <li><a href="products.html">Products App</a></li>
-          <li><a href="contact.html">Contact</a></li>
-        </ul>
-      </div>
-
-      <!-- Contact Section -->
-      <div class="footer-contact">
-        <h3>Contact Us</h3>
-        <p>Email: <a href="mailto:atypique.professional@gmail.com">atypique.professional@gmail.com</a></p>
-        <div class="socials">
-          <a href="https://www.instagram.com/atypique.enterprise/" target="_blank" class="social-icon"><i
-              class="fab fa-instagram"></i></a>
-          <a href="https://www.linkedin.com/company/atypique-enterprise/" target="_blank" class="social-icon"><i
-              class="fab fa-linkedin"></i></a>
+  <!-- NIEUWE BANNER -->
+  <section class="banner">
+    <img class="banner-image" src="assets/banner.jpg" alt="Kampvuurmoment bij Chiro Negenmanneke" />
+    <div class="banner-content">
+      <div class="container">
+        <p class="banner-eyebrow">Chiro Negenmanneke</p>
+        <h2 class="banner-title">Samen spelen, bouwen &amp; beleven</h2>
+        <p class="banner-sub">Iedere zondag 14–18u · 6–18 jaar · Sint-Pieters-Leeuw</p>
+        <div class="banner-actions">
+          <a class="btn" href="inschrijven.html">Inschrijven</a>
+          <a class="btn btn-light" href="groepen.html">Ontdek de groepen</a>
         </div>
       </div>
     </div>
+  </section>
 
-    <!-- Bottom Footer -->
-    <div class="footer-bottom">
-      <p>&copy; 2025 Atypique | All Rights Reserved</p>
-    </div>
-  </footer>
+  <main class="container">
+    <section class="hero">
+      <span class="badge">Iedere zondag · 14u–18u · 6–18 jaar</span>
+      <h1>Welkom bij Chiro Negenmanneke</h1>
+      <p class="lead">In de Chiro spelen we samen en beleven we het hele jaar door een leuke zondagnamiddag. Hoe meer je
+        komt, hoe meer vrienden je maakt en hoe leuker Chiro is.</p>
 
-  <script>
-    let lastScrollTop = 0;
-    const navbar = document.querySelector('.navbar');
+      <div class="gallery">
+        <img class="photo span-4" src="assets/ribbels.jpg" alt="Ribbels" />
+        <img class="photo span-4" src="assets/speelclub.jpg" alt="Speelclub" />
+        <img class="photo span-4" src="assets/rakwi.jpg" alt="Rakwi" />
+        <img class="photo span-4" src="assets/Tito.jpg" alt="Tito" />
+        <img class="photo span-4" src="assets/Keti.jpg" alt="Keti" />
+        <img class="photo span-4" src="assets/aspi.jpg" alt="Aspi" />
+      </div>
 
-    window.addEventListener('scroll', function () {
-      let currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+      <div class="grid">
+        <div class="card span-6">
+          <h2>Wat is Chiro?</h2>
+          <p>Tijdens de Chironamiddag spelen we in leeftijdsgroepen. Er zijn 6 afdelingen met elk hun eigen leiding.
+            Naast de zondagen zijn er ook afdelingsweekends en als kers op de taart een 10-daags kamp.</p>
+          <a class="btn" href="inschrijven.html">Schrijf je in</a>
+        </div>
+        <div class="card span-6">
+          <h2>Praktisch</h2>
+          <ul>
+            <li><b>Wanneer:</b> elke zondag 14u–18u</li>
+            <li><b>Waar:</b> Gustave Gibonstraat 1A, 1600 Sint-Pieters-Leeuw</li>
+            <li><b>Lidgeld:</b> €40/jaar (verzekering & werking)</li>
+          </ul>
+          <p class="muted">(Door je inschrijving ben je verzekerd op Chirozondagen.)</p>
+        </div>
 
-      if (currentScroll > lastScrollTop) {
-        // Scroll naar beneden
-        navbar.classList.add('hidden');
-      } else {
-        // Scroll naar boven
-        navbar.classList.remove('hidden');
-      }
-      lastScrollTop = currentScroll <= 0 ? 0 : currentScroll; // Zorg ervoor dat het niet negatief wordt
-    });
-  </script>
+        <div class="card">
+          <h2>Geschiedenis</h2>
+          <p>Het ontstaan en de opkomst van het Negenmannekes Chiro-isme: </p>
+          <p>Negenmanneke, één van de weinige rustige plekjes in de periferie van de Brusselse randgemeenten, behield
+            zijn roots ondanks de groeiende industrialisatie. </p>
+          <p>We zeggen en schrijven het Jaar des Heren 1939, toen wijlen pastoor Vendelmans besloot om het toen nog
+            landelijke Negenmanneke te voorzien van een jeugdbeweging... In 1940 zou Chiro Negenmanneke zijn ontstaan kennen...</p>
+          <p>Na deze turbulente jaren brak een welverdiende rustperiode aan… De populariteit van destijds zouden we echter nooit meer kunnen goedmaken.</p>
+          <p>Tekst: Michaël Dusollier, 2000</p>
+        </div>
+      </div>
+    </section>
 
-  <script>
-    function toggleMenu() {
-      const navLinks = document.getElementById('navLinks');
-      const hamburger = document.querySelector('.hamburger');
-
-      // Toggle the active class to show or hide the menu
-      navLinks.classList.toggle('active');
-
-      // Add an animation effect to the hamburger
-      hamburger.classList.toggle('open');
-    }
-  </script>
+    <footer>
+      <div class="grid">
+        <div class="card span-6">
+          <div class="section-title">
+            <h3>Adres</h3>
+            <div class="line"></div>
+          </div>
+          Gustave Gibonstraat 1A, 1600 Sint-Pieters-Leeuw<br />
+          <small>(op de speelplaats van de Sint-Stevensschool)</small>
+        </div>
+        <div class="card span-6">
+          <div class="section-title">
+            <h3>Volg ons</h3>
+            <div class="line"></div>
+          </div>
+          <div class="logo-row">
+            <a href="https://www.facebook.com/chiro9manneke" target="_blank" rel="noreferrer">Facebook</a> ·
+            <a href="https://www.instagram.com/chiro9manneke" target="_blank" rel="noreferrer">Instagram</a> ·
+            <a href="mailto:chiro.9manneke@gmail.com">chiro.9manneke@gmail.com</a>
+          </div>
+        </div>
+      </div>
+      <p class="muted">© 2025 Chiro Negenmanneke. Gebouwd met ❤. Content gespiegeld van de vorige website.</p>
+      <p class="muted">Deze website werd ontwikkeld door Atypique.</p>
+    </footer>
+  </main>
 </body>
-
 </html>
