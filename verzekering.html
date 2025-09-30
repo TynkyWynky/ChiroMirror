@@ -4,46 +4,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Verzekering – Chiro Negenmanneke</title>
+  <title>Verzekering • Chiro Negenmanneke</title>
   <link rel="icon" href="assets/Chirologo_700px.png" type="image/png" />
 
-  <link rel="stylesheet" href="assets/styles.css" />
+    <link rel="stylesheet" href="assets/styles.css" />
   <script defer src="assets/script.js"></script>
-
-  <link rel="canonical" href="https://www.chironegenmanneke.be/verzekering.html">
-  <meta name="description" content="Uitleg over de verzekering van Chiro Nationaal voor leden en leiding van Chiro Negenmanneke.">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Chiro Negenmanneke">
-  <meta property="og:title" content="Verzekering – Chiro Negenmanneke">
-  <meta property="og:description" content="Uitleg over de verzekering van Chiro Nationaal voor leden en leiding van Chiro Negenmanneke.">
-  <meta property="og:url" content="https://www.chironegenmanneke.be/verzekering.html">
-  <meta property="og:image" content="https://www.chironegenmanneke.be/assets/Chirologo_700px.png">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Verzekering – Chiro Negenmanneke">
-  <meta name="twitter:description" content="Uitleg over de verzekering van Chiro Nationaal voor leden en leiding van Chiro Negenmanneke.">
-  <meta name="twitter:image" content="https://www.chironegenmanneke.be/assets/Chirologo_700px.png">
-  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Organization", "name": "Chiro Negenmanneke", "url": "https://www.chironegenmanneke.be/", "logo": "https://www.chironegenmanneke.be/assets/Chirologo_700px.png", "sameAs": ["https://www.facebook.com/chiro9manneke", "https://www.instagram.com/chiro9manneke"], "address": {"@type": "PostalAddress", "streetAddress": "Gustave Gibonstraat 1A", "addressLocality": "Sint-Pieters-Leeuw", "postalCode": "1600", "addressCountry": "BE"}}</script>
 </head>
 
 <body>
   <nav class="navbar">
-    <div class="container inner">
-      <a class="brand" href="index.html">
+  <div class="container inner">
+    <a class="brand" href="index.html">
+      <img class="brand-logo" src="assets/Chirologo_700px.png" alt="Chiro logo" />
+      Chiro Negenmanneke
+    </a>
+    <div class="menu desktop">
+      <a href="inschrijven.html">Inschrijven</a>
+      <a href="activiteiten.html">Activiteiten</a>
+      <a href="groepen.html">Groepen</a>
+      <a href="chiroliedjes.html">Chiroliedjes</a>
+      <a href="verhuur.html">Verhuur</a>
+      <a href="verzekering.html">Verzekering</a>
+      <a href="contact.html">Contact</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+    <button class="burger" id="burger" aria-label="Menu" aria-controls="mobile-nav" aria-expanded="false">
+      <span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-overlay" id="mobile-nav" role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title" hidden>
+  <div class="mobile-nav-content">
+    <div class="mobile-nav-header">
+      <a class="brand" href="index.html" id="mobile-nav-title">
         <img class="brand-logo" src="assets/Chirologo_700px.png" alt="" />
         Chiro Negenmanneke
       </a>
-      <div class="menu">
-        <a href="inschrijven.html">Inschrijven</a>
-        <a href="activiteiten.html">Activiteiten</a>
-        <a href="chiroliedjes.html">Chiroliedjes</a>
-        <a href="verzekering.html">Verzekering</a>
-        <a href="groepen.html">Groepen</a>
-        <a href="verhuur.html">Verhuur</a>
-        <a href="privacy.html">Privacy</a>
-        <a href="contact.html">Contact</a>
-      </div>
+      <button class="burger" id="mobile-close" aria-label="Close">
+        <span></span>
+      </button>
     </div>
-  </nav>
+    <nav class="mobile-menu">
+      <a href="inschrijven.html">Inschrijven</a>
+      <a href="activiteiten.html">Activiteiten</a>
+      <a href="groepen.html">Groepen</a>
+      <a href="chiroliedjes.html">Chiroliedjes</a>
+      <a href="verhuur.html">Verhuur</a>
+      <a href="verzekering.html">Verzekering</a>
+      <a href="contact.html">Contact</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+  </div>
+</div>
   <main class="container">
 
     <section class="hero">
