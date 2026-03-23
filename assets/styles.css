@@ -818,6 +818,33 @@ html.nav-open, body.nav-open{
   padding: 10px 4px;
 }
 
+.camp-masthead-visual {
+  position: relative;
+  align-self: stretch;
+  margin: 0;
+  min-height: 320px;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.22);
+}
+
+.camp-masthead-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.04), rgba(15, 23, 42, 0.28)),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.22), transparent 36%);
+  pointer-events: none;
+}
+
+.camp-masthead-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .camp-kicker {
   display: inline-flex;
   padding: 8px 12px;
@@ -919,6 +946,11 @@ html.nav-open, body.nav-open{
   margin-top: 22px;
 }
 
+.camp-overview-grid {
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
 .camp-hero-card,
 .camp-note-card,
 .camp-panel {
@@ -929,7 +961,7 @@ html.nav-open, body.nav-open{
 }
 
 .camp-hero-card {
-  grid-column: span 8;
+  grid-column: span 1;
   padding: 24px;
   background:
     radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 30%),
@@ -937,10 +969,19 @@ html.nav-open, body.nav-open{
 }
 
 .camp-note-card {
-  grid-column: span 4;
+  grid-column: span 1;
   padding: 24px;
   background:
     linear-gradient(180deg, rgba(248, 250, 252, 1), rgba(241, 245, 249, 1));
+}
+
+.camp-inline-photo {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  margin-bottom: 18px;
+  border-radius: 18px;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
 }
 
 .camp-card-kicker {
@@ -1182,6 +1223,10 @@ html.nav-open, body.nav-open{
   .camp-masthead {
     padding: 22px;
     border-radius: 24px;
+  }
+
+  .camp-masthead-visual {
+    min-height: 240px;
   }
 
   .camp-masthead-copy h1 {
