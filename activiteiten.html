@@ -13,6 +13,16 @@
     <link rel="stylesheet" href="assets/styles.css" />
   <script defer src="assets/script.js"></script>
 
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YGJ0JRJ1D5"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-YGJ0JRJ1D5');
+  </script>
+
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="nl_BE" />
@@ -37,14 +47,20 @@
       Chiro Negenmanneke
     </a>
     <div class="menu desktop">
-      <a href="inschrijven.html">Inschrijven</a>
+      <details class="nav-dropdown">
+        <summary>Inschrijven</summary>
+        <div class="nav-dropdown-menu">
+          <a href="inschrijven.html">Inschrijven</a>
+          <a href="kamp.html">Kamp</a>
+          <a href="verzekering.html">Verzekering</a>
+          <a href="privacy.html">Privacy</a>
+        </div>
+      </details>
       <a href="activiteiten.html">Activiteiten</a>
       <a href="groepen.html">Groepen</a>
       <a href="chiroliedjes.html">Chiroliedjes</a>
       <a href="verhuur.html">Verhuur</a>
-      <a href="verzekering.html">Verzekering</a>
       <a href="contact.html">Contact</a>
-      <a href="privacy.html">Privacy</a>
     </div>
     <button class="burger" id="burger" aria-label="Menu" aria-controls="mobile-nav" aria-expanded="false">
       <span></span>
@@ -64,14 +80,20 @@
       </button>
     </div>
     <nav class="mobile-menu">
-      <a href="inschrijven.html">Inschrijven</a>
+      <details class="mobile-dropdown">
+        <summary>Inschrijvingen & info</summary>
+        <div class="mobile-submenu">
+          <a href="inschrijven.html">Inschrijven</a>
+          <a href="kamp.html">Kamp</a>
+          <a href="verzekering.html">Verzekering</a>
+          <a href="privacy.html">Privacy</a>
+        </div>
+      </details>
       <a href="activiteiten.html">Activiteiten</a>
       <a href="groepen.html">Groepen</a>
       <a href="chiroliedjes.html">Chiroliedjes</a>
       <a href="verhuur.html">Verhuur</a>
-      <a href="verzekering.html">Verzekering</a>
       <a href="contact.html">Contact</a>
-      <a href="privacy.html">Privacy</a>
     </nav>
   </div>
 </div>

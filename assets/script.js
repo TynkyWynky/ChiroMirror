@@ -4,6 +4,7 @@
   var burger = document.getElementById('burger');
   var overlay = document.getElementById('mobile-nav');
   var closeBtn = document.getElementById('mobile-close');
+  var desktopDropdowns = Array.prototype.slice.call(document.querySelectorAll('.nav-dropdown'));
 
   function openNav(){
     root.classList.add('nav-open');
@@ -37,7 +38,18 @@
 
   // Close on ESC
   document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape') closeNav();
+    if(e.key === 'Escape'){
+      closeNav();
+      desktopDropdowns.forEach(function(dropdown){ dropdown.removeAttribute('open'); });
+    }
+  });
+
+  document.addEventListener('click', function(e){
+    desktopDropdowns.forEach(function(dropdown){
+      if(!dropdown.contains(e.target)){
+        dropdown.removeAttribute('open');
+      }
+    });
   });
 
   // Prevent touch scroll while open (extra safety)
