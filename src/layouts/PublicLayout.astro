@@ -43,6 +43,16 @@ const socialImageUrl = socialImage.startsWith("http")
   ? socialImage
   : resolveUrl(socialImage, siteBaseUrl);
 const logoUrl = resolveUrl(siteSettings.logoUrl, siteBaseUrl);
+const analyticsBootstrap = siteSettings.analyticsId
+  ? [
+      "window.dataLayer = window.dataLayer || [];",
+      "function gtag() {",
+      "  dataLayer.push(arguments);",
+      "}",
+      'gtag("js", new Date());',
+      `gtag("config", ${JSON.stringify(siteSettings.analyticsId)});`
+    ].join("\n")
+  : "";
 ---
 
 <!DOCTYPE html>
@@ -68,14 +78,7 @@ const logoUrl = resolveUrl(siteSettings.logoUrl, siteBaseUrl);
           async
           src={`https://www.googletagmanager.com/gtag/js?id=${siteSettings.analyticsId}`}
         ></script>
-        <script is:inline define:vars={{ analyticsId: siteSettings.analyticsId }}>
-          window.dataLayer = window.dataLayer || [];
-          function gtag() {
-            dataLayer.push(arguments);
-          }
-          gtag("js", new Date());
-          gtag("config", analyticsId);
-        </script>
+        <script is:inline set:html={analyticsBootstrap}></script>
       </>
     )}
 
