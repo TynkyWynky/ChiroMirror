@@ -1,0 +1,38 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import { loadSiteContent } from "@/lib/content";
+
+const content = await loadSiteContent();
+const { siteSettings, pages, songs } = content;
+---
+
+<PublicLayout
+  title="Chiroliedjes • Chiro Negenmanneke"
+  description="Chiroliedjes en tradities van Chiro Negenmanneke om mee te zingen."
+  siteSettings={siteSettings}
+>
+  <section class="hero">
+    <h1>{pages.songs.title}</h1>
+    <p class="lead">{pages.songs.lead}</p>
+
+    <div class="grid">
+      <div class="card span-12">
+        <h2>Liedjes</h2>
+        <p class="muted song-count">{songs.length} liedjes in de bundel.</p>
+
+        {
+          songs.map((song) => (
+            <details class="song">
+              <summary>
+                <span class="song-title">{song.title}</span>
+              </summary>
+              <div class="song-body">
+                <pre class="lyrics">{song.lyrics}</pre>
+              </div>
+            </details>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</PublicLayout>

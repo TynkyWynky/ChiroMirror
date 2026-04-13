@@ -1,0 +1,16 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import SimpleCardsPage from "@/components/SimpleCardsPage.astro";
+import { loadSiteContent } from "@/lib/content";
+
+const content = await loadSiteContent();
+const { siteSettings, pages } = content;
+---
+
+<PublicLayout
+  title="Verzekering • Chiro Negenmanneke"
+  description={pages.insurance.description}
+  siteSettings={siteSettings}
+>
+  <SimpleCardsPage page={pages.insurance} />
+</PublicLayout>

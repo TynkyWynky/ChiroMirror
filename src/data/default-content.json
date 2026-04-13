@@ -1,0 +1,757 @@
+{
+  "siteSettings": {
+    "siteName": "Chiro Negenmanneke",
+    "siteUrl": "https://www.chironegenmanneke.be",
+    "logoUrl": "/assets/Chirologo_700px.png",
+    "email": "chiro.9manneke@gmail.com",
+    "facebookUrl": "https://www.facebook.com/chiro9manneke",
+    "instagramUrl": "https://www.instagram.com/chiro9manneke",
+    "address": "Gustave Gibonstraat 1A, 1600 Sint-Pieters-Leeuw",
+    "addressNote": "(op de speelplaats van de Sint-Stevensschool)",
+    "mapEmbedUrl": "https://www.google.com/maps?q=Gustave+Gibonstraat+1A,+1600+Sint-Pieters-Leeuw&hl=nl&z=16&output=embed",
+    "mapGoogleUrl": "https://www.google.com/maps/dir/?api=1&destination=Gustave+Gibonstraat+1A,+1600+Sint-Pieters-Leeuw",
+    "mapAppleUrl": "https://maps.apple.com/?address=Gustave%20Gibonstraat%201A,%201600%20Sint-Pieters-Leeuw,%20Belgi%C3%AB&ll=50.8069,4.2656&q=Chiro%20Negenmanneke",
+    "footerCopyright": "© 2026 Chiro Negenmanneke. Gebouwd met ❤. Content gespiegeld van de vorige website.",
+    "footerDeveloper": "Deze website werd ontwikkeld door Atypique.",
+    "analyticsId": "G-YGJ0JRJ1D5",
+    "footerAdminLabel": "Leiding"
+  },
+  "pages": {
+    "home": {
+      "banner": {
+        "eyebrow": "Chiro Negenmanneke",
+        "title": "Samen spelen, bouwen & beleven",
+        "subtitle": "Iedere zondag 14–18u · 6–18 jaar · Sint-Pieters-Leeuw",
+        "imageUrl": "/assets/banner.jpg",
+        "imageAlt": "Kampvuurmoment bij Chiro Negenmanneke",
+        "primaryCtaLabel": "Inschrijven",
+        "primaryCtaHref": "inschrijven.html",
+        "secondaryCtaLabel": "Ontdek de groepen",
+        "secondaryCtaHref": "groepen.html"
+      },
+      "hero": {
+        "badge": "Iedere zondag · 14u–18u · 6–18 jaar",
+        "title": "Welkom bij Chiro Negenmanneke",
+        "lead": "In de Chiro spelen we samen en beleven we het hele jaar door een leuke zondagnamiddag. Hoe meer je\nkomt, hoe meer vrienden je maakt en hoe leuker Chiro is."
+      },
+      "gallery": [
+        {
+          "imageUrl": "/assets/ribbels.jpg",
+          "alt": "Ribbels",
+          "span": 4
+        },
+        {
+          "imageUrl": "/assets/speelclub.jpg",
+          "alt": "Speelclub",
+          "span": 4
+        },
+        {
+          "imageUrl": "/assets/rakwi.jpg",
+          "alt": "Rakwi",
+          "span": 4
+        },
+        {
+          "imageUrl": "/assets/tito-cover.jpg",
+          "alt": "Tito",
+          "span": 4
+        },
+        {
+          "imageUrl": "/assets/keti-cover.jpg",
+          "alt": "Keti",
+          "span": 4
+        },
+        {
+          "imageUrl": "/assets/aspi.jpg",
+          "alt": "Aspi",
+          "span": 4
+        }
+      ],
+      "about": {
+        "title": "Wat is Chiro?",
+        "body": "Tijdens de Chironamiddag spelen we in leeftijdsgroepen. Er zijn 6 afdelingen met elk hun eigen leiding.\nNaast de zondagen zijn er ook afdelingsweekends en als kers op de taart een 10-daags kamp.",
+        "ctaLabel": "Schrijf je in",
+        "ctaHref": "inschrijven.html"
+      },
+      "practical": {
+        "title": "Praktisch",
+        "items": [
+          "Wanneer: elke zondag 14u–18u",
+          "Waar: Gustave Gibonstraat 1A, 1600 Sint-Pieters-Leeuw",
+          "Lidgeld: €40/jaar (verzekering & werking)"
+        ],
+        "note": "(Door je inschrijving ben je verzekerd op Chirozondagen.)"
+      },
+      "history": {
+        "title": "Geschiedenis",
+        "body": "Onze geschiedenis\n\nDe geschiedenis van Chiro Negenmanneke is onlosmakelijk verbonden met de geschiedenis van de wijk\nNegenmanneke zelf. Wat vandaag een levendige Chirogroep is, begon in een periode waarin de buurt nog volop\nin ontwikkeling was. Negenmanneke was toen nog een eerder rustige plek aan de rand van Brussel, maar\nstilaan groeide er een hechte gemeenschap rond school, parochie en jeugdwerk.\n\nEen belangrijke figuur in dat verhaal was pastoor Vendelmans. Reeds in de jaren 1930 zette hij zich sterk\nin voor de uitbouw van het parochiale leven in Negenmanneke. Hij organiseerde klasjes voor de jeugd en\nhielp mee bouwen aan een eigen gemeenschap in de wijk. Intussen kreeg ook de Sint-Stevensparochie vorm: de\nkerk werd opgetrokken vanaf 1937 en was voltooid in 1941. In die sfeer van opbouw, engagement en\nverbondenheid groeide ook het idee om een eigen jeugdbeweging op te richten.\n\nVolgens de bewaarde historische samenvatting op de officiële website werd in 1939 door pastoor\nVendelmans de beslissing genomen om in Negenmanneke een Chiro op te richten. In 1940 was Chiro\nNegenmanneke een feit. Daarmee kreeg de wijk niet alleen een parochie en een school, maar ook een plek\nwaar kinderen en jongeren samen konden spelen, groeien en zich engageren.\n\nDe eerste jaren van de Chiro vielen samen met een woelige periode in onze geschiedenis. Toch bleef de\ngroep bestaan en groeide ze verder uit tot een vaste waarde in Negenmanneke. Zoals ook in de historische\ntekst van Michaël Dusollier uit 2000 wordt aangehaald, kende de Chiro doorheen de jaren zowel\nbloeiperiodes als moeilijkere momenten. Er waren tijden van grote populariteit en enthousiasme,\nafgewisseld met rustigere jaren, maar de groep bleef telkens opnieuw overeind dankzij de inzet van\nleiding, leden en oud-leiding.\n\nDoorheen de decennia werd Chiro Negenmanneke veel meer dan alleen een jeugdbeweging. De Chiro werd een\nechte ontmoetingsplaats voor generaties kinderen en jongeren uit de buurt. Vriendschappen ontstonden er,\ntradities werden doorgegeven en heel wat leiding zette er haar eerste stappen in engagement en\nverantwoordelijkheid. Zo groeide de Chiro uit tot een vertrouwd deel van het leven in Negenmanneke. Dit\nalles bleef bovendien nauw verbonden met de Sint-Stevensschool, waar de groep al jarenlang haar werking\nuitbouwt. Ook vandaag bevinden de Chiro-lokalen zich nog steeds op die historische plek.\n\nNaast de gewone zondagen en kampen bouwde de Chiro in de loop der jaren ook haar eigen tradities uit. Een\nmooi voorbeeld daarvan is het Chinees etentje, dat al teruggaat tot het einde van de jaren 1970 en\nuitgroeide tot een vaste afspraak voor de groep en de bredere buurt. Zulke tradities tonen hoe sterk\nChiro Negenmanneke verankerd is in het lokale leven.\n\nVandaag blijft Chiro Negenmanneke verder schrijven aan dat verhaal. De groep bestaat inmiddels al 85 jaar,\neen mijlpaal die mooi aantoont hoe sterk de werking doorheen de tijd is gebleven. Tegelijk kijkt de Chiro\nook vooruit. De plannen voor nieuwe jeugdlokalen tonen dat er nog altijd geloof en vertrouwen is in de\ntoekomst van de groep, zodat ook volgende generaties kinderen en jongeren in Negenmanneke hun eigen\nChiroverhaal kunnen beleven.\n\nChiro Negenmanneke is dus niet zomaar een jeugdbeweging. Het is een stukje geschiedenis van de wijk zelf:\nontstaan uit de inzet van een lokale gemeenschap, gegroeid door de jaren heen, gedragen door generaties\nleiding en leden, en nog altijd springlevend. Wat begon in 1940, leeft vandaag verder in elke\nChirozondag, elk kamp, elke activiteit en elke herinnering die er wordt gemaakt."
+      }
+    },
+    "groups": {
+      "title": "Groepen",
+      "lead": "Elke groep heeft een eigen kleur, leiding en sfeer. Hieronder vind je per afdeling de basisinfo en\neen recente foto."
+    },
+    "contact": {
+      "title": "Contact",
+      "generalTitle": "Algemeen",
+      "generalBody": "E-mail: [chiro.9manneke@gmail.com](mailto:chiro.9manneke@gmail.com)\nFacebook: [facebook.com/chiro9manneke](https://www.facebook.com/chiro9manneke)\nInstagram: [@chiro9manneke](https://www.instagram.com/chiro9manneke)",
+      "formTitle": "Contactformulier",
+      "successMessage": "✅ Bedankt! Je bericht is verzonden. We antwoorden zo snel mogelijk.",
+      "errorMessage": "❌ Oeps, verzenden lukt niet. Probeer later opnieuw of mail ons rechtstreeks.",
+      "formCategories": [
+        "Contacteer de leiding",
+        "Verhuur",
+        "Contacteer de groepsleiding"
+      ],
+      "sectionsTitle": "Contacteer de leiding",
+      "groupCards": [
+        {
+          "groupSlug": "ribbels",
+          "title": "Ribbels"
+        },
+        {
+          "groupSlug": "speelclub",
+          "title": "Speelclub"
+        },
+        {
+          "groupSlug": "rakwi",
+          "title": "Rakwi"
+        },
+        {
+          "groupSlug": "tito",
+          "title": "Tito"
+        },
+        {
+          "groupSlug": "keti",
+          "title": "Keti"
+        },
+        {
+          "groupSlug": "aspi",
+          "title": "Aspi"
+        }
+      ],
+      "extraSections": [
+        {
+          "title": "Groepsleiding",
+          "accentColor": "#f472b6",
+          "sortOrder": 1,
+          "people": [
+            {
+              "name": "Dogan",
+              "phone": "0479/48.47.29"
+            },
+            {
+              "name": "Simon",
+              "phone": "0484/41.55.28"
+            }
+          ]
+        },
+        {
+          "title": "Volwassen begeleider",
+          "accentColor": "#94a3b8",
+          "sortOrder": 2,
+          "people": [
+            {
+              "name": "Lotte",
+              "phone": "0499/22.44.31"
+            },
+            {
+              "name": "Bjorn",
+              "phone": "0468/11.04.56"
+            }
+          ]
+        }
+      ]
+    },
+    "songs": {
+      "title": "Chiroliedjes",
+      "lead": "Klik open om de tekst van elk lied te tonen."
+    },
+    "activities": {
+      "slug": "activiteiten",
+      "title": "Activiteiten & Kalender",
+      "lead": "Elke zondag een spetterende namiddag. Raadpleeg het boekje of volg onze kanalen voor updates.",
+      "description": "Overzicht van onze Chiro-activiteiten: elke zondag 14u–18u, weekends en zomerkamp.",
+      "bookletUrl": "",
+      "bookletFileName": "chiro-negenmanneke-boekje.pdf",
+      "cards": [
+        {
+          "title": "Kalender",
+          "body": "De kalender verandert doorheen het jaar. Volg onze socials voor aankondigingen.\n\n- Startdag, weekends, en een kamp in juli\n- Specials zoals tochten, sport en knutselactiviteiten",
+          "span": 6
+        },
+        {
+          "title": "Boekje",
+          "body": "In het digitale *boekje* vind je per afdeling wat je nodig hebt en wanneer.",
+          "span": 6
+        }
+      ],
+      "postsTitle": "Nieuws & activiteiten",
+      "postsEmptyText": "Er staan nog geen berichten online. Kijk later nog eens terug."
+    },
+    "registration": {
+      "title": "Starten aan het Chiro-avontuur? Yes, please!",
+      "lead": "De kinderen spelen elke zondag per leeftijd in groep. Benieuwd bij welke groep jij hoort?",
+      "stepsTitle": "Hoe schrijf je je in?",
+      "steps": [
+        "Ga naar Stamhoofd en log in of maak een account.",
+        "Kies de afdeling van je kind en klik op Inschrijven.",
+        "Vul alle gegevens zorgvuldig in.",
+        "Betaal het lidgeld van €40 op IBAN BE40 7390 1609 8563 met vermelding naam kind +\ngroep.",
+        "Na formulier + betaling ben je officieel ingeschreven."
+      ],
+      "tip": "Tip: rond inschrijving en betaling best af vóór de eerste weken van het werkjaar.",
+      "groupsTitle": "Afdelingen & leeftijden",
+      "clothesTitle": "Chirokledij & afdelingen",
+      "clothesBody": "Chirokledij en extra info over afdelingen krijg je bij de leiding of via onze kanalen.",
+      "groupsTable": [
+        {
+          "name": "Ribbels",
+          "birthYears": "2017–2018",
+          "ageRange": "6–8",
+          "schoolYears": "1e–2e leerjaar"
+        },
+        {
+          "name": "Speelclub",
+          "birthYears": "2015–2016",
+          "ageRange": "8–10",
+          "schoolYears": "3e–4e leerjaar"
+        },
+        {
+          "name": "Rakwi",
+          "birthYears": "2013–2014",
+          "ageRange": "10–12",
+          "schoolYears": "5e–6e leerjaar"
+        },
+        {
+          "name": "Tito",
+          "birthYears": "2011–2012",
+          "ageRange": "12–14",
+          "schoolYears": "1e–2e middelbaar"
+        },
+        {
+          "name": "Keti",
+          "birthYears": "2009–2010",
+          "ageRange": "14–16",
+          "schoolYears": "3e–4e middelbaar"
+        },
+        {
+          "name": "Aspi",
+          "birthYears": "2007–2008",
+          "ageRange": "16–18",
+          "schoolYears": "5e–6e middelbaar"
+        }
+      ],
+      "merch": {
+        "title": "Chirokledij te koop",
+        "subtitle": "Steun je Chiro met onze kledij",
+        "body": "T-shirts: €15\nPullen/Hoodies: €20",
+        "note": "Bestellen kan op zondag bij de leiding of stuur ons gerust een berichtje.",
+        "imageUrl": "/assets/uniform.jpg",
+        "imageAlt": "Chiro t-shirt en hoodie",
+        "prices": [
+          "T-shirt €15",
+          "Hoodie €20"
+        ],
+        "actions": [
+          {
+            "label": "Bestellen via e-mail",
+            "href": "mailto:chiro.9manneke@gmail.com"
+          },
+          {
+            "label": "Vraag via\nInstagram",
+            "href": "https://www.instagram.com/chiro9manneke"
+          }
+        ]
+      }
+    },
+    "camp": {
+      "title": "Kampinfo zonder zoeken",
+      "kicker": "Zomerkamp",
+      "lead": "Alles wat ouders nodig hebben staat hier samen: prijs, betaling, inschrijving, paklijst en\nde belangrijkste afspraken.",
+      "heroImageUrl": "/assets/kampfoto.jpg",
+      "heroImageAlt": "Kinderen en leiding samen op Chirokamp",
+      "ctas": [
+        {
+          "label": "Inschrijving",
+          "href": "#camp-signup"
+        },
+        {
+          "label": "Paklijst",
+          "href": "#camp-checklist"
+        }
+      ],
+      "jumpLinks": [
+        {
+          "label": "Prijs",
+          "href": "#camp-price"
+        },
+        {
+          "label": "Inschrijving",
+          "href": "#camp-signup"
+        },
+        {
+          "label": "Checklist",
+          "href": "#camp-checklist"
+        }
+      ],
+      "overviewTitle": "Eerst dit in orde brengen",
+      "overviewItems": [
+        {
+          "title": "Via Stamhoofd",
+          "text": "Inschrijven gebeurt online via Kamp X"
+        },
+        {
+          "title": "Vanaf €100",
+          "text": "Gezinskorting en gratis vanaf het vierde kind"
+        },
+        {
+          "title": "1 juli",
+          "text": "Tot dan kosteloos annuleren"
+        }
+      ],
+      "importantTitle": "Belangrijk",
+      "importantImageUrl": "/assets/kampfoto.jpg",
+      "importantImageAlt": "Sfeerbeeld van het Chirokamp",
+      "importantItems": [
+        "Medische fiche up-to-date houden",
+        "Juiste mededeling bij betaling gebruiken",
+        "Identiteitskaart of kopie kids-ID meenemen",
+        "Veldbed is verplicht op kamp"
+      ],
+      "importantNotice": "Financiële moeilijkheden? Gespreid betalen is mogelijk. Neem contact op\nmet de leiding.",
+      "priceTitle": "Kampprijs",
+      "priceItems": [
+        {
+          "label": "Het eerste kind",
+          "value": "€140"
+        },
+        {
+          "label": "Het tweede kind",
+          "value": "€120"
+        },
+        {
+          "label": "Het derde kind",
+          "value": "€100"
+        },
+        {
+          "label": "Vanaf het vierde kind",
+          "value": "Gratis"
+        },
+        {
+          "label": "Ribbels (7 dagen)",
+          "value": "€100"
+        }
+      ],
+      "bankAccount": "BE40 7390 1609 8563",
+      "bankMessage": "Kamp - naam en voornaam van je kind(eren) - afdeling(en)",
+      "cancellationPolicy": "Prijs & betaling",
+      "supportBoxes": [
+        {
+          "title": "Financiële moeilijkheden",
+          "body": "Wanneer het moeilijk is om het volledige bedrag in één keer te betalen, kunnen wij samen\nbekijken hoe de Chiro kan helpen. Er kunnen afspraken gemaakt worden om het kampgeld gespreid te\nbetalen."
+        },
+        {
+          "title": "Terugbetaling mutualiteit",
+          "body": "Ouders kunnen voor activiteiten een fiscaal attest vragen bij de mutualiteit. De meeste mutualiteiten\nbetalen een deel van het kampgeld terug."
+        }
+      ],
+      "signupTitle": "Zo schrijf je je kind in",
+      "signupIntro": "Zo schrijf je je kind in",
+      "signupLinkUrl": "https://chiro-negenmanneke-spl.stamhoofd.be",
+      "signupLinkLabel": "Stamhoofd",
+      "signupSteps": [
+        {
+          "title": "Log in op Stamhoofd",
+          "text": "Meld je aan met je bestaande account."
+        },
+        {
+          "title": "Open Kamp Peer",
+          "text": "Klik op de afdeling van je kind en daarna op de rode knop Inschrijven."
+        },
+        {
+          "title": "Vul alles zorgvuldig in",
+          "text": "Controleer alle gegevens goed voor je bevestigt."
+        },
+        {
+          "title": "Betaal het kampgeld",
+          "text": "Gebruik het juiste bedrag en de correcte mededeling."
+        },
+        {
+          "title": "Klaar",
+          "text": "Je kind is ingeschreven en kan mee op kamp."
+        }
+      ],
+      "checklistTitle": "Wat neem je mee?",
+      "checklistSections": [
+        {
+          "title": "Algemeen",
+          "note": "",
+          "items": [
+            "Vanaf Tito is een volledig Chiro-uniform verplicht: beige short of rok en een T-shirt of pull van Chiro Negenmanneke",
+            "Identiteitskaart voor +12-jarigen, kopie van kids-ID voor -12-jarigen",
+            "2 kleefbriefjes van het ziekenfonds",
+            "Een up-to-date medische fiche indien er wijzigingen zijn tussen inschrijving en bivak",
+            "Eventuele medicatie, vermeld op de medische fiche",
+            "Bus- of treinabonnement als je dit hebt",
+            "Rugzak waarin handdoek, drinkbus, zwemgerief en wat eten past",
+            "Linnen zak voor vuile was, vermijd plastic zakken",
+            "Enveloppen, briefpapier, kaartjes, schrijfgerief, postzegels en adressenlijst",
+            "Zakgeld: Ribbels, Speelclub en Rakwi €10; Tito, Keti en Aspi €30"
+          ]
+        },
+        {
+          "title": "Chiro-uniform",
+          "note": "We verwachten dat jullie, net zoals de leiding, in uniform op kamp komen. Voor Tito, Keti en Aspi is\ndit verplicht.",
+          "items": [
+            "Een T-shirt of trui van Chiro Negenmanneke. Deze kan je bij de leiding bestellen.",
+            "Een beige Chiroshort of -rok via De Banier."
+          ]
+        },
+        {
+          "title": "Slaapgerief",
+          "note": "",
+          "items": [
+            "Veldbed, geen luchtmatras",
+            "Kussen",
+            "Slaapzak",
+            "Eventueel een extra dekentje",
+            "Pyjama",
+            "Zaklamp"
+          ]
+        },
+        {
+          "title": "Toiletzak",
+          "note": "",
+          "items": [
+            "Tandpasta, tandenborstel en beker",
+            "Kam of borstel",
+            "Haarrekkers",
+            "Zakdoeken",
+            "Zonnecrème",
+            "Anti-muggenspray en anti-tekenspray",
+            "3 à 4 handdoeken en enkele washandjes",
+            "Enkele veiligheidsspelden",
+            "Geen zeep of shampoo: wij zorgen voor biologisch afbreekbare producten",
+            "Voor de oudere jongens en meisjes: scheergerief en maandverband of tampons"
+          ]
+        },
+        {
+          "title": "Spelkledij",
+          "note": "",
+          "items": [
+            "Voldoende kledij voor alle weersomstandigheden",
+            "Minstens 14 onderbroeken",
+            "Minstens 14 paar kousen, korte en lange",
+            "Pet en regenjas",
+            "Rubberen laarzen",
+            "Stap- of sportschoenen en reserveschoenen",
+            "Schoenen die je gemakkelijk kan aandoen, zoals slippers",
+            "Drinkbus of kruik",
+            "Zwemgerief en zwembandjes voor de kleinsten",
+            "Heel oude of slechte kledij voor vuile spelen",
+            "Mooie kledij voor de dansavond",
+            "Wit T-shirt om te knutselen"
+          ]
+        },
+        {
+          "title": "Materiaal lenen",
+          "note": "Een veldbed meenemen op kamp is verplicht. Indien er moeilijkheden zijn om dit aan te kopen, kan je\nde leiding vragen of er eventueel een veldbed geleend kan worden.",
+          "items": []
+        }
+      ]
+    },
+    "rental": {
+      "slug": "verhuur",
+      "title": "Verhuur",
+      "lead": "We verhuren enkel materiaal. Lokalen worden niet verhuurd.",
+      "description": "Lokaal huren bij Chiro Negenmanneke: voorwaarden, beschikbaarheid en contact.",
+      "cards": [
+        {
+          "title": "Materiaalverhuur",
+          "body": "Geef je een feestje of BBQ? We verhuren tafels, banken, kookpotten en meer aan schappelijke prijzen. Bij verhuur wordt steeds een waarborg aangerekend.\n\nVraag naar beschikbaarheid en prijzen via [mail](mailto:chiro.9manneke@gmail.com).",
+          "span": 6
+        }
+      ]
+    },
+    "insurance": {
+      "slug": "verzekering",
+      "title": "Verzekering",
+      "lead": "",
+      "description": "Informatie over de Chiro-verzekering voor leden en ouders.",
+      "cards": [
+        {
+          "title": "Ai, een pijntje… wat nu?",
+          "body": "We organiseren alles zo veilig mogelijk, maar een ongeval is snel gebeurd. In geval van een ongeval (op zondag of op kamp) krijg je van de leiding verzekeringspapieren. Heb je die niet, download dan het formulier bij Chiro Nationaal.\n\n**Medische kosten** worden via de Chiroverzekering geregeld zodra het dossier compleet is.",
+          "span": 6
+        },
+        {
+          "title": "Wat doe ik met het medisch getuigschrift?",
+          "body": "1. Laat het door de dokter invullen.\n2. Scan of bezorg het aan de leiding via [chiro.9manneke@gmail.com](mailto:chiro.9manneke@gmail.com) of geef het af op zondag.\n3. Vergeet je **rekeningnummer** en je **e-mailadres** niet te vermelden.\n\nEr kan pas tot vergoeding overgegaan worden als **alle documenten** in orde zijn.",
+          "span": 6
+        },
+        {
+          "title": "Mutualiteit",
+          "body": "Betaal eerst zelf de kosten. Vraag bij de apotheker een BVACN-formulier. Bezorg daarna het borderel van de mutualiteit en de kostennota’s aan IC-verzekeringen, Kempische Steenweg 404, 3500 Hasselt.\n\nNiet aangesloten bij een mutualiteit? Bezorg de oorspronkelijke stukken rechtstreeks aan IC-verzekeringen. Vergoedingen worden aan het slachtoffer uitbetaald.",
+          "span": 6
+        },
+        {
+          "title": "Let op met ereloon & kamers",
+          "body": "Vraag je zelf een éénpersoonskamer, dan kunnen artsen hogere erelonen aanrekenen – dat verschil wordt niet terugbetaald. Als het ziekenhuis beslist dat een aparte kamer medisch nodig is, gelden normale tarieven.",
+          "span": 6
+        }
+      ]
+    },
+    "privacy": {
+      "slug": "privacy",
+      "title": "GDPR • Privacyverklaring",
+      "lead": "Versie 1.0 – laatst gewijzigd op 16 september 2020.",
+      "description": "Privacyverklaring van Chiro Negenmanneke.",
+      "cards": [
+        {
+          "title": "Wat en waarom",
+          "body": "- We verwerken enkel noodzakelijke persoonsgegevens en vragen toestemming waar nodig.\n- We nemen passende technische en organisatorische maatregelen om gegevens te beschermen.\n- We delen geen gegevens met derden, tenzij noodzakelijk (bv. verzekeringen, subsidies).",
+          "span": 6
+        },
+        {
+          "title": "Rechten & contact",
+          "body": "Je hebt recht op inzage, correctie en verwijdering. Contact: [chiro.9manneke@gmail.com](mailto:chiro.9manneke@gmail.com).\n\nKlachten? Gegevensbeschermingsautoriteit: [dien klacht in](https://www.gegevensbeschermingsautoriteit.be/burger/acties/klacht-indienen).",
+          "span": 6
+        },
+        {
+          "title": "Verwerkers & bewaartermijn",
+          "body": "We gebruiken o.a. Google Drive en een ledenportaal van Chirojeugd Vlaanderen. Gegevens worden niet langer bewaard dan nodig en niet buiten de EU gedeeld.",
+          "span": 12
+        }
+      ]
+    }
+  },
+  "groups": [
+    {
+      "slug": "ribbels",
+      "name": "Ribbels",
+      "themeKey": "ribbels",
+      "ageRange": "6–8",
+      "birthYears": "2017–2018",
+      "schoolYears": "1e–2e leerjaar",
+      "description": "Ontdekken, spelen en fantasie staan centraal.",
+      "imageUrl": "/assets/ribbels.jpg",
+      "imageAlt": "Ribbels foto",
+      "sortOrder": 1,
+      "leaders": [
+        {
+          "name": "Aaron",
+          "phone": "0494/87.63.77"
+        },
+        {
+          "name": "Sacha",
+          "phone": "0470/66.49.22"
+        }
+      ]
+    },
+    {
+      "slug": "speelclub",
+      "name": "Speelclub",
+      "themeKey": "speelclub",
+      "ageRange": "8–10",
+      "birthYears": "2015–2016",
+      "schoolYears": "3e–4e leerjaar",
+      "description": "Teamwork, plezier en nieuwe uitdagingen.",
+      "imageUrl": "/assets/speelclub.jpg",
+      "imageAlt": "Speelclub foto",
+      "sortOrder": 2,
+      "leaders": [
+        {
+          "name": "Viktor",
+          "phone": "0474/56.07.75"
+        },
+        {
+          "name": "Simon",
+          "phone": "0479/38.94.25"
+        }
+      ]
+    },
+    {
+      "slug": "rakwi",
+      "name": "Rakwi",
+      "themeKey": "rakwi",
+      "ageRange": "10–12",
+      "birthYears": "2013–2014",
+      "schoolYears": "5e–6e leerjaar",
+      "description": "Avontuur, buiten spelen en uitdagingen aangaan.",
+      "imageUrl": "/assets/rakwi.jpg",
+      "imageAlt": "Rakwi foto",
+      "sortOrder": 3,
+      "leaders": [
+        {
+          "name": "Ha Vy",
+          "phone": "0471/06.38.30"
+        },
+        {
+          "name": "Dogan",
+          "phone": "0479/48.47.29"
+        }
+      ]
+    },
+    {
+      "slug": "tito",
+      "name": "Tito",
+      "themeKey": "tito",
+      "ageRange": "12–14",
+      "birthYears": "2011–2012",
+      "schoolYears": "1e–2e middelbaar",
+      "description": "Stoere spelen, techniek en samenwerken.",
+      "imageUrl": "/assets/tito.jpg",
+      "imageAlt": "Tito foto",
+      "sortOrder": 4,
+      "leaders": [
+        {
+          "name": "Amelia",
+          "phone": "0493/65.35.24"
+        },
+        {
+          "name": "Noa",
+          "phone": "0477/85.20.62"
+        },
+        {
+          "name": "Lina",
+          "phone": "0474/65.00.90"
+        }
+      ]
+    },
+    {
+      "slug": "keti",
+      "name": "Keti",
+      "themeKey": "keti",
+      "ageRange": "14–16",
+      "birthYears": "2009–2010",
+      "schoolYears": "3e–4e middelbaar",
+      "description": "Verantwoordelijkheid opnemen, tochten en grotere spelen.",
+      "imageUrl": "/assets/keti.jpg",
+      "imageAlt": "Keti foto",
+      "sortOrder": 5,
+      "leaders": [
+        {
+          "name": "Kimberly",
+          "phone": "0478/09.59.83"
+        },
+        {
+          "name": "Erika",
+          "phone": "0479/38.94.25"
+        }
+      ]
+    },
+    {
+      "slug": "aspi",
+      "name": "Aspi",
+      "themeKey": "aspi",
+      "ageRange": "16–18",
+      "birthYears": "2007–2008",
+      "schoolYears": "5e–6e middelbaar",
+      "description": "Initiatief als oudste groep & voorbereiding op leiding geven.",
+      "imageUrl": "/assets/aspi.jpg",
+      "imageAlt": "Aspi foto",
+      "sortOrder": 6,
+      "leaders": [
+        {
+          "name": "Nathan",
+          "phone": "0468/35.74.35"
+        },
+        {
+          "name": "Clara",
+          "phone": "0470/71.61.45"
+        }
+      ]
+    }
+  ],
+  "contactSections": [
+    {
+      "title": "Groepsleiding",
+      "accentColor": "#f472b6",
+      "sortOrder": 1,
+      "people": [
+        {
+          "name": "Dogan",
+          "phone": "0479/48.47.29"
+        },
+        {
+          "name": "Simon",
+          "phone": "0484/41.55.28"
+        }
+      ]
+    },
+    {
+      "title": "Volwassen begeleider",
+      "accentColor": "#94a3b8",
+      "sortOrder": 2,
+      "people": [
+        {
+          "name": "Lotte",
+          "phone": "0499/22.44.31"
+        },
+        {
+          "name": "Bjorn",
+          "phone": "0468/11.04.56"
+        }
+      ]
+    }
+  ],
+  "songs": [
+    {
+      "title": "Vonken",
+      "lyrics": "Strofe 1\nZondagmiddag, het is weer tijd\nDat ik naar de Chiro rijd\nIk heb geen zin, toch doe ik mijn Chirokleren aan\n\nEn plots, ineens komt dat gevoel\nJe weet echt wel wat ik bedoel\nDe Chirovonk zet mij in vuur en vlam\n\nRefrein\nChiro geeft vonken!\nAl is het leven zuur\nChiro doet je pronken!\nSamen rond het Chirovuur\n\nStrofe 2\nEr is een plek voor elk talent\nEen zottekot in onze Chirotent\nDat enthousiasme straalt echt op mij af\n\nEn geraakt mijn vuur weleens geblust\nDan weet ik dat de rest niet rust\nTotdat ik weer in lichterlaaie sta\n\nRefrein\nChiro geeft vonken!\nAl is het leven zuur\nChiro doet je pronken!\nSamen rond het Chirovuur\nWe wakkeren de vlam wat aan en delen het moment\nIk weet dat jij er voor mij bent\n\nBridge\nC-H\nC-H-I\nC-H-I-R-O\nWe zijn een toffe bende\nWe zijn van de Chiro!\n\nC-H\nC-H-I\nC-H-I-R-O\nWe zijn een toffe bende\nWe zijn van de Chiro!\n\nC-H\nC-H-I\nC-H-I-R-O\nWe zijn een toffe bende\nWe zijn van de Chiro!\n\nC-H\nC-H-I\nC-H-I-R-O\nWe zijn een toffe bende\nWe zijn van de Chiro!\n\nRefrein\nChiro geeft vonken!\nAl is het leven zuur\nChiro doet je pronken!\nSamen rond het Chirovuur\nWe wakkeren de vlam wat aan en delen het moment\nIk weet dat jij er voor mij bent\n\nOutro\nC-H\nC-H-I\nC-H-I-R-O\nWe zijn een toffe bende\nWe zijn van de Chiro!\n\nC-H\nC-H-I\nC-H-I-R-O\nWe zijn een toffe bende\nWe zijn van de Chiro!\n\nC-H\nC-H-I\nC-H-I-R-O\nWe zijn een toffe bende\nWe zijn van de Chiro!\n\nC-H\nC-H-I\nC-H-I-R-O\nWe zijn een toffe bende\nWe zijn van de Chiro!",
+      "sortOrder": 1
+    },
+    {
+      "title": "Avondlied",
+      "lyrics": "Daal nu bij het zinken van deze dag.\nDaal in ons gemoed, gij trouwe vlag.\nGij zijt zegen, troost en lach.\nDaal in d ‘avondzon, oh vlag.\n\nHeer, wij bergen in ons hart uw vlag.\nZegen haar en ons, uw jonge wacht.\nGoedenavond, vlag en dag.\nChristus Koning, goedenacht.\n\nGoedenavond, vlag en dag.\nChristus Koning, goedenacht.",
+      "sortOrder": 2
+    },
+    {
+      "title": "Ballen",
+      "lyrics": "1-2-3-en LALA: Lalala lala lalala Lalala lala lalala Lalala lala lalala\n\nStrofe 1\nIk trek m’n stoute schoenen aan Ik trek niks anders aan, ik trek\nRebelleke trek het me niet aan Ik ben van Chiro NEGENMANNEKE!\nEn ik ben supercool De koene ridder van het dorp\nHet roze elfje van het woud Ik ben moedig, ik ben stout\n\nRefrein:\nWo-o-o De Chiro die heeft ballen, overal\nWo-o-o wij zijn groot, moedig, stout en HOP!\nLALA: Lalala lala lalala Lalala lala lalala\n\nStrofe 2:\nIk trek m’n stoute kleren uit Ik maak een ketting en roep luid\nIk ben een vleesklomp en ik plak Ik speel smerig als een slak\nJef, waar is de dode vis Bokalleke stamp en dek de geit\nDe bok die steukt in het lokaal Op zondag kan het allemaal\n\nRefrein:\nWo-o-o de Chiro die heeft ballen overal\nWo-o-o wij zijn groot, moedig, stout en TRA!\nLALA: …\n\nStrofe 3:\nIk wacht een ganse week om te duiken in een beek\nvol met slijk, ik pak een bad in een verkleedkofferbak\nOm twee uur zondagnoen Durf ik foute dingen doen\nDurf ik alles wat niet mag ZONDAG ANARCHIRODAG!\n\nRefrein:\nWo-o-o de chiro die heeft ballen en dat mag\nWo-o-o wij zijn groot, moedig, stout en …\n\nBridge:\nNet zoals de KLJ, de scouts en helden op TV,\ndoen wij ook een goede daad, maar dan beter uiteraard\nWITTE BALLEN ZWARTE BALLEN HEY HEY HEY\nDIKKE BALLEN HARDE BALLEN HEY HEY HEY\nROLLE BOLLEN BILLEN BALLEN HEY HEY HEY\nAL LE DAGEN AN AR CHI RO DAG\n\nRefrein:\nWo-o-o de chiro die heeft ballen en dat mag\nWo-o-o wij zijn groot, moedig, stout en ZO!\n\nRefrein:\nWo-o-o de chiro die heeft ballen en dat mag\nWo-o-o wij zijn groot, moedig, stout en …\n\nWIJ GAAN HARD Om twee uur zondagnoen Durf ik foute dingen doen\nDurf ik alles wat niet mag ZONDAG ANARCHIRODAG!",
+      "sortOrder": 3
+    },
+    {
+      "title": "Bivaklied",
+      "lyrics": "Leven op het ritme van de wind en van de zon\nZingen op de melodie van bos en beek en bron\nSlapen met 't getrommel van de regen op het dak\nOntwaken met de morgendauw we zijn weer op bivak!\nIeder die ons ziet kijkt raar\nWat niet kon dat wordt hier waar\nVreemd wordt vriend en klein is groot\nIn onze ploeg valt geeneen uit de boot\nTrek er mee op uit breek grenzen open,\nSamenspel wordt reden om te hopen\nIedereen doet mee en blijf niet staan\nEen nieuwe wereld roept om door te gaan!",
+      "sortOrder": 4
+    },
+    {
+      "title": "C-H C-H-I C-H-I-R-O",
+      "lyrics": "C-H\nC-H-I\nC-H-I-R-O\nWij zijn een toffe bende\nWij zijn van de Chiro!",
+      "sortOrder": 5
+    },
+    {
+      "title": "Door de kamer vloog …",
+      "lyrics": "Vervang NAAM 1 en NAAM 2 door twee echte namen.\n\nDoor de kamer vloog NAAM 1\nVliegensvlug vloog daar NAAM 1\n't Vliegen van NAAM 1 was vlug gedaan\nWant hij/zij vloog tegen NAAM 2 aan\n\nO-o-o, o-o-o-o-o-oo\n\n't Vliegen van NAAM 1 was vlug gedaan\nwant hij/zij vloog tegen NAAM 2 aan",
+      "sortOrder": 6
+    },
+    {
+      "title": "Grenzeloos Chiro (jaarthemalied 2019–2020)",
+      "lyrics": "'k Had laatst een gek idee\nDe leiding deed ook mee\nWe speelden zondag reisje rond de wereld\nMet Ribbels naar Japan\nAspi’s naar Pakistan\nIn Spanje speelden we Bertha enorma\n\nEen schipper nam ons mee\nVoer ons over zee\nWe moesten geen centje betalen\nAan de Chinese muur\nSloeg ik een mal figuur\nToen ik voetbalde met mijn handen\n\nREFREIN\nEn wie je bent dat maakt niet uit\nWaar je ook bent, roep heel luid\nBreek grenzen open en ga op avontuur\nKijk over de muur, grenzeloos Chiro\nDe wereld staat open, wij zijn helemaal klaar\nWe vliegen in een jaar vol, grenzeloos Chiro\n\nHeel de aardbol rond,\nLeren met open mond\nHeel verbaasd van wie tegenkwamen\nAnders en toch gelijk\nVerbreden onze kijk\nChiro beleven we allemaal samen\n\nREFREIN\nEn wie je bent, dat maakt niet uit\nDe grenzen openen voluit\nPak je zak, trek eropuit\nBreek grenzen open en ga op avontuur\nKijk over de muur, grenzeloos Chiro\nDe wereld staat open, wij zijn helemaal klaar\nWe vliegen in een jaar vol, grenzeloos Chiro",
+      "sortOrder": 7
+    },
+    {
+      "title": "Ik blijf in Chiro geloven",
+      "lyrics": "De originele versie was ons iets te traag. Geniet van de hardstyle remix!!\n\nIk blijf in Chiro geloven\nen ik stuur een ballon naar boven,\nwant 't is het teken, 't is het verhaal\nvan kind'ren dat ik je zing:\nde Chiro, een uitdaging.",
+      "sortOrder": 8
+    },
+    {
+      "title": "'t Liefs (jaarthemalied 1997–1998)",
+      "lyrics": "Stotteren en giechelen zo rood als een tomaat (aa-aa-aah).\nEen vreemd, plezant gevoel tintelt door m'n ruggengraat.\n'k Wil dolgraag iets vertellen maar hoe pak je dat nu aan?\nJe woont al op m'n pennenzak maar dat zal niet volstaan.\n\nRefrein:\nOmdat ik van je hou, tel ik blaadjes, schrijf ik jou.\n'MET LIEFS' erbij voel ik vlinders, ben ik blij.\n'k Heb je foto op zak, spring met gemak tot op het dak.\nAls ik uren naar de spiegel kijk denk ik aan jou,\nomdat ik ziel-enorm-fantastisch-heel erg van je hou (aa-aa-aah).\n\nWe sprinten rond het blokje en we blinken in ons vel (aa-aa-aah).\nWapperende oren zijn bij ons niet echt van tel.\nMet mensenvlees gaan knutselen: waar halen ze 't idee?\nDie plastieken chirurgie: doen we daar zo snel aan mee?.\n\nRefrein\n\nDe zon is aan het schijnen en 't is ook nog volle maan (aa-aa-aah).\nDe schaapjes op het droge, de problemen van de baan.\nNu weet ik het wel zeker: 't is voor eeuwig en altijd.\nMaar 't kan ook nog verkeren en dat vraagt dan weer wat tijd.\n\nRefrein\n\nSoms zijn er van die boekjes of programma's op TV (aa-aa-aah).\nDan word ik stiekem wijzer maar vaak zit ik er ook mee.\nDat turnen en dat stoeien lijkt hen zelden te vermoeien.\nEn dan blijft er nog de vraag: is dit echt of is het knoeien?\n\nRefrein\n\nEr zijn zo van die woorden waar mijn moeder zich aan stoort (aa-aa-aah).\nMaar die je op de speelplaats onder vrienden wel vaak hoort.\nWe gaan ze nu niet zingen: want dan wordt het onbeleefd.\n'k wil wel stiekem één verklappen, als je mij een zoentje geeft.\n\nRefrein\n\nBorsten noem ik tietjes: is dat echt zo onbeleefd? (aa-aa-aah).\nBusten klinkt wel netter, maar het is voorbijgestreefd.\nEen piemel noem ik pikje of nog liever pietje puk.\n(op fluistertoon) en als moeder het niet hoort: ja, dan zeg ik stiekem f....\n\nRefrein",
+      "sortOrder": 9
+    },
+    {
+      "title": "Ochtendlied",
+      "lyrics": "Wij hijsen bij het gloren van de morgen ons vlagge als een biddend lied.\nWant heilig is 't geschenk van elke morgen, dat God ons weer 't aanvaarden biedt.\nDraag door weer en wind ons vlagge, teken van de heldentijd.\nLaat ze waaien, laat ze werven, allen voor de grote strijd.\nLaat ze waaien, laat ze werven, allen voor de grote strijd.",
+      "sortOrder": 10
+    },
+    {
+      "title": "Tuimeling",
+      "lyrics": "Ben je bijna uitgekeken?\nDenk je, wat heeft het voor zin?\nTijd om frisse moed te kweken\nMaak een flinke tuimeling\n\nVoel je vrij tussen je vrienden\nBlijf niet langer vreemdeling\nTracht de vlam snel weer te vinden\nMaak een flinke tuimeling\n\nTuimel, tuimeling, schud jezelf doorheen\nGooi alles ondersteboven\nLaat het vuur in jou niet doven\nTuimel, tuimeling, smijt jezelf erin\nGooi alles ondersteboven\nBlijf er rotsvast in gelo-o-ven\n\n‘t Chirowerk is vaak geen pretje\nSoms wordt het een marteling\nGeef dan vlug jezelf een zetje\nMaak een flinke tuimeling\n\nVoel je hartslag stevig bonken\nZonder spoor van hapering\nDoe die gloed weer hevig vonken\nMaak een flinke tuimeling\n\nTuimel, tuimeling, schud jezelf doorheen\nGooi alles ondersteboven\nLaat het vuur in jou niet doven\nTuimel, tuimeling, smijt jezelf erin\nGooi alles ondersteboven\nBlijf er rotsvast in gelo-o-ven\n\nNeem jezelf eens onder handen\nJe bent toch geen zwakkeling?\nBijt maar stevig op je tanden\nMaak een flinke tuimeling\n\nZo kan je de vreugde voelen\nIn je eigen vriendenkring\nDoor jezelf te hersenspoelen\nMaak een flinke tuimeling\n\nTuimel, tuimeling, schud jezelf doorheen\nGooi alles ondersteboven\nLaat het vuur in jou niet doven\nTuimel, tuimeling, smijt jezelf erin\nGooi alles ondersteboven\nBlijf er rotsvast in gelo-o-ven\n\nTuimel, tuimeling, schud jezelf doorheen\nGooi alles ondersteboven\nLaat het vuur in jou niet doven\nTuimel, tuimeling, smijt jezelf erin\nGooi alles ondersteboven\nBlijf er rotsvast in gelo-o-ven",
+      "sortOrder": 11
+    }
+  ],
+  "posts": [],
+  "contactMessages": []
+}

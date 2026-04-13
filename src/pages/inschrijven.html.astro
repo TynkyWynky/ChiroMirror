@@ -1,0 +1,93 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import { loadSiteContent } from "@/lib/content";
+
+const content = await loadSiteContent();
+const { siteSettings, pages, groups } = content;
+const registration = pages.registration;
+---
+
+<PublicLayout
+  title="Inschrijven • Chiro Negenmanneke"
+  description="Schrijf je in bij Chiro Negenmanneke. Alle praktische info voor nieuwe en bestaande leden."
+  siteSettings={siteSettings}
+>
+  <section class="hero">
+    <h1>{registration.title}</h1>
+    <p class="lead">{registration.lead}</p>
+
+    <div class="stacked">
+      <div class="card steps">
+        <h2>{registration.stepsTitle}</h2>
+        <ol>
+          {registration.steps.map((step) => <li>{step}</li>)}
+        </ol>
+        <p class="callout">
+          <strong>Tip:</strong> {registration.tip.replace(/^Tip:\s*/i, "")}
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>{registration.groupsTitle}</h2>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Afdeling</th>
+                <th>Geboortejaar</th>
+                <th>Leeftijd</th>
+                <th>Klas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                groups.map((group) => (
+                  <tr>
+                    <td>{group.name}</td>
+                    <td>{group.birthYears}</td>
+                    <td>{group.ageRange}</td>
+                    <td>{group.schoolYears}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>{registration.clothesTitle}</h2>
+        <p>{registration.clothesBody}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="merch">
+    <div class="section-title">
+      <h2>{registration.merch.title}</h2>
+      <div class="line" aria-hidden="true"></div>
+    </div>
+
+    <div class="card merch-card">
+      <div class="merch-img-wrap">
+        <img src={registration.merch.imageUrl} alt={registration.merch.imageAlt} />
+        {
+          registration.merch.prices.map((price, index) => (
+            <span class={`price-pill ${index % 2 === 0 ? "left" : "right"}`}>{price}</span>
+          ))
+        }
+      </div>
+
+      <div>
+        <h3>{registration.merch.subtitle}</h3>
+        <ul>
+          {registration.merch.body.split("\n").filter(Boolean).map((line) => <li>{line}</li>)}
+        </ul>
+        <p class="muted-small">{registration.merch.note}</p>
+        <div class="inline-actions">
+          {registration.merch.actions.map((action) => <a class="btn" href={action.href}>{action.label}</a>)}
+        </div>
+      </div>
+    </div>
+  </section>
+</PublicLayout>

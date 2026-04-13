@@ -1,0 +1,28 @@
+{
+  "name": "chiro-negenmanneke-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro check",
+    "preview": "astro preview",
+    "import:legacy": "node ./scripts/extract-legacy-content.mjs",
+    "seed": "node ./scripts/seed-supabase.mjs"
+  },
+  "dependencies": {
+    "@astrojs/netlify": "^7.0.6",
+    "@astrojs/preact": "^5.1.1",
+    "@supabase/supabase-js": "^2.103.0",
+    "astro": "^6.1.5",
+    "marked": "^18.0.0",
+    "preact": "^10.29.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@types/node": "^25.6.0",
+    "cheerio": "^1.2.0",
+    "typescript": "^5.9.3"
+  }
+}

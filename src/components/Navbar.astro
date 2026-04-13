@@ -1,0 +1,66 @@
+---
+import { primaryNav } from "@/lib/routes";
+import { withDevFresh } from "@/lib/href";
+---
+
+<nav class="navbar">
+  <div class="container inner">
+    <a class="brand" href="/">
+      <img class="brand-logo" src="/assets/Chirologo_700px.png" alt="Chiro logo" />
+      Chiro Negenmanneke
+    </a>
+    <div class="menu desktop">
+      {
+        primaryNav.map((item) =>
+          "children" in item ? (
+            <details class="nav-dropdown">
+              <summary>{item.label}</summary>
+              <div class="nav-dropdown-menu">
+                {item.children.map((child) => (
+                  <a href={withDevFresh(child.href)}>{child.label}</a>
+                ))}
+              </div>
+            </details>
+          ) : (
+            <a href={withDevFresh(item.href)}>{item.label}</a>
+          )
+        )
+      }
+    </div>
+    <button class="burger" id="burger" aria-label="Menu" aria-controls="mobile-nav" aria-expanded="false">
+      <span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-overlay" id="mobile-nav" role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title" hidden>
+  <div class="mobile-nav-content">
+    <div class="mobile-nav-header">
+      <a class="brand" href="/" id="mobile-nav-title">
+        <img class="brand-logo" src="/assets/Chirologo_700px.png" alt="" />
+        Chiro Negenmanneke
+      </a>
+      <button class="burger" id="mobile-close" aria-label="Close">
+        <span></span>
+      </button>
+    </div>
+    <nav class="mobile-menu">
+      {
+        primaryNav.map((item) =>
+          "children" in item ? (
+            <details class="mobile-dropdown">
+              <summary>{item.label}</summary>
+              <div class="mobile-submenu">
+                {item.children.map((child) => (
+                  <a href={withDevFresh(child.href)}>{child.label}</a>
+                ))}
+              </div>
+            </details>
+          ) : (
+            <a href={withDevFresh(item.href)}>{item.label}</a>
+          )
+        )
+      }
+    </nav>
+  </div>
+</div>

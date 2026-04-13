@@ -1,0 +1,143 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import { loadSiteContent } from "@/lib/content";
+
+const content = await loadSiteContent();
+const { siteSettings, pages } = content;
+const camp = pages.camp;
+---
+
+<PublicLayout
+  title="Kamp • Chiro Negenmanneke"
+  description="Alle info over het kamp van Chiro Negenmanneke: praktische afspraken, inschrijving, prijs en foto's."
+  siteSettings={siteSettings}
+  socialImage={camp.heroImageUrl}
+>
+  <section class="camp-shell">
+    <section class="camp-masthead">
+      <div class="camp-masthead-copy">
+        <p class="camp-kicker">{camp.kicker}</p>
+        <h1>{camp.title}</h1>
+        <p class="lead">{camp.lead}</p>
+        <div class="camp-cta-row">
+          {camp.ctas.map((cta, index) => <a class={`btn ${index === 1 ? "btn-light" : ""}`} href={cta.href}>{cta.label}</a>)}
+        </div>
+      </div>
+      <figure class="camp-masthead-visual">
+        <img src={camp.heroImageUrl} alt={camp.heroImageAlt} />
+      </figure>
+    </section>
+
+    <nav class="camp-jumpbar" aria-label="Kamp navigatie">
+      {camp.jumpLinks.map((link) => <a href={link.href}>{link.label}</a>)}
+    </nav>
+
+    <section class="camp-overview-grid">
+      <article class="camp-hero-card">
+        <p class="camp-card-kicker">Snel overzicht</p>
+        <h2>{camp.overviewTitle}</h2>
+        <div class="camp-pill-grid">
+          {
+            camp.overviewItems.map((item) => (
+              <div class="camp-pill">
+                <strong>{item.title}</strong>
+                <span>{item.text}</span>
+              </div>
+            ))
+          }
+        </div>
+      </article>
+
+      <aside class="camp-note-card">
+        <img class="camp-inline-photo" src={camp.importantImageUrl} alt={camp.importantImageAlt} />
+        <h2>{camp.importantTitle}</h2>
+        <ul class="checklist">
+          {camp.importantItems.map((item) => <li>{item}</li>)}
+        </ul>
+        <p class="callout">{camp.importantNotice}</p>
+      </aside>
+    </section>
+
+    <section class="camp-main-grid">
+      <article class="camp-panel camp-panel-price" id="camp-price">
+        <p class="camp-card-kicker">Prijs & betaling</p>
+        <h2>{camp.priceTitle}</h2>
+        <div class="camp-price-list">
+          {
+            camp.priceItems.map((item) => (
+              <div>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))
+          }
+        </div>
+        <div class="camp-bank-box">
+          <p>
+            <strong>Rekeningnummer</strong><br />{camp.bankAccount}
+          </p>
+          <p>
+            <strong>Mededeling</strong><br />{camp.bankMessage}
+          </p>
+        </div>
+        <p>{camp.cancellationPolicy}</p>
+        <div class="camp-soft-boxes">
+          {
+            camp.supportBoxes.map((box) => (
+              <div class="camp-soft-box">
+                <h3>{box.title}</h3>
+                <p>{box.body}</p>
+              </div>
+            ))
+          }
+        </div>
+      </article>
+
+      <article class="camp-panel camp-panel-signup" id="camp-signup">
+        <p class="camp-card-kicker">Inschrijving</p>
+        <h2>{camp.signupTitle}</h2>
+        <p>
+          {camp.signupIntro}{" "}
+          <a href={camp.signupLinkUrl} target="_blank" rel="noreferrer">
+            {camp.signupLinkLabel}
+          </a>.
+        </p>
+        <ol class="camp-step-list">
+          {
+            camp.signupSteps.map((step) => (
+              <li>
+                <strong>{step.title}</strong>
+                <span>{step.text}</span>
+              </li>
+            ))
+          }
+        </ol>
+      </article>
+
+      <section class="camp-panel camp-panel-checklist" id="camp-checklist">
+        <p class="camp-card-kicker">Checklist</p>
+        <h2>{camp.checklistTitle}</h2>
+        <div class="camp-accordion-grid">
+          {
+            camp.checklistSections.map((section, index) =>
+              section.items.length ? (
+                <details class="camp-pack-card" open={index === 0}>
+                  <summary>{section.title}</summary>
+                  {section.note && <p>{section.note}</p>}
+                  <ul class="checklist">
+                    {section.items.map((item) => <li>{item}</li>)}
+                  </ul>
+                </details>
+              ) : (
+                <div class="camp-pack-card camp-pack-note">
+                  <h3>{section.title}</h3>
+                  <p>{section.note}</p>
+                </div>
+              )
+            )
+          }
+        </div>
+      </section>
+    </section>
+  </section>
+</PublicLayout>

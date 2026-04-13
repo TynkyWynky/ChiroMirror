@@ -1,0 +1,77 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import RichText from "@/components/RichText.astro";
+import { loadSiteContent } from "@/lib/content";
+import { withDevFresh } from "@/lib/href";
+
+const content = await loadSiteContent();
+const { siteSettings, pages } = content;
+const home = pages.home;
+const primaryCtaHref = withDevFresh(`/${home.banner.primaryCtaHref.replace(/^\//, "")}`);
+const secondaryCtaHref = withDevFresh(`/${home.banner.secondaryCtaHref.replace(/^\//, "")}`);
+const aboutCtaHref = withDevFresh(`/${home.about.ctaHref.replace(/^\//, "")}`);
+---
+
+<PublicLayout
+  title="Chiro Negenmanneke – Officiële site"
+  description="Welkom bij Chiro Negenmanneke in Sint-Pieters-Leeuw. Info voor leden en ouders: inschrijven, activiteiten, groepen, verhuur en contact."
+  siteSettings={siteSettings}
+  socialImage={home.banner.imageUrl}
+  showMapFooter={true}
+>
+  <section slot="afterNav" class="banner">
+    <img class="banner-image" src={home.banner.imageUrl} alt={home.banner.imageAlt} />
+    <div class="banner-content">
+      <div class="container">
+        <p class="banner-eyebrow">{home.banner.eyebrow}</p>
+        <h2 class="banner-title">{home.banner.title}</h2>
+        <p class="banner-sub">{home.banner.subtitle}</p>
+        <div class="banner-actions">
+          <a class="btn" href={primaryCtaHref}>
+            {home.banner.primaryCtaLabel}
+          </a>
+          <a class="btn btn-light" href={secondaryCtaHref}>
+            {home.banner.secondaryCtaLabel}
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="hero">
+    <span class="badge">{home.hero.badge}</span>
+    <h1>{home.hero.title}</h1>
+    <p class="lead">{home.hero.lead}</p>
+
+    <div class="gallery">
+      {
+        home.gallery.map((image) => (
+          <img class={`photo span-${image.span}`} src={image.imageUrl} alt={image.alt} />
+        ))
+      }
+    </div>
+
+    <div class="grid">
+      <div class="card span-6">
+        <h2>{home.about.title}</h2>
+        <RichText content={home.about.body} />
+        <a class="btn" href={aboutCtaHref}>
+          {home.about.ctaLabel}
+        </a>
+      </div>
+
+      <div class="card span-6">
+        <h2>{home.practical.title}</h2>
+        <ul>
+          {home.practical.items.map((item) => <li><strong>{item.split(":")[0]}:</strong> {item.split(":").slice(1).join(":").trim()}</li>)}
+        </ul>
+        <p class="muted">{home.practical.note}</p>
+      </div>
+
+      <div class="card">
+        <h2>{home.history.title}</h2>
+        <RichText content={home.history.body} />
+      </div>
+    </div>
+  </section>
+</PublicLayout>

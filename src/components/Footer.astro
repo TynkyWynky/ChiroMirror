@@ -1,0 +1,77 @@
+---
+import type { SiteSettings } from "@/types/content";
+import { withDevFresh } from "@/lib/href";
+
+interface Props {
+  siteSettings: SiteSettings;
+  showMap?: boolean;
+}
+
+const { siteSettings, showMap = false } = Astro.props;
+---
+
+<footer>
+  <div class="container">
+    <div class="grid">
+      <div class={`card ${showMap ? "span-12" : "span-6"}`}>
+        <div class="section-title">
+          <h3>Adres</h3>
+          <div class="line"></div>
+        </div>
+        {siteSettings.address}<br />
+        <small>{siteSettings.addressNote}</small>
+
+        {
+          showMap && (
+            <>
+              <div class="map-wrapper">
+                <iframe
+                  title="Kaart – Chiro Negenmanneke"
+                  src={siteSettings.mapEmbedUrl}
+                  allowfullscreen
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                ></iframe>
+              </div>
+
+              <div class="map-actions">
+                <a class="btn" target="_blank" rel="noreferrer" href={siteSettings.mapGoogleUrl}>
+                  Route (Google Maps)
+                </a>
+                <a class="btn btn-light" target="_blank" rel="noreferrer" href={siteSettings.mapAppleUrl}>
+                  Open in Apple Maps
+                </a>
+              </div>
+            </>
+          )
+        }
+      </div>
+
+      <div class={`card ${showMap ? "span-12" : "span-6"}`}>
+        <div class="section-title">
+          <h3>Volg ons</h3>
+          <div class="line"></div>
+        </div>
+        <div class="logo-row">
+          <a href={siteSettings.facebookUrl} target="_blank" rel="noreferrer">
+            Facebook
+          </a>
+          ·
+          <a href={siteSettings.instagramUrl} target="_blank" rel="noreferrer">
+            Instagram
+          </a>
+          ·
+          <a href={`mailto:${siteSettings.email}`}>{siteSettings.email}</a>
+        </div>
+      </div>
+    </div>
+
+    <p class="muted">{siteSettings.footerCopyright}</p>
+    <p class="muted">{siteSettings.footerDeveloper}</p>
+    <p class="footer-meta">
+      <a class="admin-link" href={withDevFresh("/admin/")} rel="nofollow">
+        {siteSettings.footerAdminLabel}
+      </a>
+    </p>
+  </div>
+</footer>

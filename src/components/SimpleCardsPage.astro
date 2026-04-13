@@ -1,0 +1,26 @@
+---
+import RichText from "@/components/RichText.astro";
+import type { SimplePage } from "@/types/content";
+
+interface Props {
+  page: SimplePage;
+}
+
+const { page } = Astro.props;
+---
+
+<section class="hero">
+  <h1>{page.title}</h1>
+  {page.lead && <p class="lead">{page.lead}</p>}
+
+  <div class="grid">
+    {
+      page.cards.map((card) => (
+        <div class={`card ${card.span === 6 ? "span-6" : "span-12"}`}>
+          <h2>{card.title}</h2>
+          <RichText content={card.body} />
+        </div>
+      ))
+    }
+  </div>
+</section>

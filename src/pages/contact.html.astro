@@ -1,0 +1,67 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import RichText from "@/components/RichText.astro";
+import ContactForm from "@/components/ContactForm";
+import { loadSiteContent } from "@/lib/content";
+
+const content = await loadSiteContent();
+const { siteSettings, pages, groups, contactSections } = content;
+const contactPage = pages.contact;
+const groupLookup = new Map(groups.map((group) => [group.slug, group]));
+const orderedGroups = contactPage.groupCards
+  .map((item) => groupLookup.get(item.groupSlug))
+  .filter((group): group is (typeof groups)[number] => Boolean(group));
+---
+
+<PublicLayout
+  title="Contact • Chiro Negenmanneke"
+  description="Contacteer Chiro Negenmanneke: locatie, e-mail en sociale media."
+  siteSettings={siteSettings}
+>
+  <section class="hero">
+    <h1>{contactPage.title}</h1>
+
+    <div class="grid">
+      <div class="card span-6">
+        <h2>{contactPage.generalTitle}</h2>
+        <RichText content={contactPage.generalBody} />
+
+        <h3>{contactPage.formTitle}</h3>
+        <ContactForm
+          client:load
+          categories={contactPage.formCategories}
+          successMessage={contactPage.successMessage}
+          errorMessage={contactPage.errorMessage}
+          fallbackEmail={siteSettings.email}
+        />
+      </div>
+
+      <div class="card span-6">
+        <h2>{contactPage.sectionsTitle}</h2>
+        <div class="grid">
+          {
+            orderedGroups.map((group) => (
+              <div class="card" style={`border-top: 4px solid var(--${group.themeKey})`}>
+                <h3>{group.name}</h3>
+                <p class="contact-card-people">
+                  {group.leaders.map((leader) => `${leader.name}: ${leader.phone}`).join("\n")}
+                </p>
+              </div>
+            ))
+          }
+
+          {
+            contactSections.map((section) => (
+              <div class="card" style={`border-top: 4px solid ${section.accentColor}`}>
+                <h3>{section.title}</h3>
+                <p class="contact-card-people">
+                  {section.people.map((person) => `${person.name}: ${person.phone}`).join("\n")}
+                </p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+</PublicLayout>

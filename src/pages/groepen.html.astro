@@ -1,0 +1,46 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import { loadSiteContent } from "@/lib/content";
+
+const content = await loadSiteContent();
+const { siteSettings, pages, groups } = content;
+---
+
+<PublicLayout
+  title="Groepen • Chiro Negenmanneke"
+  description="Maak kennis met onze afdelingen: Ribbels, Speelclub, Rakwi, Tito, Keti en Aspi."
+  siteSettings={siteSettings}
+>
+  <section class="hero">
+    <h1>{pages.groups.title}</h1>
+    <p class="lead">{pages.groups.lead}</p>
+
+    <div class="grid groepen-grid">
+      {
+        groups.map((group) => (
+          <article class={`card groep ${group.themeKey}`} style={`--groepkleur: var(--${group.themeKey})`}>
+            <div
+              class="groep-head"
+              style="background: color-mix(in srgb, var(--groepkleur) 16%, white);"
+            >
+              <h2>{group.name}</h2>
+              <span class="tag">{group.ageRange}</span>
+            </div>
+            <img class="cover" src={group.imageUrl} alt={group.imageAlt} loading="lazy" />
+            <div class="groep-body">
+              <p class="meta">
+                Leeftijd: {group.ageRange} · Geboortejaar: {group.birthYears} · {group.schoolYears}
+              </p>
+              <p>{group.description}</p>
+              <ul class="groep-list">
+                <li>
+                  <strong>Leiding:</strong> {group.leaders.map((leader) => leader.name).join(" · ")}
+                </li>
+              </ul>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+</PublicLayout>

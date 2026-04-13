@@ -1,0 +1,80 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import RichText from "@/components/RichText.astro";
+import { loadSiteContent } from "@/lib/content";
+
+const content = await loadSiteContent();
+const { siteSettings, pages, posts } = content;
+const activities = pages.activities;
+const bookletDownloadHref = activities.bookletUrl ? "/api/booklet" : "";
+
+function renderActivityCardBody(title: string, body: string) {
+  if (!bookletDownloadHref || title.trim().toLowerCase() !== "boekje") {
+    return body;
+  }
+
+  if (/\*boekje\*/i.test(body)) {
+    return body.replace(/\*boekje\*/i, `[boekje](${bookletDownloadHref})`);
+  }
+
+  if (/\bboekje\b/i.test(body)) {
+    return body.replace(/\bboekje\b/i, `[boekje](${bookletDownloadHref})`);
+  }
+
+  return `${body}\n\n[boekje](${bookletDownloadHref})`;
+}
+
+const formatter = new Intl.DateTimeFormat("nl-BE", {
+  day: "numeric",
+  month: "long",
+  year: "numeric"
+});
+---
+
+<PublicLayout
+  title="Activiteiten • Chiro Negenmanneke"
+  description={activities.description}
+  siteSettings={siteSettings}
+>
+  <section class="hero">
+    <h1>{activities.title}</h1>
+    <p class="lead">{activities.lead}</p>
+
+    <div class="grid">
+      {
+        activities.cards.map((card) => (
+          <div class={`card ${card.span === 6 ? "span-6" : "span-12"}`}>
+            <h2>{card.title}</h2>
+            <RichText content={renderActivityCardBody(card.title, card.body)} />
+          </div>
+        ))
+      }
+    </div>
+
+    <section class="posts-section">
+      <div class="section-title">
+        <h2>{activities.postsTitle}</h2>
+        <div class="line"></div>
+      </div>
+
+      {
+        posts.length ? (
+          <div class="grid posts-grid">
+            {posts.map((post) => (
+              <article class="card span-6 post-card">
+                <p class="post-date">{post.eventDate ? formatter.format(new Date(post.eventDate)) : "Zonder datum"}</p>
+                <h3>{post.title}</h3>
+                {post.summary && <p class="lead-small">{post.summary}</p>}
+                <RichText content={post.body} />
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div class="card empty-state">
+            <p>{activities.postsEmptyText}</p>
+          </div>
+        )
+      }
+    </section>
+  </section>
+</PublicLayout>
