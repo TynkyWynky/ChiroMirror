@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import { defaultContent } from "@/lib/default-content";
+import { adminDefaultContent } from "@/lib/admin-default-content";
 import type {
   CampChecklistSection,
   CampOverviewItem,
@@ -57,10 +57,10 @@ const publicSupabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
 function cloneDefaults() {
   if (typeof structuredClone === "function") {
-    return structuredClone(defaultContent);
+    return structuredClone(adminDefaultContent);
   }
 
-  return JSON.parse(JSON.stringify(defaultContent));
+  return JSON.parse(JSON.stringify(adminDefaultContent));
 }
 
 function mergePage<T extends object>(fallback: T, value: unknown) {
@@ -266,24 +266,26 @@ function mapSiteSettings(row: Record<string, unknown> | null | undefined): SiteS
   }
 
   return {
-    siteName: String(row.site_name ?? defaultContent.siteSettings.siteName),
-    siteUrl: String(row.site_url ?? defaultContent.siteSettings.siteUrl),
-    logoUrl: String(row.logo_url ?? defaultContent.siteSettings.logoUrl),
-    email: String(row.email ?? defaultContent.siteSettings.email),
-    facebookUrl: String(row.facebook_url ?? defaultContent.siteSettings.facebookUrl),
-    instagramUrl: String(row.instagram_url ?? defaultContent.siteSettings.instagramUrl),
-    address: String(row.address ?? defaultContent.siteSettings.address),
-    addressNote: String(row.address_note ?? defaultContent.siteSettings.addressNote),
-    mapEmbedUrl: String(row.map_embed_url ?? defaultContent.siteSettings.mapEmbedUrl),
-    mapGoogleUrl: String(row.map_google_url ?? defaultContent.siteSettings.mapGoogleUrl),
-    mapAppleUrl: String(row.map_apple_url ?? defaultContent.siteSettings.mapAppleUrl),
+    siteName: String(row.site_name ?? adminDefaultContent.siteSettings.siteName),
+    siteUrl: String(row.site_url ?? adminDefaultContent.siteSettings.siteUrl),
+    logoUrl: String(row.logo_url ?? adminDefaultContent.siteSettings.logoUrl),
+    email: String(row.email ?? adminDefaultContent.siteSettings.email),
+    facebookUrl: String(row.facebook_url ?? adminDefaultContent.siteSettings.facebookUrl),
+    instagramUrl: String(row.instagram_url ?? adminDefaultContent.siteSettings.instagramUrl),
+    address: String(row.address ?? adminDefaultContent.siteSettings.address),
+    addressNote: String(row.address_note ?? adminDefaultContent.siteSettings.addressNote),
+    mapEmbedUrl: String(row.map_embed_url ?? adminDefaultContent.siteSettings.mapEmbedUrl),
+    mapGoogleUrl: String(row.map_google_url ?? adminDefaultContent.siteSettings.mapGoogleUrl),
+    mapAppleUrl: String(row.map_apple_url ?? adminDefaultContent.siteSettings.mapAppleUrl),
     footerCopyright: String(
-      row.footer_copyright ?? defaultContent.siteSettings.footerCopyright
+      row.footer_copyright ?? adminDefaultContent.siteSettings.footerCopyright
     ),
-    footerDeveloper: String(row.footer_developer ?? defaultContent.siteSettings.footerDeveloper),
-    analyticsId: String(row.analytics_id ?? defaultContent.siteSettings.analyticsId),
+    footerDeveloper: String(
+      row.footer_developer ?? adminDefaultContent.siteSettings.footerDeveloper
+    ),
+    analyticsId: String(row.analytics_id ?? adminDefaultContent.siteSettings.analyticsId),
     footerAdminLabel: String(
-      row.footer_admin_label ?? defaultContent.siteSettings.footerAdminLabel
+      row.footer_admin_label ?? adminDefaultContent.siteSettings.footerAdminLabel
     )
   };
 }
@@ -1133,16 +1135,16 @@ export default function AdminApp() {
       setProfiles(profileRows);
       setSiteSettings(mapSiteSettings(siteSettingsResult.data as Record<string, unknown> | null));
       setPages({
-        home: mergePage(defaultContent.pages.home, pageMap.home),
-        groups: mergePage(defaultContent.pages.groups, pageMap.groups),
-        contact: mergePage(defaultContent.pages.contact, pageMap.contact),
-        songs: mergePage(defaultContent.pages.songs, pageMap.songs),
-        activities: mergePage(defaultContent.pages.activities, pageMap.activities),
-        registration: mergePage(defaultContent.pages.registration, pageMap.registration),
-        camp: mergePage(defaultContent.pages.camp, pageMap.camp),
-        rental: mergePage(defaultContent.pages.rental, pageMap.rental),
-        insurance: mergePage(defaultContent.pages.insurance, pageMap.insurance),
-        privacy: mergePage(defaultContent.pages.privacy, pageMap.privacy)
+        home: mergePage(adminDefaultContent.pages.home, pageMap.home),
+        groups: mergePage(adminDefaultContent.pages.groups, pageMap.groups),
+        contact: mergePage(adminDefaultContent.pages.contact, pageMap.contact),
+        songs: mergePage(adminDefaultContent.pages.songs, pageMap.songs),
+        activities: mergePage(adminDefaultContent.pages.activities, pageMap.activities),
+        registration: mergePage(adminDefaultContent.pages.registration, pageMap.registration),
+        camp: mergePage(adminDefaultContent.pages.camp, pageMap.camp),
+        rental: mergePage(adminDefaultContent.pages.rental, pageMap.rental),
+        insurance: mergePage(adminDefaultContent.pages.insurance, pageMap.insurance),
+        privacy: mergePage(adminDefaultContent.pages.privacy, pageMap.privacy)
       });
       setGroups(
         (groupsResult.data ?? []).length
