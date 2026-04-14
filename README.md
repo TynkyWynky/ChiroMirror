@@ -78,6 +78,9 @@ Zet dezelfde environment variables ook in Netlify:
 - `PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+Laat `ADMIN_EMAIL` weg in Netlify.
+Die variabele wordt alleen gebruikt door `npm run seed` om lokaal een bestaande gebruiker admin te maken. Omdat dit e-mailadres ook publiek op de site kan staan, kan Netlify het anders als "exposed secret" blokkeren.
+
 Build command:
 
 ```bash
