@@ -11,6 +11,11 @@ export default defineConfig({
     host: true
   },
   vite: {
+    build: {
+      // Work around a Linux-only esbuild minification failure on Netlify
+      // while keeping the generated client bundle functionally identical.
+      minify: false
+    },
     server: {
       headers: {
         "Cache-Control": "no-store"
