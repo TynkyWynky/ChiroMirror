@@ -29,6 +29,25 @@ const formatter = new Intl.DateTimeFormat("nl-BE", {
   month: "long",
   year: "numeric"
 });
+
+function getPostSortValue(eventDate: string, createdAt?: string) {
+  if (eventDate) {
+    return new Date(eventDate).getTime();
+  }
+
+  if (createdAt) {
+    return new Date(createdAt).getTime();
+  }
+
+  return 0;
+}
+
+const orderedPosts = [...posts].sort(
+  (left, right) =>
+    Number(right.featured) - Number(left.featured) ||
+    getPostSortValue(right.eventDate, right.createdAt) -
+      getPostSortValue(left.eventDate, left.createdAt)
+);
 ---
 
 <PublicLayout
@@ -58,11 +77,16 @@ const formatter = new Intl.DateTimeFormat("nl-BE", {
       </div>
 
       {
-        posts.length ? (
+        orderedPosts.length ? (
           <div class="grid posts-grid">
-            {posts.map((post) => (
+            {orderedPosts.map((post) => (
               <article class="card span-6 post-card">
-                <p class="post-date">{post.eventDate ? formatter.format(new Date(post.eventDate)) : "Zonder datum"}</p>
+                <div class="post-meta-row">
+                  {post.featured && <span class="badge">Uitgelicht</span>}
+                  <p class="post-date">
+                    {post.eventDate ? formatter.format(new Date(post.eventDate)) : "Zonder datum"}
+                  </p>
+                </div>
                 <h3>{post.title}</h3>
                 {post.summary && <p class="lead-small">{post.summary}</p>}
                 <RichText content={post.body} />

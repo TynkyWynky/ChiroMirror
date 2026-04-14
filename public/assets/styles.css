@@ -1273,6 +1273,18 @@ html.nav-open, body.nav-open{
   margin-bottom: .5rem;
 }
 
+.post-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .65rem;
+  margin-bottom: .5rem;
+}
+
+.post-meta-row .post-date {
+  margin: 0;
+}
+
 .post-date {
   margin: 0 0 .5rem;
   color: var(--primary);

@@ -562,6 +562,50 @@ function toPostRow(post: Post) {
   return row;
 }
 
+function getTodayDateInputValue() {
+  const now = new Date();
+  return formatDateInput(new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString());
+}
+
+function createEmptyPost(): Post {
+  return {
+    id: tempId("post"),
+    title: "",
+    summary: "",
+    body: "",
+    eventDate: getTodayDateInputValue(),
+    published: false,
+    featured: false
+  };
+}
+
+function normalizePost(post: Post, overrides: Partial<Post> = {}): Post {
+  const nextPost = {
+    ...post,
+    ...overrides
+  };
+
+  return {
+    ...nextPost,
+    title: nextPost.title.trim(),
+    summary: nextPost.summary.trim(),
+    body: nextPost.body.trim(),
+    eventDate: formatDateInput(nextPost.eventDate)
+  };
+}
+
+function getPostPublishError(post: Post) {
+  if (!post.title) {
+    return "Geef je post eerst een titel voor je hem publiceert.";
+  }
+
+  if (!post.body) {
+    return "Schrijf eerst inhoud voor je deze post publiceert.";
+  }
+
+  return null;
+}
+
 function mapContactMessage(row: Record<string, unknown>): ContactMessage {
   return {
     id: String(row.id ?? ""),
@@ -1160,6 +1204,9 @@ export default function AdminApp() {
   const [loginEmail, setLoginEmail] = useState(() => getRememberedLoginEmail());
   const [loginPassword, setLoginPassword] = useState("");
   const [rememberLogin, setRememberLogin] = useState(() => getRememberLoginPreference());
+  const [postsSaving, setPostsSaving] = useState(false);
+  const [activePostActionId, setActivePostActionId] = useState<string | null>(null);
+  const [postFeedback, setPostFeedback] = useState<{ id: string; message: string } | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -1202,7 +1249,7 @@ export default function AdminApp() {
 
   async function loadDashboard() {
     if (!supabase || !session) {
-      return;
+      return false;
     }
 
     setDataLoading(true);
@@ -1298,12 +1345,15 @@ export default function AdminApp() {
       setDeletedContactSectionIds([]);
       setDeletedSongIds([]);
       setDeletedPostIds([]);
+      setPostFeedback(null);
+      return true;
     } catch (error) {
       console.error(error);
       setNotice({
         type: "error",
         message: error instanceof Error ? error.message : "De beheeromgeving kon niet geladen worden."
       });
+      return false;
     } finally {
       window.clearTimeout(stallTimeoutId);
       setDataLoading(false);
@@ -1634,27 +1684,130 @@ export default function AdminApp() {
     await loadDashboard();
   }
 
-  async function savePosts() {
-    if (!supabase) {
+  function updatePostAt(index: number, updater: (post: Post) => Post) {
+    setPosts((current) =>
+      current.map((item, itemIndex) => (itemIndex === index ? updater(item) : item))
+    );
+  }
+
+  async function saveSinglePost(index: number, publish: boolean) {
+    if (!supabase || postsSaving) {
       return;
     }
 
-    const { error } = await supabase.from("posts").upsert(posts.map(toPostRow));
+    const currentPost = posts[index];
+    if (!currentPost) {
+      return;
+    }
+
+    const sourceId = currentPost.id || `post-${index}`;
+    const nextPost = normalizePost(currentPost, publish ? { published: true } : {});
+    const publishError = publish ? getPostPublishError(nextPost) : null;
+
+    if (publishError) {
+      setNotice({ type: "error", message: publishError });
+      return;
+    }
+
+    setNotice(null);
+    setPostsSaving(true);
+    setActivePostActionId(sourceId);
+    setPostFeedback(null);
+
+    const { data, error } = await supabase.from("posts").upsert(toPostRow(nextPost)).select().single();
+
     if (error) {
+      setPostsSaving(false);
+      setActivePostActionId(null);
       setNotice({ type: "error", message: error.message });
       return;
     }
 
-    if (deletedPostIds.length) {
-      const deleteResult = await supabase.from("posts").delete().in("id", deletedPostIds);
-      if (deleteResult.error) {
-        setNotice({ type: "error", message: deleteResult.error.message });
-        return;
-      }
+    const savedPost = mapPost(data as Record<string, unknown>);
+    const successMessage = savedPost.published
+      ? `Post "${savedPost.title}" staat nu live op de activiteitenpagina.`
+      : savedPost.title
+        ? `Concept "${savedPost.title}" is opgeslagen.`
+        : "Concept opgeslagen.";
+
+    setPosts((current) =>
+      current.map((item, itemIndex) =>
+        (item.id || `post-${itemIndex}`) === sourceId ? savedPost : item
+      )
+    );
+    setDeletedPostIds((current) => current.filter((id) => id !== savedPost.id));
+    setPostFeedback({
+      id: savedPost.id || sourceId,
+      message: savedPost.published
+        ? "Gelukt: deze post staat nu live."
+        : "Gelukt: dit concept is opgeslagen."
+    });
+    setNotice({ type: "success", message: successMessage });
+    setPostsSaving(false);
+    setActivePostActionId(null);
+  }
+
+  async function savePosts() {
+    if (!supabase || postsSaving) {
+      return;
     }
 
-    setNotice({ type: "success", message: "Posts opgeslagen." });
-    await loadDashboard();
+    const normalizedPosts = posts.map((post) => normalizePost(post));
+    const invalidPublishedPost = normalizedPosts.find(
+      (post) => post.published && Boolean(getPostPublishError(post))
+    );
+
+    if (invalidPublishedPost) {
+      setNotice({
+        type: "error",
+        message: getPostPublishError(invalidPublishedPost) ?? "Een gepubliceerde post is nog niet volledig ingevuld."
+      });
+      return;
+    }
+
+    if (!normalizedPosts.length && !deletedPostIds.length) {
+      setNotice({ type: "success", message: "Er zijn geen posts om op te slaan." });
+      return;
+    }
+
+    setNotice(null);
+    setPostsSaving(true);
+    setActivePostActionId("bulk");
+    setPostFeedback(null);
+
+    try {
+      if (normalizedPosts.length) {
+        const { error } = await supabase.from("posts").upsert(normalizedPosts.map(toPostRow));
+        if (error) {
+          throw error;
+        }
+      }
+
+      if (deletedPostIds.length) {
+        const deleteResult = await supabase.from("posts").delete().in("id", deletedPostIds);
+        if (deleteResult.error) {
+          throw deleteResult.error;
+        }
+      }
+
+      const refreshed = await loadDashboard();
+      if (refreshed) {
+        setNotice({
+          type: "success",
+          message: normalizedPosts.length
+            ? "Alle posts zijn bijgewerkt."
+            : "Verwijderde posts zijn verwerkt."
+        });
+      }
+    } catch (error) {
+      setNotice({
+        type: "error",
+        message: error instanceof Error ? error.message : "Posts opslaan lukte niet."
+      });
+    } finally {
+      setPostsSaving(false);
+      setActivePostActionId(null);
+    }
   }
 
   async function deleteMessage(id: string) {
@@ -2228,34 +2381,127 @@ export default function AdminApp() {
             <div class="admin-panel-head">
               <div>
                 <h2>Posts & activiteiten</h2>
-                <p>Nieuwe berichten verschijnen onder de activiteitenpagina.</p>
+                <p>Nieuwe berichten verschijnen onder de activiteitenpagina zodra je ze publiceert.</p>
               </div>
-              <button class="btn" type="button" onClick={savePosts}>
-                Opslaan
+              <button class="btn" type="button" onClick={savePosts} disabled={postsSaving}>
+                {activePostActionId === "bulk" ? "Posts opslaan..." : "Alles opslaan"}
               </button>
+            </div>
+
+            <div class="admin-subpanel">
+              <div class="admin-post-toolbar">
+                <div>
+                  <h4>Sneller posten</h4>
+                  <p class="muted">
+                    `Post nu` slaat op en zet je bericht meteen live. `Concept opslaan` bewaart het alleen in de admin.
+                  </p>
+                </div>
+                <a class="btn btn-light" href="/activiteiten.html" target="_blank" rel="noreferrer">
+                  Bekijk activiteitenpagina
+                </a>
+              </div>
             </div>
 
             <div class="admin-subpanel">
               <div class="admin-subpanel-head">
                 <h4>Berichten</h4>
-                <button class="btn btn-light" type="button" onClick={() => setPosts((current) => [{ id: tempId("post"), title: "", summary: "", body: "", eventDate: "", published: false, featured: false }, ...current])}>
-                  Post toevoegen
+                <button
+                  class="btn btn-light"
+                  type="button"
+                  disabled={postsSaving}
+                  onClick={() => setPosts((current) => [createEmptyPost(), ...current])}
+                >
+                  Nieuwe post maken
                 </button>
               </div>
 
+              {!posts.length && (
+                <div class="admin-post-empty">
+                  <strong>Nog geen posts.</strong>
+                  <span>Maak hierboven je eerste post aan en publiceer hem meteen van hieruit.</span>
+                </div>
+              )}
+
               {posts.map((post, index) => (
                 <div class="admin-card-editor" key={post.id ?? index}>
-                  <TextField label="Titel" value={post.title} onInput={(value) => setPosts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, title: value } : item))} />
-                  <TextField label="Datum" type="date" value={formatDateInput(post.eventDate)} onInput={(value) => setPosts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, eventDate: value } : item))} />
-                  <TextAreaField label="Korte samenvatting" value={post.summary} rows={3} onInput={(value) => setPosts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, summary: value } : item))} />
-                  <TextAreaField label="Inhoud (Markdown)" value={post.body} rows={8} onInput={(value) => setPosts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, body: value } : item))} />
+                  <div class="admin-post-head">
+                    <div>
+                      <h4>{post.title.trim() || `Nieuwe post ${posts.length - index}`}</h4>
+                      <p class="admin-post-status">
+                        {post.published
+                          ? "Live op de activiteitenpagina"
+                          : "Concept in admin, nog niet publiek zichtbaar"}
+                      </p>
+                    </div>
+                    {post.featured && <span class="admin-post-badge">Uitgelicht</span>}
+                  </div>
+
+                  <TextField
+                    label="Titel"
+                    value={post.title}
+                    onInput={(value) => updatePostAt(index, (item) => ({ ...item, title: value }))}
+                  />
+                  <TextField
+                    label="Datum"
+                    type="date"
+                    value={formatDateInput(post.eventDate)}
+                    onInput={(value) => updatePostAt(index, (item) => ({ ...item, eventDate: value }))}
+                  />
+                  <TextAreaField
+                    label="Korte samenvatting"
+                    value={post.summary}
+                    rows={3}
+                    onInput={(value) => updatePostAt(index, (item) => ({ ...item, summary: value }))}
+                  />
+                  <TextAreaField
+                    label="Inhoud (Markdown)"
+                    value={post.body}
+                    rows={8}
+                    onInput={(value) => updatePostAt(index, (item) => ({ ...item, body: value }))}
+                  />
                   <div class="admin-inline-grid">
-                    <CheckboxField label="Gepubliceerd" checked={post.published} onChange={(checked) => setPosts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, published: checked } : item))} />
-                    <CheckboxField label="Uitgelicht" checked={post.featured} onChange={(checked) => setPosts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, featured: checked } : item))} />
+                    <CheckboxField
+                      label="Gepubliceerd"
+                      checked={post.published}
+                      onChange={(checked) => updatePostAt(index, (item) => ({ ...item, published: checked }))}
+                    />
+                    <CheckboxField
+                      label="Uitgelicht"
+                      checked={post.featured}
+                      onChange={(checked) => updatePostAt(index, (item) => ({ ...item, featured: checked }))}
+                    />
+                  </div>
+                  {postFeedback?.id === (post.id || `post-${index}`) && (
+                    <p class="admin-post-feedback">{postFeedback.message}</p>
+                  )}
+                  <div class="admin-post-actions">
+                    <button
+                      class="btn btn-light"
+                      type="button"
+                      disabled={postsSaving}
+                      onClick={() => void saveSinglePost(index, false)}
+                    >
+                      {activePostActionId === (post.id || `post-${index}`)
+                        ? "Opslaan..."
+                        : "Concept opslaan"}
+                    </button>
+                    <button
+                      class="btn"
+                      type="button"
+                      disabled={postsSaving}
+                      onClick={() => void saveSinglePost(index, true)}
+                    >
+                      {activePostActionId === (post.id || `post-${index}`)
+                        ? "Bezig..."
+                        : post.published
+                          ? "Wijzigingen publiceren"
+                          : "Post nu"}
+                    </button>
                   </div>
                   <button
                     class="admin-remove"
                     type="button"
+                    disabled={postsSaving}
                     onClick={() => {
                       if (post.id && !post.id.startsWith("temp-")) {
                         setDeletedPostIds((current) => [...current, post.id!]);

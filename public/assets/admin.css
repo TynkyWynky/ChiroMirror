@@ -403,6 +403,81 @@
   margin-top: 14px;
 }
 
+.admin-post-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-post-toolbar h4,
+.admin-post-head h4 {
+  margin: 0 0 6px;
+}
+
+.admin-post-empty {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(248, 113, 113, .08);
+  border: 1px dashed rgba(185, 28, 28, .18);
+}
+
+.admin-post-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-post-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-post-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(185, 28, 28, .1);
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.admin-post-feedback {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(34, 197, 94, .12);
+  color: #166534;
+  font-weight: 700;
+}
+
+.admin-post-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.admin-panel .btn[disabled],
+.admin-subpanel .btn[disabled],
+.admin-remove[disabled] {
+  opacity: .65;
+  cursor: not-allowed;
+}
+
 .admin-remove {
   appearance: none;
   border: 0;
