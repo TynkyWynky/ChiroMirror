@@ -54,6 +54,8 @@ type AdminLoadingStep = {
 
 const publicSupabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const publicSupabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const REMEMBER_LOGIN_STORAGE_KEY = "chiro-admin-remember-login";
+const REMEMBERED_EMAIL_STORAGE_KEY = "chiro-admin-remembered-email";
 
 function cloneDefaults() {
   if (typeof structuredClone === "function") {
@@ -130,6 +132,138 @@ function clearAuthUrlState() {
   }
 
   window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+function getSupabaseStorageKey(url: string) {
+  try {
+    return `sb-${new URL(url).hostname.split(".")[0]}-auth-token`;
+  } catch {
+    return "sb-admin-auth-token";
+  }
+}
+
+const supabaseStorageKey = publicSupabaseUrl
+  ? getSupabaseStorageKey(publicSupabaseUrl)
+  : "sb-admin-auth-token";
+
+function createMemoryStorage() {
+  const store = new Map<string, string>();
+
+  return {
+    getItem(key: string) {
+      return store.get(key) ?? null;
+    },
+    setItem(key: string, value: string) {
+      store.set(key, value);
+    },
+    removeItem(key: string) {
+      store.delete(key);
+    }
+  };
+}
+
+const fallbackAuthStorage = createMemoryStorage();
+
+function getBrowserStorage(kind: "local" | "session") {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return kind === "local" ? window.localStorage : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function getRememberLoginPreference() {
+  const storage = getBrowserStorage("local");
+
+  try {
+    return storage?.getItem(REMEMBER_LOGIN_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function getRememberedLoginEmail() {
+  const storage = getBrowserStorage("local");
+
+  try {
+    return storage?.getItem(REMEMBERED_EMAIL_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function syncRememberedLogin(rememberLogin: boolean, email: string) {
+  const storage = getBrowserStorage("local");
+
+  if (!storage) {
+    return;
+  }
+
+  try {
+    if (!rememberLogin) {
+      storage.removeItem(REMEMBER_LOGIN_STORAGE_KEY);
+      storage.removeItem(REMEMBERED_EMAIL_STORAGE_KEY);
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+    storage.setItem(REMEMBER_LOGIN_STORAGE_KEY, "true");
+
+    if (trimmedEmail) {
+      storage.setItem(REMEMBERED_EMAIL_STORAGE_KEY, trimmedEmail);
+    } else {
+      storage.removeItem(REMEMBERED_EMAIL_STORAGE_KEY);
+    }
+  } catch {
+    // Negeer opslagfouten en laat de login gewoon verder werken.
+  }
+}
+
+function resolveAdminAuthStorage() {
+  const localStorageRef = getBrowserStorage("local");
+  const sessionStorageRef = getBrowserStorage("session");
+
+  if (getRememberLoginPreference()) {
+    return localStorageRef ?? sessionStorageRef ?? fallbackAuthStorage;
+  }
+
+  return sessionStorageRef ?? localStorageRef ?? fallbackAuthStorage;
+}
+
+function createAdminAuthStorage() {
+  return {
+    getItem(key: string) {
+      return resolveAdminAuthStorage().getItem(key);
+    },
+    setItem(key: string, value: string) {
+      resolveAdminAuthStorage().setItem(key, value);
+    },
+    removeItem(key: string) {
+      resolveAdminAuthStorage().removeItem(key);
+    }
+  };
+}
+
+function clearStoredAdminAuth(storageKey: string) {
+  const storageAreas = [getBrowserStorage("local"), getBrowserStorage("session")];
+
+  for (const storage of storageAreas) {
+    if (!storage) {
+      continue;
+    }
+
+    try {
+      storage.removeItem(storageKey);
+      storage.removeItem(`${storageKey}-code-verifier`);
+      storage.removeItem(`${storageKey}-user`);
+    } catch {
+      // Als een opslagmedium niet beschikbaar is, laten we de rest gewoon verder lopen.
+    }
+  }
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
@@ -471,12 +605,16 @@ function TextField(props: {
   value: string;
   onInput: (value: string) => void;
   type?: string;
+  name?: string;
+  autoComplete?: string;
 }) {
   return (
     <label class="admin-field">
       <span>{props.label}</span>
       <input
         type={props.type ?? "text"}
+        name={props.name}
+        autoComplete={props.autoComplete}
         value={props.value}
         onInput={(event) => props.onInput((event.currentTarget as HTMLInputElement).value)}
       />
@@ -1019,13 +1157,18 @@ export default function AdminApp() {
   const [deletedContactSectionIds, setDeletedContactSectionIds] = useState<string[]>([]);
   const [deletedSongIds, setDeletedSongIds] = useState<string[]>([]);
   const [deletedPostIds, setDeletedPostIds] = useState<string[]>([]);
-  const [loginEmail, setLoginEmail] = useState("");
+  const [loginEmail, setLoginEmail] = useState(() => getRememberedLoginEmail());
   const [loginPassword, setLoginPassword] = useState("");
+  const [rememberLogin, setRememberLogin] = useState(() => getRememberLoginPreference());
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("editor");
+
+  useEffect(() => {
+    syncRememberedLogin(rememberLogin, loginEmail);
+  }, [rememberLogin, loginEmail]);
 
   useEffect(() => {
     if (!publicSupabaseUrl || !publicSupabaseAnonKey) {
@@ -1035,7 +1178,15 @@ export default function AdminApp() {
 
     try {
       setClientError(null);
-      setSupabase(createClient(publicSupabaseUrl, publicSupabaseAnonKey));
+      setSupabase(
+        createClient(publicSupabaseUrl, publicSupabaseAnonKey, {
+          auth: {
+            persistSession: true,
+            storageKey: supabaseStorageKey,
+            storage: createAdminAuthStorage()
+          }
+        })
+      );
     } catch (error) {
       console.error("Supabase client kon niet worden geladen.", error);
       setClientError(
@@ -1262,9 +1413,12 @@ export default function AdminApp() {
       return;
     }
 
+    const trimmedEmail = loginEmail.trim();
     setNotice(null);
+    syncRememberedLogin(rememberLogin, trimmedEmail);
+
     const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
+      email: trimmedEmail,
       password: loginPassword
     });
 
@@ -1273,16 +1427,19 @@ export default function AdminApp() {
       return;
     }
 
+    setLoginEmail(trimmedEmail);
     setLoginPassword("");
   }
 
   async function sendResetLink() {
-    if (!supabase || !loginEmail) {
+    const trimmedEmail = loginEmail.trim();
+
+    if (!supabase || !trimmedEmail) {
       return;
     }
 
     setNotice(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
       redirectTo: `${window.location.origin}/admin/`
     });
 
@@ -1300,10 +1457,12 @@ export default function AdminApp() {
     }
 
     await supabase.auth.signOut();
+    clearStoredAdminAuth(supabaseStorageKey);
     clearAuthUrlState();
     setAuthMode("login");
     setNewPassword("");
     setConfirmPassword("");
+    setLoginPassword("");
     setActiveTab("overview");
   }
 
@@ -1678,16 +1837,42 @@ export default function AdminApp() {
             Meld aan met je eigen e-mailadres en wachtwoord. Nog geen toegang? Vraag een admin om je uit te nodigen.
           </p>
           {notice && <div class={`admin-notice admin-notice-${notice.type}`}>{notice.message}</div>}
-          <TextField label="E-mail" value={loginEmail} onInput={setLoginEmail} type="email" />
-          <TextField label="Wachtwoord" value={loginPassword} onInput={setLoginPassword} type="password" />
-          <div class="admin-auth-actions">
-            <button class="btn" type="button" onClick={signIn}>
-              Inloggen
-            </button>
-            <button class="btn btn-light" type="button" onClick={sendResetLink}>
-              Wachtwoord resetten
-            </button>
-          </div>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void signIn();
+            }}
+          >
+            <TextField
+              label="E-mail"
+              value={loginEmail}
+              onInput={setLoginEmail}
+              type="email"
+              name="email"
+              autoComplete="email"
+            />
+            <TextField
+              label="Wachtwoord"
+              value={loginPassword}
+              onInput={setLoginPassword}
+              type="password"
+              name="password"
+              autoComplete="current-password"
+            />
+            <CheckboxField
+              label="Onthoud mij op dit toestel"
+              checked={rememberLogin}
+              onChange={setRememberLogin}
+            />
+            <div class="admin-auth-actions">
+              <button class="btn" type="submit">
+                Inloggen
+              </button>
+              <button class="btn btn-light" type="button" onClick={sendResetLink}>
+                Wachtwoord resetten
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     );
@@ -1708,12 +1893,16 @@ export default function AdminApp() {
             value={newPassword}
             onInput={setNewPassword}
             type="password"
+            name="new-password"
+            autoComplete="new-password"
           />
           <TextField
             label="Bevestig wachtwoord"
             value={confirmPassword}
             onInput={setConfirmPassword}
             type="password"
+            name="confirm-password"
+            autoComplete="new-password"
           />
           <div class="admin-auth-actions">
             <button class="btn" type="button" onClick={updatePassword}>
