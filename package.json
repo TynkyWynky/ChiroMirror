@@ -4,12 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "check": "astro check",
+    "dev": "node ./scripts/patch-preact-client.mjs && astro dev",
+    "build": "node ./scripts/patch-preact-client.mjs && astro build",
+    "check": "node ./scripts/patch-preact-client.mjs && astro check",
     "preview": "astro preview",
     "import:legacy": "node ./scripts/extract-legacy-content.mjs",
-    "seed": "node ./scripts/seed-supabase.mjs"
+    "seed": "node ./scripts/seed-supabase.mjs",
+    "postinstall": "node ./scripts/patch-preact-client.mjs"
   },
   "dependencies": {
     "@astrojs/netlify": "^7.0.6",
