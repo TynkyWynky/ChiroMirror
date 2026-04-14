@@ -653,6 +653,122 @@ function mapProfile(row: Record<string, unknown>): Profile {
   };
 }
 
+function hasText(value: string | null | undefined) {
+  return Boolean(value?.trim());
+}
+
+function hasPersonDetails(person: Person) {
+  return hasText(person.name) || hasText(person.phone);
+}
+
+function formatCount(value: number, singular: string, plural: string) {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function summarizeList(values: string[], limit = 2) {
+  const cleaned = values.map((value) => value.trim()).filter(Boolean);
+
+  if (!cleaned.length) {
+    return "";
+  }
+
+  if (cleaned.length <= limit) {
+    return cleaned.join(", ");
+  }
+
+  return `${cleaned.slice(0, limit).join(", ")} en ${cleaned.length - limit} meer`;
+}
+
+function parseDateValue(value: string | null | undefined) {
+  const input = value?.trim();
+
+  if (!input) {
+    return null;
+  }
+
+  const dateOnlyMatch = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(input);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatAdminDate(
+  value: string | null | undefined,
+  options: Intl.DateTimeFormatOptions = {}
+) {
+  const date = parseDateValue(value);
+
+  if (!date) {
+    return "";
+  }
+
+  return date.toLocaleString("nl-BE", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    ...options
+  });
+}
+
+function formatRelativeDate(value: string | null | undefined) {
+  const date = parseDateValue(value);
+
+  if (!date) {
+    return "";
+  }
+
+  const diffMs = date.getTime() - Date.now();
+  const absMs = Math.abs(diffMs);
+  const isPast = diffMs <= 0;
+
+  if (absMs < 60_000) {
+    return isPast ? "zonet" : "binnenkort";
+  }
+
+  if (absMs < 3_600_000) {
+    const minutes = Math.max(1, Math.round(absMs / 60_000));
+    return isPast ? `${minutes} min geleden` : `binnen ${minutes} min`;
+  }
+
+  if (absMs < 86_400_000) {
+    const hours = Math.max(1, Math.round(absMs / 3_600_000));
+    return isPast ? `${hours} u geleden` : `binnen ${hours} u`;
+  }
+
+  if (absMs < 172_800_000) {
+    return isPast ? "gisteren" : "morgen";
+  }
+
+  if (absMs < 604_800_000) {
+    const days = Math.max(1, Math.round(absMs / 86_400_000));
+    return isPast ? `${days} d geleden` : `binnen ${days} d`;
+  }
+
+  return formatAdminDate(value, {
+    day: "numeric",
+    month: "short",
+    year: date.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
+    hour: undefined,
+    minute: undefined
+  });
+}
+
+function isWithinLastDays(value: string | null | undefined, days: number) {
+  const date = parseDateValue(value);
+
+  if (!date) {
+    return false;
+  }
+
+  const diffMs = Date.now() - date.getTime();
+  return diffMs >= 0 && diffMs <= days * 86_400_000;
+}
+
 async function uploadAsset(client: SupabaseClient, file: File, folder: string) {
   const extension = file.name.split(".").pop() ?? "jpg";
   const base = slugify(file.name.replace(/\.[^.]+$/, "")) || "beeld";
@@ -1485,6 +1601,343 @@ export default function AdminApp() {
     availableTabs.push({ id: "team", label: "Team" });
   }
 
+  const publishedPosts = posts.filter((post) => post.published);
+  const draftPosts = posts.filter((post) => !post.published);
+  const readyDraftPosts = draftPosts.filter((post) => !getPostPublishError(normalizePost(post)));
+  const recentMessages = messages.filter((message) => isWithinLastDays(message.createdAt, 7));
+  const teamAdminCount = profiles.filter((item) => item.role === "admin").length;
+  const teamEditorCount = profiles.filter((item) => item.role === "editor").length;
+  const totalLeaderCount = groups.reduce(
+    (count, group) => count + group.leaders.filter(hasPersonDetails).length,
+    0
+  );
+  const groupsWithoutLeaders = groups.filter(
+    (group) => group.leaders.filter(hasPersonDetails).length === 0
+  );
+  const groupsWithoutImages = groups.filter((group) => !hasText(group.imageUrl));
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const upcomingPublishedPosts = [...publishedPosts]
+    .filter((post) => {
+      const eventDate = parseDateValue(post.eventDate);
+      return Boolean(eventDate && eventDate.getTime() >= todayStart);
+    })
+    .sort((left, right) => {
+      const leftDate = parseDateValue(left.eventDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const rightDate = parseDateValue(right.eventDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return leftDate - rightDate;
+    });
+  const nextUpcomingPost = upcomingPublishedPosts[0] ?? null;
+  const siteChecks = [
+    { label: "site-URL", done: hasText(siteSettings.siteUrl) },
+    { label: "e-mail", done: hasText(siteSettings.email) },
+    { label: "adres", done: hasText(siteSettings.address) },
+    { label: "kaart", done: hasText(siteSettings.mapEmbedUrl) }
+  ];
+  const siteReadyCount = siteChecks.filter((item) => item.done).length;
+  const missingSiteLabels = siteChecks.filter((item) => !item.done).map((item) => item.label);
+  const analyticsLinked = hasText(siteSettings.analyticsId);
+  const profileName =
+    profile?.full_name.trim() || session?.user.email?.split("@")[0] || "leiding";
+  const overviewSpotlight = nextUpcomingPost
+    ? {
+        eyebrow: "Komt eraan",
+        title: nextUpcomingPost.title || "Volgende activiteit",
+        detail: `${
+          formatAdminDate(nextUpcomingPost.eventDate, {
+            day: "numeric",
+            month: "long",
+            year: undefined,
+            hour: undefined,
+            minute: undefined
+          }) || "Datum nog invullen"
+        }${nextUpcomingPost.featured ? " · uitgelicht" : ""}`
+      }
+    : readyDraftPosts[0]
+      ? {
+          eyebrow: "Klaar om te posten",
+          title: readyDraftPosts[0].title || "Concept zonder titel",
+          detail: readyDraftPosts[0].eventDate
+            ? `Kan live voor ${formatAdminDate(readyDraftPosts[0].eventDate, {
+                day: "numeric",
+                month: "long",
+                year: undefined,
+                hour: undefined,
+                minute: undefined
+              })}`
+            : "Dit concept kan meteen live gezet worden."
+        }
+      : messages[0]
+        ? {
+            eyebrow: "Laatste bericht",
+            title: messages[0].subject || messages[0].category || "Nieuw contactbericht",
+            detail: `${messages[0].name || messages[0].email}${messages[0].createdAt ? ` · ${formatRelativeDate(messages[0].createdAt)}` : ""}`
+          }
+        : {
+            eyebrow: "Status",
+            title: "Alles staat netjes",
+            detail: "Geen dringende blokkeringen gevonden in de huidige inhoud."
+          };
+  const overviewMetrics = [
+    {
+      label: "Berichten",
+      value: String(messages.length),
+      meta: recentMessages.length
+        ? `${formatCount(recentMessages.length, "nieuw bericht", "nieuwe berichten")} in de laatste 7 dagen`
+        : "Geen nieuwe berichten in de laatste 7 dagen"
+    },
+    {
+      label: "Posts live",
+      value: String(publishedPosts.length),
+      meta: posts.length
+        ? draftPosts.length
+          ? `${formatCount(draftPosts.length, "concept", "concepten")} staan nog klaar`
+          : "Alles wat gemaakt is staat live"
+        : "Nog geen posts aangemaakt"
+    },
+    {
+      label: "Leiding op site",
+      value: String(totalLeaderCount),
+      meta: groups.length
+        ? `${formatCount(groups.length, "groep", "groepen")} zichtbaar in contact`
+        : "Nog geen groepen toegevoegd"
+    },
+    {
+      label: "Teamaccounts",
+      value: String(profiles.length),
+      meta: `${teamAdminCount} admins · ${teamEditorCount} editors`
+    }
+  ];
+  const overviewActions: Array<{
+    label: string;
+    detail: string;
+    tab: TabId;
+    primary: boolean;
+  }> = [
+    {
+      label: "Nieuwe post",
+      detail: "Werk activiteiten uit en zet ze live voor ouders en leden.",
+      tab: "posts" as TabId,
+      primary: true
+    },
+    {
+      label: "Berichten bekijken",
+      detail: messages.length
+        ? `${formatCount(messages.length, "bericht", "berichten")} in de inbox`
+        : "Hou nieuwe contactvragen in het oog.",
+      tab: "messages" as TabId,
+      primary: false
+    },
+    {
+      label: "Contact aanpassen",
+      detail: "Pas leiding, telefoons en blokken op de contactpagina aan.",
+      tab: "contact" as TabId,
+      primary: false
+    },
+    {
+      label: "Site-instellingen",
+      detail: "Werk adres, socials, kaart en footer bij.",
+      tab: "site" as TabId,
+      primary: false
+    }
+  ];
+
+  if (profile?.role === "admin") {
+    overviewActions.push({
+      label: "Team beheren",
+      detail: "Nodig leiding uit of verwijder accounts wanneer nodig.",
+      tab: "team",
+      primary: false
+    });
+  }
+
+  const overviewTasks: Array<{
+    title: string;
+    detail: string;
+    cta: string;
+    tab: TabId;
+    tone: "urgent" | "soft" | "good";
+  }> = [];
+
+  if (recentMessages.length) {
+    overviewTasks.push({
+      title: `${formatCount(recentMessages.length, "nieuw bericht", "nieuwe berichten")} wachten op opvolging`,
+      detail: messages[0]
+        ? `Nieuwste bericht van ${messages[0].name || messages[0].email}${messages[0].createdAt ? ` kwam ${formatRelativeDate(messages[0].createdAt)} binnen.` : " staat klaar in je inbox."}`
+        : "Er kwamen recent berichten binnen via de contactpagina.",
+      cta: "Open berichten",
+      tab: "messages",
+      tone: "urgent"
+    });
+  }
+
+  if (readyDraftPosts.length) {
+    overviewTasks.push({
+      title: `${formatCount(readyDraftPosts.length, "post", "posts")} zijn klaar om live te zetten`,
+      detail: "Deze concepten hebben al een titel en inhoud, dus je kunt ze meteen publiceren.",
+      cta: "Naar posts",
+      tab: "posts",
+      tone: "soft"
+    });
+  }
+
+  if (groupsWithoutLeaders.length) {
+    overviewTasks.push({
+      title: `${formatCount(groupsWithoutLeaders.length, "groep mist leiding", "groepen missen leiding")}`,
+      detail: `${summarizeList(
+        groupsWithoutLeaders.map((group) => group.name || "Zonder naam"),
+        3
+      )} tonen nog geen contactpersonen.`,
+      cta: "Werk contact bij",
+      tab: "contact",
+      tone: "urgent"
+    });
+  }
+
+  if (groupsWithoutImages.length) {
+    overviewTasks.push({
+      title: `${formatCount(groupsWithoutImages.length, "groepskaart mist een foto", "groepskaarten missen een foto")}`,
+      detail: "Een sterke groepspagina leest beter met beeld per leeftijdsgroep.",
+      cta: "Open groepen",
+      tab: "groups",
+      tone: "soft"
+    });
+  }
+
+  if (siteReadyCount < siteChecks.length) {
+    overviewTasks.push({
+      title: "Basisinfo van de site is nog niet volledig",
+      detail: `Ontbreekt nog: ${missingSiteLabels.join(", ")}.`,
+      cta: "Controleer site",
+      tab: "site",
+      tone: "soft"
+    });
+  }
+
+  if (!overviewTasks.length) {
+    overviewTasks.push({
+      title: "Alles staat voorlopig goed",
+      detail: "Er zijn geen directe blokkeringen gevonden in posts, contact of site-instellingen.",
+      cta: "Bekijk overzicht",
+      tab: "overview",
+      tone: "good"
+    });
+  }
+
+  const recentActivity = [
+    ...messages.map((message) => ({
+      key: `message-${message.id ?? message.email}-${message.createdAt ?? ""}`,
+      title: message.subject || message.category || "Nieuw contactbericht",
+      detail: `${message.name || message.email}${message.category ? ` · ${message.category}` : ""}`,
+      timeLabel: formatRelativeDate(message.createdAt) || "Onbekend tijdstip",
+      timestamp: parseDateValue(message.createdAt)?.getTime() ?? 0,
+      tab: "messages" as TabId
+    })),
+    ...posts
+      .filter((post) => hasText(post.createdAt))
+      .map((post) => ({
+        key: `post-${post.id ?? post.title}-${post.createdAt ?? ""}`,
+        title: post.title || "Post zonder titel",
+        detail: post.published ? "Gepubliceerd op activiteiten" : "Opgeslagen als concept",
+        timeLabel: formatRelativeDate(post.createdAt) || "Onbekend tijdstip",
+        timestamp: parseDateValue(post.createdAt)?.getTime() ?? 0,
+        tab: "posts" as TabId
+      })),
+    ...(profile?.role === "admin"
+      ? [...profiles]
+          .filter((item) => hasText(item.created_at))
+          .map((item) => ({
+            key: `profile-${item.user_id}-${item.created_at ?? ""}`,
+            title: item.full_name || item.email,
+            detail: item.role === "admin" ? "Toegevoegd als admin" : "Toegevoegd aan het team",
+            timeLabel: formatRelativeDate(item.created_at) || "Onbekend tijdstip",
+            timestamp: parseDateValue(item.created_at)?.getTime() ?? 0,
+            tab: "team" as TabId
+          }))
+      : [])
+  ]
+    .filter((item) => item.timestamp > 0)
+    .sort((left, right) => right.timestamp - left.timestamp)
+    .slice(0, 5);
+
+  const healthItems = [
+    {
+      label: "Leiding per groep",
+      value: groups.length ? groups.length - groupsWithoutLeaders.length : 0,
+      total: groups.length,
+      summary: groups.length
+        ? groupsWithoutLeaders.length
+          ? `${formatCount(groupsWithoutLeaders.length, "groep mist nog leiding", "groepen missen nog leiding")}.`
+          : "Elke groep heeft minstens één leider zichtbaar."
+        : "Voeg groepen toe om dit blok te vullen.",
+      tab: "contact" as TabId
+    },
+    {
+      label: "Groepsfoto's",
+      value: groups.length ? groups.length - groupsWithoutImages.length : 0,
+      total: groups.length,
+      summary: groups.length
+        ? groupsWithoutImages.length
+          ? `${formatCount(groupsWithoutImages.length, "groep mist nog een foto", "groepen missen nog een foto")}.`
+          : "Alle groepen hebben een afbeelding."
+        : "Nog geen groepen aangemaakt.",
+      tab: "groups" as TabId
+    },
+    {
+      label: "Posts live",
+      value: publishedPosts.length,
+      total: posts.length,
+      summary: posts.length
+        ? draftPosts.length
+          ? `${formatCount(draftPosts.length, "concept", "concepten")} wachten nog op publicatie.`
+          : "Alle bestaande posts staan live."
+        : "Nog geen posts gemaakt.",
+      tab: "posts" as TabId
+    },
+    {
+      label: "Basis site-info",
+      value: siteReadyCount,
+      total: siteChecks.length,
+      summary:
+        siteReadyCount === siteChecks.length
+          ? "Site-URL, e-mail, adres en kaart zijn ingevuld."
+          : `Ontbreekt nog: ${missingSiteLabels.join(", ")}.`,
+      tab: "site" as TabId
+    }
+  ];
+
+  const systemStatusItems = [
+    {
+      label: "Contactmail",
+      value: hasText(siteSettings.email) ? siteSettings.email : "Nog niet ingevuld",
+      ok: hasText(siteSettings.email),
+      tab: "site" as TabId
+    },
+    {
+      label: "Kaart en route",
+      value:
+        hasText(siteSettings.mapEmbedUrl) && hasText(siteSettings.mapGoogleUrl)
+          ? "Google Maps staat gekoppeld"
+          : "Controleer map embed of routeknop",
+      ok: hasText(siteSettings.mapEmbedUrl) && hasText(siteSettings.mapGoogleUrl),
+      tab: "site" as TabId
+    },
+    {
+      label: "Analytics",
+      value: analyticsLinked ? "Metingen zijn gekoppeld" : "Nog geen bezoekersmeting ingesteld",
+      ok: analyticsLinked,
+      tab: "site" as TabId
+    },
+    {
+      label: "Laatste bericht",
+      value: messages[0]
+        ? `${messages[0].name || messages[0].email}${messages[0].createdAt ? ` · ${formatAdminDate(messages[0].createdAt)}` : ""}`
+        : "Nog geen contactberichten ontvangen",
+      ok: Boolean(messages[0]),
+      tab: "messages" as TabId
+    }
+  ];
+
   async function signIn() {
     if (!supabase) {
       return;
@@ -2240,18 +2693,183 @@ export default function AdminApp() {
         {dataLoading && <div class="admin-loading-inline">Data verversen...</div>}
 
         {activeTab === "overview" && (
-          <section class="admin-panel">
-            <h2>Overzicht</h2>
-            <p>
-              Hier beheer je de hele website: home, groepen, contact, liedjes, posts en de vaste pagina's.
-            </p>
-            <ul class="admin-stat-list">
-              <li>{groups.length} groepen</li>
-              <li>{songs.length} liedjes</li>
-              <li>{posts.length} posts</li>
-              <li>{messages.length} contactberichten</li>
-            </ul>
-          </section>
+          <>
+            <section class="admin-panel admin-overview-hero">
+              <div class="admin-overview-hero-copy">
+                <p class="admin-kicker">Dashboard</p>
+                <h2>Welkom terug, {profileName}</h2>
+                <p>
+                  Hier zie je in één oogopslag wat vandaag aandacht vraagt op de website, in de
+                  inbox en in het team.
+                </p>
+              </div>
+              <div class="admin-overview-spotlight">
+                <span class="admin-overview-spotlight-label">{overviewSpotlight.eyebrow}</span>
+                <strong>{overviewSpotlight.title}</strong>
+                <p>{overviewSpotlight.detail}</p>
+              </div>
+
+              <div class="admin-overview-actions">
+                {overviewActions.map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    class={`admin-overview-action${action.primary ? " is-primary" : ""}`}
+                    onClick={() => setActiveTab(action.tab)}
+                  >
+                    <strong>{action.label}</strong>
+                    <span>{action.detail}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div class="admin-overview-stats">
+                {overviewMetrics.map((metric) => (
+                  <article class="admin-overview-stat" key={metric.label}>
+                    <span>{metric.label}</span>
+                    <strong>{metric.value}</strong>
+                    <p>{metric.meta}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <div class="admin-overview-sections">
+              <section class="admin-panel">
+                <div class="admin-panel-head">
+                  <div>
+                    <h2>Vandaag te doen</h2>
+                    <p>De belangrijkste dingen die nu het meeste impact hebben op de site.</p>
+                  </div>
+                </div>
+
+                <div class="admin-overview-list">
+                  {overviewTasks.slice(0, 4).map((task) => (
+                    <article class={`admin-overview-item is-${task.tone}`} key={task.title}>
+                      <div>
+                        <span class={`admin-overview-pill is-${task.tone}`}>
+                          {task.tone === "urgent"
+                            ? "Aandacht"
+                            : task.tone === "good"
+                              ? "Klaar"
+                              : "Te verbeteren"}
+                        </span>
+                        <h3>{task.title}</h3>
+                        <p>{task.detail}</p>
+                      </div>
+                      <button class="btn btn-light" type="button" onClick={() => setActiveTab(task.tab)}>
+                        {task.cta}
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <section class="admin-panel">
+                <div class="admin-panel-head">
+                  <div>
+                    <h2>Recente activiteit</h2>
+                    <p>Wat er het laatst binnenkwam of aangepast werd in je beheer.</p>
+                  </div>
+                </div>
+
+                <div class="admin-overview-activity-list">
+                  {recentActivity.length ? (
+                    recentActivity.map((item) => (
+                      <article class="admin-overview-activity" key={item.key}>
+                        <div class="admin-overview-activity-main">
+                          <strong>{item.title}</strong>
+                          <p>{item.detail}</p>
+                        </div>
+                        <div class="admin-overview-activity-meta">
+                          <span>{item.timeLabel}</span>
+                          <button
+                            class="btn btn-light"
+                            type="button"
+                            onClick={() => setActiveTab(item.tab)}
+                          >
+                            Open
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <div class="admin-overview-empty">
+                      Nog geen recente activiteit gevonden. Zodra er berichten, posts of teamwijzigingen
+                      binnenkomen, zie je ze hier.
+                    </div>
+                  )}
+                </div>
+              </section>
+            </div>
+
+            <div class="admin-overview-sections">
+              <section class="admin-panel">
+                <div class="admin-panel-head">
+                  <div>
+                    <h2>Inhoudsstatus</h2>
+                    <p>Zo zie je snel welke onderdelen van de site al volledig ingevuld zijn.</p>
+                  </div>
+                </div>
+
+                <div class="admin-overview-health-list">
+                  {healthItems.map((item) => {
+                    const percentage = item.total
+                      ? Math.max(8, Math.round((item.value / item.total) * 100))
+                      : 0;
+
+                    return (
+                      <article class="admin-overview-health" key={item.label}>
+                        <div class="admin-overview-health-head">
+                          <div>
+                            <strong>{item.label}</strong>
+                            <p>{item.summary}</p>
+                          </div>
+                          <button
+                            class="admin-overview-link"
+                            type="button"
+                            onClick={() => setActiveTab(item.tab)}
+                          >
+                            {item.total ? `${item.value}/${item.total}` : "Nog leeg"}
+                          </button>
+                        </div>
+                        <div class="admin-overview-progress" aria-hidden="true">
+                          <span style={{ width: `${percentage}%` }} />
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section class="admin-panel">
+                <div class="admin-panel-head">
+                  <div>
+                    <h2>Systeemstatus</h2>
+                    <p>Handig om te zien of de basis van contact, kaart en metingen goed staat.</p>
+                  </div>
+                </div>
+
+                <div class="admin-overview-system-list">
+                  {systemStatusItems.map((item) => (
+                    <article class={`admin-overview-system${item.ok ? " is-ok" : " is-warning"}`} key={item.label}>
+                      <div class="admin-overview-system-copy">
+                        <strong>{item.label}</strong>
+                        <p>{item.value}</p>
+                      </div>
+                      <button
+                        class="btn btn-light"
+                        type="button"
+                        onClick={() => setActiveTab(item.tab)}
+                      >
+                        Open
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </>
         )}
 
         {activeTab === "site" && (
