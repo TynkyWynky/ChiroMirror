@@ -3,6 +3,7 @@ import path from "node:path";
 import { load } from "cheerio";
 
 const rootDir = process.cwd();
+const legacyDir = path.join(rootDir, "legacy");
 const outputDir = path.join(rootDir, "src", "data");
 const outputFile = path.join(outputDir, "default-content.json");
 
@@ -16,7 +17,7 @@ const groupMeta = {
 };
 
 function readHtml(fileName) {
-  return fs.readFileSync(path.join(rootDir, fileName), "utf8");
+  return fs.readFileSync(path.join(legacyDir, fileName), "utf8");
 }
 
 function readPage(fileName) {
