@@ -1967,7 +1967,7 @@ export default function AdminApp() {
               <TextAreaField label="Succesmelding" value={pages.contact.successMessage} onInput={(value) => setPages((current) => ({ ...current, contact: { ...current.contact, successMessage: value } }))} />
               <TextAreaField label="Foutmelding" value={pages.contact.errorMessage} onInput={(value) => setPages((current) => ({ ...current, contact: { ...current.contact, errorMessage: value } }))} />
               <TextField label="Sectietitel rechts" value={pages.contact.sectionsTitle} onInput={(value) => setPages((current) => ({ ...current, contact: { ...current.contact, sectionsTitle: value } }))} />
-              <TextAreaField label="Formuliercategorieën (1 per regel)" value={joinLines(pages.contact.formCategories)} onInput={(value) => setPages((current) => ({ ...current, contact: { ...current.contact, formCategories: splitLines(value) } }))} />
+              <TextAreaField label="Formuliercategorieen (1 per regel)" value={joinLines(pages.contact.formCategories)} onInput={(value) => setPages((current) => ({ ...current, contact: { ...current.contact, formCategories: splitLines(value) } }))} />
             </div>
 
             <div class="admin-subpanel">
@@ -2276,7 +2276,7 @@ export default function AdminApp() {
                       <div>
                         <h3>{message.subject}</h3>
                         <p class="muted-small">
-                          {message.name} · {message.email} · {message.category}
+                          {message.name} | {message.email} | {message.category}
                         </p>
                       </div>
                       <button class="admin-remove" type="button" onClick={() => deleteMessage(message.id ?? "")}>
