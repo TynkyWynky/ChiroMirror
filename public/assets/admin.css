@@ -6,12 +6,14 @@
   color: var(--text);
 }
 
+.admin-shell,
 .admin-auth-wrap {
   display: grid;
   place-items: center;
   padding: 32px 16px;
 }
 
+.admin-splash,
 .admin-auth-card {
   width: min(520px, 100%);
   padding: 28px;
@@ -19,6 +21,42 @@
   background: #fff;
   border: 1px solid rgba(15, 23, 42, .08);
   box-shadow: 0 22px 46px rgba(15, 23, 42, .08);
+}
+
+.admin-splash {
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-splash::before {
+  content: "";
+  position: absolute;
+  inset: auto -10% -25% auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(216, 29, 29, 0.14), transparent 68%);
+  pointer-events: none;
+}
+
+.admin-splash > * {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-splash-mark {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  margin-bottom: 18px;
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  box-shadow: 0 14px 30px rgba(185, 28, 28, .22);
 }
 
 .admin-auth-actions {
@@ -32,6 +70,31 @@
 .admin-loading-inline {
   padding: 18px;
   color: var(--muted);
+}
+
+.admin-loader {
+  position: relative;
+  height: 10px;
+  margin-top: 22px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(248, 113, 113, .16);
+}
+
+.admin-loader::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -32%;
+  width: 32%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #b91c1c, #ef4444, #fb7185);
+  animation: admin-loader-sweep 1.2s ease-in-out infinite;
+}
+
+.admin-loading-hint {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .admin-notice {
@@ -228,6 +291,16 @@
 .admin-stacked-panels {
   display: grid;
   gap: 18px;
+}
+
+@keyframes admin-loader-sweep {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(420%);
+  }
 }
 
 @media (min-width: 980px) {

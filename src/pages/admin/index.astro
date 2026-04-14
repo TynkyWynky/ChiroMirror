@@ -14,6 +14,20 @@ import AdminApp from "@/components/admin/AdminApp";
     <link rel="stylesheet" href="/assets/admin.css" />
   </head>
   <body>
-    <AdminApp client:load />
+    <AdminApp client:only="preact">
+      <div slot="fallback" class="admin-app admin-shell">
+        <div class="admin-splash">
+          <div class="admin-splash-mark" aria-hidden="true">9M</div>
+          <p class="admin-kicker">Leiding Admin</p>
+          <h1>Admin wordt geladen</h1>
+          <p class="muted">
+            We laden het beheerpaneel in. Als dit langer dan een paar seconden duurt, ververs dan
+            de pagina.
+          </p>
+          <div class="admin-loader" aria-hidden="true"></div>
+          <p class="admin-loading-hint">De login en je dashboard worden zo meteen opgehaald.</p>
+        </div>
+      </div>
+    </AdminApp>
   </body>
 </html>

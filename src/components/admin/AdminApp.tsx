@@ -20,6 +20,9 @@ import type {
 
 type Role = "admin" | "editor";
 type AuthMode = "login" | "recovery";
+const AUTH_TIMEOUT_MS = 4000;
+const DASHBOARD_STALL_MS = 5000;
+const DASHBOARD_TIMEOUT_MS = 12000;
 type TabId =
   | "overview"
   | "site"
@@ -122,6 +125,47 @@ function clearAuthUrlState() {
   }
 
   window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
+}
+
+function AdminLoadingScreen(props: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  hint?: string;
+}) {
+  return (
+    <div class="admin-app admin-shell">
+      <div class="admin-splash">
+        <div class="admin-splash-mark" aria-hidden="true">
+          9M
+        </div>
+        <p class="admin-kicker">{props.eyebrow}</p>
+        <h1>{props.title}</h1>
+        <p class="muted">{props.body}</p>
+        <div class="admin-loader" aria-hidden="true" />
+        {props.hint && <p class="admin-loading-hint">{props.hint}</p>}
+      </div>
+    </div>
+  );
 }
 
 function mapSiteSettings(row: Record<string, unknown> | null | undefined): SiteSettings {
@@ -864,7 +908,9 @@ export default function AdminApp() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [authLoading, setAuthLoading] = useState(true);
+  const [authStalled, setAuthStalled] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
+  const [dataStalled, setDataStalled] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(cloneDefaults().siteSettings);
   const [pages, setPages] = useState<SitePages>(cloneDefaults().pages);
@@ -904,7 +950,12 @@ export default function AdminApp() {
     }
 
     setDataLoading(true);
+    setDataStalled(false);
     setNotice(null);
+
+    const stallTimeoutId = window.setTimeout(() => {
+      setDataStalled(true);
+    }, DASHBOARD_STALL_MS);
 
     try {
       const [
@@ -916,16 +967,20 @@ export default function AdminApp() {
         postsResult,
         messagesResult,
         profilesResult
-      ] = await Promise.all([
-        supabase.from("site_settings").select("*").eq("id", 1).maybeSingle(),
-        supabase.from("page_content").select("slug, data"),
-        supabase.from("groups").select("*").order("sort_order", { ascending: true }),
-        supabase.from("contact_sections").select("*").order("sort_order", { ascending: true }),
-        supabase.from("songs").select("*").order("sort_order", { ascending: true }),
-        supabase.from("posts").select("*").order("event_date", { ascending: false }),
-        supabase.from("contact_messages").select("*").order("created_at", { ascending: false }),
-        supabase.from("profiles").select("*").order("created_at", { ascending: true })
-      ]);
+      ] = await withTimeout(
+        Promise.all([
+          supabase.from("site_settings").select("*").eq("id", 1).maybeSingle(),
+          supabase.from("page_content").select("slug, data"),
+          supabase.from("groups").select("*").order("sort_order", { ascending: true }),
+          supabase.from("contact_sections").select("*").order("sort_order", { ascending: true }),
+          supabase.from("songs").select("*").order("sort_order", { ascending: true }),
+          supabase.from("posts").select("*").order("event_date", { ascending: false }),
+          supabase.from("contact_messages").select("*").order("created_at", { ascending: false }),
+          supabase.from("profiles").select("*").order("created_at", { ascending: true })
+        ]),
+        DASHBOARD_TIMEOUT_MS,
+        "Het ophalen van de admin-data duurt te lang. Probeer opnieuw of meld je opnieuw aan."
+      );
 
       if (
         siteSettingsResult.error ||
@@ -994,6 +1049,7 @@ export default function AdminApp() {
         message: error instanceof Error ? error.message : "De beheeromgeving kon niet geladen worden."
       });
     } finally {
+      window.clearTimeout(stallTimeoutId);
       setDataLoading(false);
     }
   }
@@ -1007,11 +1063,17 @@ export default function AdminApp() {
     const authClient = supabase;
 
     let isActive = true;
+    setAuthStalled(false);
     const timeoutId = window.setTimeout(() => {
       if (isActive) {
+        setAuthStalled(true);
+        setNotice({
+          type: "error",
+          message: "De loginstart duurt langer dan normaal. Je kunt opnieuw laden of handmatig opnieuw aanmelden."
+        });
         setAuthLoading(false);
       }
-    }, 2000);
+    }, AUTH_TIMEOUT_MS);
 
     async function initializeAuth() {
       try {
@@ -1063,11 +1125,13 @@ export default function AdminApp() {
 
   useEffect(() => {
     if (session && authMode !== "recovery") {
-      loadDashboard();
+      void loadDashboard();
     } else {
       setProfile(null);
       setProfiles([]);
       setMessages([]);
+      setDataLoading(false);
+      setDataStalled(false);
     }
   }, [session, authMode]);
 
@@ -1400,6 +1464,8 @@ export default function AdminApp() {
     }
   }
 
+  const isBootingDashboard = Boolean(session && authMode !== "recovery" && !profile && dataLoading);
+
   if (!publicSupabaseUrl || !publicSupabaseAnonKey) {
     return (
       <div class="admin-app admin-auth-wrap">
@@ -1412,7 +1478,33 @@ export default function AdminApp() {
   }
 
   if (authLoading) {
-    return <div class="admin-loading">Admin laden...</div>;
+    return (
+      <AdminLoadingScreen
+        eyebrow="Leiding Admin"
+        title="Admin wordt opgestart"
+        body="We controleren je sessie en bereiden de beheeromgeving voor."
+        hint={
+          authStalled
+            ? "Dit duurt langer dan normaal. Ververs de pagina als dit scherm blijft staan."
+            : "Even geduld, dit duurt normaal maar een paar seconden."
+        }
+      />
+    );
+  }
+
+  if (isBootingDashboard) {
+    return (
+      <AdminLoadingScreen
+        eyebrow="Leiding Admin"
+        title="Beheeromgeving laden"
+        body="Je inhoud, berichten en teamgegevens worden opgehaald."
+        hint={
+          dataStalled
+            ? "De verbinding met Supabase reageert traag. We wachten nog even op de eerste data."
+            : "We bouwen je dashboard op."
+        }
+      />
+    );
   }
 
   if (!session) {
@@ -1468,6 +1560,29 @@ export default function AdminApp() {
             </button>
             <button class="btn btn-light" type="button" onClick={signOut}>
               Annuleren
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div class="admin-app admin-auth-wrap">
+        <div class="admin-auth-card">
+          <p class="admin-kicker">Leiding Admin</p>
+          <h1>De admin kon niet volledig laden</h1>
+          <p class="muted">
+            {notice?.message ??
+              "De eerste laadbeurt is mislukt. Probeer opnieuw of meld je opnieuw aan."}
+          </p>
+          <div class="admin-auth-actions">
+            <button class="btn" type="button" onClick={() => void loadDashboard()}>
+              Opnieuw proberen
+            </button>
+            <button class="btn btn-light" type="button" onClick={() => void signOut()}>
+              Opnieuw aanmelden
             </button>
           </div>
         </div>
