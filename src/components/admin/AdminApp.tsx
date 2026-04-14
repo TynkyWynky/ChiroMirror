@@ -2224,9 +2224,14 @@ export default function AdminApp() {
           <p class="muted-small">
             Ingelogd als <strong>{profile?.email ?? session.user.email}</strong>
           </p>
-          <button class="btn btn-light" type="button" onClick={signOut}>
-            Uitloggen
-          </button>
+          <div class="admin-sidebar-actions">
+            <a class="btn btn-light" href="/">
+              Terug naar site
+            </a>
+            <button class="btn btn-light" type="button" onClick={signOut}>
+              Uitloggen
+            </button>
+          </div>
         </div>
       </aside>
 

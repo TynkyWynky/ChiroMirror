@@ -338,6 +338,17 @@
   gap: 12px;
 }
 
+.admin-sidebar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.admin-sidebar-actions .btn {
+  text-decoration: none;
+}
+
 .admin-main {
   padding: 20px 16px 40px;
 }
