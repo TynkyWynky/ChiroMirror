@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import type { Session, SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { adminDefaultContent } from "@/lib/admin-default-content";
 import type {
   CampChecklistSection,
@@ -1033,38 +1033,20 @@ export default function AdminApp() {
       return;
     }
 
-    let isActive = true;
-
-    async function initializeClient() {
-      try {
-        const { createClient } = await import("@supabase/supabase-js");
-        if (!isActive) {
-          return;
-        }
-
-        setClientError(null);
-        setSupabase(createClient(publicSupabaseUrl, publicSupabaseAnonKey));
-      } catch (error) {
-        console.error("Supabase client kon niet worden geladen.", error);
-        if (isActive) {
-          setClientError(
-            "De beveiligde admin-module kon niet worden geladen. Ververs de pagina en probeer opnieuw."
-          );
-          setNotice({
-            type: "error",
-            message:
-              "De admin-code kon niet worden gestart. Ververs de pagina of probeer later opnieuw."
-          });
-          setAuthLoading(false);
-        }
-      }
+    try {
+      setClientError(null);
+      setSupabase(createClient(publicSupabaseUrl, publicSupabaseAnonKey));
+    } catch (error) {
+      console.error("Supabase client kon niet worden geladen.", error);
+      setClientError(
+        "De beveiligde admin-module kon niet worden geladen. Ververs de pagina en probeer opnieuw."
+      );
+      setNotice({
+        type: "error",
+        message: "De admin-code kon niet worden gestart. Ververs de pagina of probeer later opnieuw."
+      });
+      setAuthLoading(false);
     }
-
-    void initializeClient();
-
-    return () => {
-      isActive = false;
-    };
   }, []);
 
   async function loadDashboard() {
