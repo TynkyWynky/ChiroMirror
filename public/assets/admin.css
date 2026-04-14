@@ -13,6 +13,12 @@
   padding: 32px 16px;
 }
 
+.admin-app.admin-auth-wrap {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-content: center;
+}
+
 .admin-splash,
 .admin-auth-card {
   width: min(520px, 100%);
@@ -450,6 +456,12 @@
   .admin-app {
     display: grid;
     grid-template-columns: 300px minmax(0, 1fr);
+  }
+
+  .admin-app.admin-auth-wrap {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    align-content: center;
   }
 
   .admin-sidebar {
