@@ -471,6 +471,19 @@
   margin-top: 16px;
 }
 
+.admin-team-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.admin-team-actions .muted-small {
+  margin: 0;
+}
+
 .admin-panel .btn[disabled],
 .admin-subpanel .btn[disabled],
 .admin-remove[disabled] {

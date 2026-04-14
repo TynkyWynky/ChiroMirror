@@ -76,14 +76,14 @@ export const POST: APIRoute = async ({ request }) => {
   };
 
   if (
-    payload.name.length < 2 ||
+    payload.name.length < 1 ||
     payload.name.length > 120 ||
     !EMAIL_PATTERN.test(payload.email) ||
-    payload.subject.length < 3 ||
+    payload.subject.length < 1 ||
     payload.subject.length > 160 ||
-    payload.category.length < 2 ||
+    payload.category.length < 1 ||
     payload.category.length > 80 ||
-    payload.message.length < 10 ||
+    payload.message.length < 1 ||
     payload.message.length > 5000
   ) {
     return json("Vul alle verplichte velden correct in.", 400);

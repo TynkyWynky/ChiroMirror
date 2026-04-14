@@ -104,12 +104,25 @@ export default function ContactForm({
           ? ((await adminResponse.json().catch(() => null)) as { message?: string } | null)
           : null;
       const adminSucceeded = Boolean(adminResponse?.ok);
+      const netlifyResponse =
+        netlifyResult.status === "fulfilled"
+          ? netlifyResult.value
+          : null;
+      const netlifyHandledByNetlify = Boolean(
+        netlifyResponse?.headers.get("x-nf-request-id")
+      );
       const netlifySucceeded =
         netlifyResult.status === "fulfilled" &&
-        netlifyResult.value.ok;
+        netlifyResult.value.ok &&
+        netlifyHandledByNetlify;
       const isLocalDev =
         typeof window !== "undefined" &&
         ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const isNonNetlifyEnvironment =
+        !isLocalDev &&
+        netlifyResult.status === "fulfilled" &&
+        netlifyResult.value.ok &&
+        !netlifyHandledByNetlify;
 
       if (adminSucceeded && (netlifySucceeded || isLocalDev)) {
         setForm(initialState(categories));
@@ -118,6 +131,15 @@ export default function ContactForm({
           isLocalDev && !netlifySucceeded
             ? "Bericht opgeslagen. De mailnotificatie werkt pas op Netlify."
             : adminBody?.message || successMessage
+        );
+        return;
+      }
+
+      if (adminSucceeded && isNonNetlifyEnvironment) {
+        setForm(initialState(categories));
+        setStatus("error");
+        setStatusMessage(
+          "Je bericht staat in de admin, maar deze omgeving verwerkt geen Netlify Forms-mails."
         );
         return;
       }

@@ -1236,6 +1236,7 @@ export default function AdminApp() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("editor");
+  const [removingProfileId, setRemovingProfileId] = useState<string | null>(null);
 
   useEffect(() => {
     syncRememberedLogin(rememberLogin, loginEmail);
@@ -1925,6 +1926,64 @@ export default function AdminApp() {
       setInviteName("");
       setInviteRole("editor");
       await loadDashboard();
+    }
+  }
+
+  async function removeTeamMember(targetProfile: Profile) {
+    if (!session || profile?.role !== "admin") {
+      return;
+    }
+
+    if (targetProfile.user_id === session.user.id) {
+      setNotice({
+        type: "error",
+        message: "Je kunt jezelf niet uit het team verwijderen."
+      });
+      return;
+    }
+
+    const adminCount = profiles.filter((item) => item.role === "admin").length;
+    if (targetProfile.role === "admin" && adminCount <= 1) {
+      setNotice({
+        type: "error",
+        message: "Je moet minstens 1 admin overhouden in het team."
+      });
+      return;
+    }
+
+    const displayName = targetProfile.full_name?.trim() || targetProfile.email;
+    if (!confirm(`${displayName} uit het team verwijderen? Deze persoon kan daarna niet meer inloggen.`)) {
+      return;
+    }
+
+    setNotice(null);
+    setRemovingProfileId(targetProfile.user_id);
+
+    try {
+      const response = await fetch("/api/admin/team/remove", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          userId: targetProfile.user_id
+        })
+      });
+
+      const result = (await response.json().catch(() => null)) as { message?: string } | null;
+      setNotice({
+        type: response.ok ? "success" : "error",
+        message:
+          result?.message ??
+          (response.ok ? "Het teamlid is verwijderd." : "Verwijderen uit het team lukte niet.")
+      });
+
+      if (response.ok) {
+        await loadDashboard();
+      }
+    } finally {
+      setRemovingProfileId(null);
     }
   }
 
@@ -2826,16 +2885,43 @@ export default function AdminApp() {
             <div class="admin-subpanel">
               <h4>Bestaande profielen</h4>
               {profiles.map((currentProfile, index) => (
-                <div class="admin-inline-grid admin-inline-grid-wide" key={currentProfile.user_id}>
-                  <TextField label="Naam" value={currentProfile.full_name} onInput={(value) => setProfiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, full_name: value } : item))} />
-                  <TextField label="E-mail" value={currentProfile.email} onInput={(value) => setProfiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, email: value } : item))} />
-                  <label class="admin-field">
-                    <span>Rol</span>
-                    <select value={currentProfile.role} onInput={(event) => setProfiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, role: (event.currentTarget as HTMLSelectElement).value as Role } : item))}>
-                      <option value="editor">Editor</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </label>
+                <div class="admin-card-editor" key={currentProfile.user_id}>
+                  <div class="admin-inline-grid admin-inline-grid-wide">
+                    <TextField label="Naam" value={currentProfile.full_name} onInput={(value) => setProfiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, full_name: value } : item))} />
+                    <TextField label="E-mail" value={currentProfile.email} onInput={(value) => setProfiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, email: value } : item))} />
+                    <label class="admin-field">
+                      <span>Rol</span>
+                      <select value={currentProfile.role} onInput={(event) => setProfiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, role: (event.currentTarget as HTMLSelectElement).value as Role } : item))}>
+                        <option value="editor">Editor</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="admin-team-actions">
+                    <p class="muted-small">
+                      {currentProfile.user_id === session.user.id
+                        ? "Je eigen account kun je hier niet verwijderen."
+                        : currentProfile.role === "admin" &&
+                            profiles.filter((item) => item.role === "admin").length <= 1
+                          ? "De laatste admin kun je niet verwijderen."
+                          : "Verwijderen haalt dit teamlid volledig uit de admin-login."}
+                    </p>
+                    <button
+                      class="admin-remove"
+                      type="button"
+                      disabled={
+                        removingProfileId === currentProfile.user_id ||
+                        currentProfile.user_id === session.user.id ||
+                        (currentProfile.role === "admin" &&
+                          profiles.filter((item) => item.role === "admin").length <= 1)
+                      }
+                      onClick={() => void removeTeamMember(currentProfile)}
+                    >
+                      {removingProfileId === currentProfile.user_id
+                        ? "Verwijderen..."
+                        : "Uit team verwijderen"}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
