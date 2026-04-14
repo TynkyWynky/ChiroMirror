@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "preact/hooks";
-import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
+import { useEffect, useState } from "preact/hooks";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { defaultContent } from "@/lib/default-content";
 import type {
   CampChecklistSection,
@@ -909,6 +909,8 @@ export default function AdminApp() {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [authLoading, setAuthLoading] = useState(true);
   const [authStalled, setAuthStalled] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [dataStalled, setDataStalled] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
@@ -931,17 +933,44 @@ export default function AdminApp() {
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("editor");
 
-  const supabase = useMemo(() => {
+  useEffect(() => {
     if (!publicSupabaseUrl || !publicSupabaseAnonKey) {
-      return null;
+      setAuthLoading(false);
+      return;
     }
 
-    try {
-      return createClient(publicSupabaseUrl, publicSupabaseAnonKey);
-    } catch (error) {
-      console.error("Supabase client kon niet worden gemaakt.", error);
-      return null;
+    let isActive = true;
+
+    async function initializeClient() {
+      try {
+        const { createClient } = await import("@supabase/supabase-js");
+        if (!isActive) {
+          return;
+        }
+
+        setClientError(null);
+        setSupabase(createClient(publicSupabaseUrl, publicSupabaseAnonKey));
+      } catch (error) {
+        console.error("Supabase client kon niet worden geladen.", error);
+        if (isActive) {
+          setClientError(
+            "De beveiligde admin-module kon niet worden geladen. Ververs de pagina en probeer opnieuw."
+          );
+          setNotice({
+            type: "error",
+            message:
+              "De admin-code kon niet worden gestart. Ververs de pagina of probeer later opnieuw."
+          });
+          setAuthLoading(false);
+        }
+      }
     }
+
+    void initializeClient();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   async function loadDashboard() {
@@ -1056,7 +1085,6 @@ export default function AdminApp() {
 
   useEffect(() => {
     if (!supabase) {
-      setAuthLoading(false);
       return;
     }
 
@@ -1472,6 +1500,24 @@ export default function AdminApp() {
         <div class="admin-auth-card">
           <h1>Admin configuratie ontbreekt</h1>
           <p>Vul eerst `PUBLIC_SUPABASE_URL` en `PUBLIC_SUPABASE_ANON_KEY` in om de login te activeren.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (clientError) {
+    return (
+      <div class="admin-app admin-auth-wrap">
+        <div class="admin-auth-card">
+          <p class="admin-kicker">Leiding Admin</p>
+          <h1>De admin startte niet correct op</h1>
+          <p class="muted">{clientError}</p>
+          {notice && <div class={`admin-notice admin-notice-${notice.type}`}>{notice.message}</div>}
+          <div class="admin-auth-actions">
+            <button class="btn" type="button" onClick={() => window.location.reload()}>
+              Pagina verversen
+            </button>
+          </div>
         </div>
       </div>
     );

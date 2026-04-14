@@ -1,0 +1,5 @@
+
+> chiro-negenmanneke-site@1.0.0 preview
+> astro preview --host 127.0.0.1 --port 4322
+
+[2m08:42:24[22m [34m[@astrojs/netlify][39m Enabling sessions with Netlify Blobs

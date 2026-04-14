@@ -1,0 +1,2 @@
+[31m[1m08:43:19[22m [ERROR] [vite][39m [31merror while updating dependencies:
+Error: EPERM: operation not permitted, rename 'C:\Users\dogan\OneDrive\Bureau\Private_Project\AtypiqueSite\ChiroMirror\node_modules\.vite\deps' -> 'C:\Users\dogan\OneDrive\Bureau\Private_Project\AtypiqueSite\ChiroMirror\node_modules\.vite\deps_temp_bd10df22'[39m
