@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { adminDefaultContent } from "@/lib/admin-default-content";
+import { toPublicSiteUrl } from "@/lib/site-url";
 import type {
   CampChecklistSection,
   CampOverviewItem,
@@ -1516,7 +1517,7 @@ export default function AdminApp() {
 
     setNotice(null);
     const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-      redirectTo: `${window.location.origin}/admin/auth-action/`
+      redirectTo: toPublicSiteUrl("/admin/auth-action/")
     });
 
     setNotice({

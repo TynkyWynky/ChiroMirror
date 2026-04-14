@@ -19,3 +19,18 @@ Patched @astrojs/preact client entrypoints.
            [36mhttp://192.168.147.1:4321/[39m
            [36mhttp://10.216.185.4:4321/[39m
 [2m14:45:41[22m [32mwatching for file changes...[39m
+[2m14:51:00[22m [34m[vite][39m [32m.env changed, restarting server...[39m
+[vite] connected.
+[33m[1m14:51:01[22m [WARN] [vite][39m ⚠ Warning: Multiple instances of @netlify/vite-plugin have been loaded. This may cause unexpected behavior if the plugin is configured differently in each instance. If you have one instance of this plugin in your Vite config, you may safely remove it.
+[2m14:51:02[22m [34m[vite][39m Environment loaded
+[2m14:51:02[22m [34m[vite][39m Middleware loaded. Emulating features: aiGateway, blobs, edgeFunctions, functions, geolocation, headers, images, redirects, static.
+[2m14:51:02[22m [34m[vite][39m 💭 Linking this project to a Netlify site lets you deploy your site, use any environment variables defined on your team and site and much more. Run npx netlify init to get started.
+[2m14:51:02[22m [34m[vite][39m Re-optimizing dependencies because vite config has changed
+[2m14:51:02[22m [34m[vite][39m server restarted.
+[2m14:51:02[22m [34m[vite][39m 
+[2m14:51:02[22m [34m[vite][39m   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m14:51:02[22m [34m[vite][39m   [32m➜[39m  [1mNetwork[22m: [36mhttp://172.17.224.1:[1m5173[22m/[39m
+[2m14:51:02[22m [34m[vite][39m   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.158.1:[1m5173[22m/[39m
+[2m14:51:02[22m [34m[vite][39m   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.146.1:[1m5173[22m/[39m
+[2m14:51:02[22m [34m[vite][39m   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.147.1:[1m5173[22m/[39m
+[2m14:51:02[22m [34m[vite][39m   [32m➜[39m  [1mNetwork[22m: [36mhttp://10.216.185.4:[1m5173[22m/[39m

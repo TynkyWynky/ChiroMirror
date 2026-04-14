@@ -55,6 +55,7 @@ npm run check
 ```env
 PUBLIC_SUPABASE_URL=...
 PUBLIC_SUPABASE_ANON_KEY=...
+PUBLIC_SITE_URL=https://www.chironegenmanneke.be
 SUPABASE_SERVICE_ROLE_KEY=...
 ADMIN_EMAIL=jouw@adres.be
 ```
@@ -71,6 +72,7 @@ Belangrijk:
 
 - Rerun `supabase/schema.sql` ook wanneer je latere updates uit deze repo binnenhaalt.
 - Als een `SUPABASE_SERVICE_ROLE_KEY` ooit zichtbaar gedeeld werd, roteer die meteen in Supabase en update daarna `.env` en Netlify.
+- Zet in `Authentication > URL Configuration` ook de `Site URL` zelf op `https://www.chironegenmanneke.be` en niet op een localhost-adres. De tekst in Supabase invite-mails gebruikt die waarde letterlijk.
 
 ## Netlify setup
 
@@ -78,6 +80,7 @@ Zet dezelfde environment variables ook in Netlify:
 
 - `PUBLIC_SUPABASE_URL`
 - `PUBLIC_SUPABASE_ANON_KEY`
+- `PUBLIC_SITE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 Laat `ADMIN_EMAIL` weg in Netlify.
