@@ -31,6 +31,8 @@ function encodeForm(data: Record<string, string>) {
     .join("&");
 }
 
+const NETLIFY_FORM_ENDPOINT = "/netlify-form/";
+
 export default function ContactForm({
   categories,
   successMessage,
@@ -79,7 +81,7 @@ export default function ContactForm({
       };
 
       const [netlifyResult, adminResult] = await Promise.allSettled([
-        fetch("/", {
+        fetch(NETLIFY_FORM_ENDPOINT, {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded"
@@ -173,7 +175,7 @@ export default function ContactForm({
     <form
       name="contact"
       method="POST"
-      action="/"
+      action={NETLIFY_FORM_ENDPOINT}
       data-netlify="true"
       netlify-honeypot="website"
       onSubmit={handleSubmit}

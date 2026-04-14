@@ -1,0 +1,24 @@
+---
+export const prerender = true;
+---
+
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Netlify form detectie</title>
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body>
+    <form name="contact" method="POST" data-netlify="true" netlify-honeypot="website" hidden>
+      <input type="hidden" name="form-name" value="contact" />
+      <input name="naam" />
+      <input name="email" type="email" />
+      <input name="onderwerp" />
+      <input name="categorie" />
+      <textarea name="bericht"></textarea>
+      <input name="website" />
+    </form>
+  </body>
+</html>
