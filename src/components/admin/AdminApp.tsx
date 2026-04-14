@@ -46,6 +46,11 @@ interface Profile {
 }
 
 type Notice = { type: "success" | "error"; message: string } | null;
+type AdminLoadingStep = {
+  label: string;
+  detail: string;
+  delayedDetail?: string;
+};
 
 const publicSupabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const publicSupabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -151,7 +156,45 @@ function AdminLoadingScreen(props: {
   title: string;
   body: string;
   hint?: string;
+  stalled?: boolean;
+  steps: AdminLoadingStep[];
 }) {
+  const [elapsedMs, setElapsedMs] = useState(0);
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    const intervalId = window.setInterval(() => {
+      setElapsedMs(Date.now() - startedAt);
+    }, 160);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [props.title, props.body]);
+
+  const steps = props.steps.length
+    ? props.steps
+    : [{ label: "Voorbereiden", detail: props.body }];
+  const elapsedSeconds = Math.max(1, Math.ceil(elapsedMs / 1000));
+  const stepDurationMs = 1800;
+  const rawStep = elapsedMs / stepDurationMs;
+  const activeIndex = Math.min(steps.length - 1, Math.floor(rawStep));
+  const segmentStart = 16 + activeIndex * (68 / steps.length);
+  const segmentEnd =
+    activeIndex === steps.length - 1
+      ? props.stalled
+        ? 96
+        : 92
+      : 16 + (activeIndex + 1) * (68 / steps.length);
+  const segmentProgress = Math.min(rawStep - activeIndex, activeIndex === steps.length - 1 ? 0.28 : 1);
+  const progress = Math.round(
+    segmentStart + (segmentEnd - segmentStart) * Math.max(0, segmentProgress)
+  );
+  const currentStep = steps[activeIndex];
+  const currentDetail = props.stalled
+    ? currentStep.delayedDetail ?? props.hint ?? currentStep.detail
+    : currentStep.detail;
+
   return (
     <div class="admin-app admin-shell">
       <div class="admin-splash">
@@ -161,8 +204,57 @@ function AdminLoadingScreen(props: {
         <p class="admin-kicker">{props.eyebrow}</p>
         <h1>{props.title}</h1>
         <p class="muted">{props.body}</p>
-        <div class="admin-loader" aria-hidden="true" />
-        {props.hint && <p class="admin-loading-hint">{props.hint}</p>}
+        <div class="admin-loader-meta" aria-live="polite">
+          <span>{props.stalled ? "Verbinding reageert traag" : "Live voortgang"}</span>
+          <strong>{progress}%</strong>
+        </div>
+        <div
+          class="admin-loader"
+          role="progressbar"
+          aria-label="Laadstatus admin"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+        >
+          <span class="admin-loader-bar" style={{ width: `${progress}%` }} />
+        </div>
+        <div class="admin-loader-status" aria-live="polite">
+          <strong>{currentStep.label}</strong>
+          <span>{currentDetail}</span>
+        </div>
+        <ul class="admin-loader-steps">
+          {steps.map((step, index) => {
+            const stateClass =
+              index < activeIndex
+                ? "is-complete"
+                : index === activeIndex
+                  ? "is-active"
+                  : "is-pending";
+            const stateLabel =
+              index < activeIndex
+                ? "Klaar"
+                : index === activeIndex
+                  ? props.stalled
+                    ? "Wachten"
+                    : "Actief"
+                  : "Straks";
+
+            return (
+              <li class={`admin-loader-step ${stateClass}`} key={step.label}>
+                <span class="admin-loader-step-dot" aria-hidden="true" />
+                <div class="admin-loader-step-copy">
+                  <strong>{step.label}</strong>
+                  <span>{step.detail}</span>
+                </div>
+                <span class="admin-loader-step-state">{stateLabel}</span>
+              </li>
+            );
+          })}
+        </ul>
+        <div class="admin-loader-foot">
+          {props.hint && <p class="admin-loading-hint">{props.hint}</p>}
+          <p class="admin-loader-elapsed">Bezig sinds {elapsedSeconds}s</p>
+        </div>
       </div>
     </div>
   );
@@ -1529,6 +1621,26 @@ export default function AdminApp() {
         eyebrow="Leiding Admin"
         title="Admin wordt opgestart"
         body="We controleren je sessie en bereiden de beheeromgeving voor."
+        stalled={authStalled}
+        steps={[
+          {
+            label: "Beveiligde module laden",
+            detail: "De admincode en logincomponenten worden lokaal opgestart."
+          },
+          {
+            label: "Supabase verbinden",
+            detail: "We maken een veilige verbinding met de loginservice."
+          },
+          {
+            label: "Sessie controleren",
+            detail: "We kijken of je op dit toestel al bent aangemeld.",
+            delayedDetail: "De sessiecontrole duurt langer dan normaal, maar loopt nog."
+          },
+          {
+            label: "Login klaarmaken",
+            detail: "De juiste login- of herstelstap wordt voorbereid."
+          }
+        ]}
         hint={
           authStalled
             ? "Dit duurt langer dan normaal. Ververs de pagina als dit scherm blijft staan."
@@ -1544,6 +1656,25 @@ export default function AdminApp() {
         eyebrow="Leiding Admin"
         title="Beheeromgeving laden"
         body="Je inhoud, berichten en teamgegevens worden opgehaald."
+        stalled={dataStalled}
+        steps={[
+          {
+            label: "Profiel ophalen",
+            detail: "We laden je rol en rechten in."
+          },
+          {
+            label: "Site-inhoud lezen",
+            detail: "Pagina's, groepen en liedjes worden uit de databank opgehaald."
+          },
+          {
+            label: "Berichten synchroniseren",
+            detail: "Contactberichten en teaminformatie komen binnen."
+          },
+          {
+            label: "Dashboard opbouwen",
+            detail: "Alles wordt klaargezet in het beheerpaneel."
+          }
+        ]}
         hint={
           dataStalled
             ? "De verbinding met Supabase reageert traag. We wachten nog even op de eerste data."
