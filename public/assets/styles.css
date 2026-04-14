@@ -252,6 +252,31 @@ hr {
   opacity: 0.85;
 }
 
+.map-wrapper {
+  margin-top: 18px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #eef4fb;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+}
+
+.map-wrapper iframe {
+  display: block;
+  width: 100%;
+  height: min(52vw, 430px);
+  min-height: 280px;
+  border: 0;
+}
+
+.map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
 /* ---------- HOME: Photo grid ---------- */
 .gallery {
   display: grid;
@@ -1235,6 +1260,15 @@ html.nav-open, body.nav-open{
 
   .camp-pack-card {
     grid-column: span 12;
+  }
+
+  .map-wrapper {
+    border-radius: 22px;
+  }
+
+  .map-wrapper iframe {
+    height: 320px;
+    min-height: 320px;
   }
 }
 
