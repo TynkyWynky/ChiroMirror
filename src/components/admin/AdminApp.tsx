@@ -1643,6 +1643,7 @@ export default function AdminApp() {
     ? {
         eyebrow: "Komt eraan",
         title: nextUpcomingPost.title || "Volgende activiteit",
+        caption: "Eerstvolgende publieke focus",
         detail: `${
           formatAdminDate(nextUpcomingPost.eventDate, {
             day: "numeric",
@@ -1651,12 +1652,15 @@ export default function AdminApp() {
             hour: undefined,
             minute: undefined
           }) || "Datum nog invullen"
-        }${nextUpcomingPost.featured ? " · uitgelicht" : ""}`
+        }${nextUpcomingPost.featured ? " · uitgelicht" : ""}`,
+        cta: "Open posts",
+        tab: "posts" as TabId
       }
     : readyDraftPosts[0]
       ? {
           eyebrow: "Klaar om te posten",
           title: readyDraftPosts[0].title || "Concept zonder titel",
+          caption: "Snelste volgende actie",
           detail: readyDraftPosts[0].eventDate
             ? `Kan live voor ${formatAdminDate(readyDraftPosts[0].eventDate, {
                 day: "numeric",
@@ -1665,18 +1669,26 @@ export default function AdminApp() {
                 hour: undefined,
                 minute: undefined
               })}`
-            : "Dit concept kan meteen live gezet worden."
+            : "Dit concept kan meteen live gezet worden.",
+          cta: "Werk post af",
+          tab: "posts" as TabId
         }
       : messages[0]
         ? {
             eyebrow: "Laatste bericht",
             title: messages[0].subject || messages[0].category || "Nieuw contactbericht",
-            detail: `${messages[0].name || messages[0].email}${messages[0].createdAt ? ` · ${formatRelativeDate(messages[0].createdAt)}` : ""}`
+            caption: "Nieuw in de inbox",
+            detail: `${messages[0].name || messages[0].email}${messages[0].createdAt ? ` · ${formatRelativeDate(messages[0].createdAt)}` : ""}`,
+            cta: "Lees bericht",
+            tab: "messages" as TabId
           }
         : {
             eyebrow: "Status",
             title: "Alles staat netjes",
-            detail: "Geen dringende blokkeringen gevonden in de huidige inhoud."
+            caption: "Rustige start",
+            detail: "Geen dringende blokkeringen gevonden in de huidige inhoud.",
+            cta: "Bekijk checks",
+            tab: "site" as TabId
           };
   const overviewMetrics = [
     {
@@ -1713,12 +1725,14 @@ export default function AdminApp() {
     detail: string;
     tab: TabId;
     primary: boolean;
+    badge: string;
   }> = [
     {
       label: "Nieuwe post",
       detail: "Werk activiteiten uit en zet ze live voor ouders en leden.",
       tab: "posts" as TabId,
-      primary: true
+      primary: true,
+      badge: "Snel starten"
     },
     {
       label: "Berichten bekijken",
@@ -1726,19 +1740,22 @@ export default function AdminApp() {
         ? `${formatCount(messages.length, "bericht", "berichten")} in de inbox`
         : "Hou nieuwe contactvragen in het oog.",
       tab: "messages" as TabId,
-      primary: false
+      primary: false,
+      badge: "Inbox"
     },
     {
       label: "Contact aanpassen",
       detail: "Pas leiding, telefoons en blokken op de contactpagina aan.",
       tab: "contact" as TabId,
-      primary: false
+      primary: false,
+      badge: "Contact"
     },
     {
       label: "Site-instellingen",
       detail: "Werk adres, socials, kaart en footer bij.",
       tab: "site" as TabId,
-      primary: false
+      primary: false,
+      badge: "Basis"
     }
   ];
 
@@ -1747,7 +1764,8 @@ export default function AdminApp() {
       label: "Team beheren",
       detail: "Nodig leiding uit of verwijder accounts wanneer nodig.",
       tab: "team",
-      primary: false
+      primary: false,
+      badge: "Admin"
     });
   }
 
@@ -1823,6 +1841,39 @@ export default function AdminApp() {
       tone: "good"
     });
   }
+
+  const openTaskCount = overviewTasks.filter((task) => task.tone !== "good").length;
+  const overviewGlance = [
+    {
+      label: "Open punten",
+      value: openTaskCount ? String(openTaskCount) : "0",
+      detail: openTaskCount ? "vragen vandaag aandacht" : "niets dringend"
+    },
+    {
+      label: "Volgende focus",
+      value: nextUpcomingPost?.eventDate
+        ? formatAdminDate(nextUpcomingPost.eventDate, {
+            day: "numeric",
+            month: "short",
+            year: undefined,
+            hour: undefined,
+            minute: undefined
+          })
+        : readyDraftPosts.length
+          ? "Concept klaar"
+          : "Rustig",
+      detail: nextUpcomingPost
+        ? "publieke activiteit"
+        : readyDraftPosts.length
+          ? "kan live"
+          : "geen deadline"
+    },
+    {
+      label: "Analytics",
+      value: analyticsLinked ? "Actief" : "Uit",
+      detail: analyticsLinked ? "metingen gekoppeld" : "nog niet ingesteld"
+    }
+  ];
 
   const recentActivity = [
     ...messages.map((message) => ({
@@ -2695,18 +2746,41 @@ export default function AdminApp() {
         {activeTab === "overview" && (
           <>
             <section class="admin-panel admin-overview-hero">
-              <div class="admin-overview-hero-copy">
-                <p class="admin-kicker">Dashboard</p>
-                <h2>Welkom terug, {profileName}</h2>
-                <p>
-                  Hier zie je in één oogopslag wat vandaag aandacht vraagt op de website, in de
-                  inbox en in het team.
-                </p>
+              <div class="admin-overview-hero-main">
+                <div class="admin-overview-hero-copy">
+                  <p class="admin-kicker">Dashboard</p>
+                  <h2>Welkom terug, {profileName}</h2>
+                  <p>
+                    Hier zie je in één oogopslag wat vandaag aandacht vraagt op de website, in de
+                    inbox en in het team.
+                  </p>
+                </div>
+
+                <div class="admin-overview-glance">
+                  {overviewGlance.map((item) => (
+                    <article class="admin-overview-glance-card" key={item.label}>
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                      <p>{item.detail}</p>
+                    </article>
+                  ))}
+                </div>
               </div>
+
               <div class="admin-overview-spotlight">
-                <span class="admin-overview-spotlight-label">{overviewSpotlight.eyebrow}</span>
+                <div class="admin-overview-spotlight-head">
+                  <span class="admin-overview-spotlight-label">{overviewSpotlight.eyebrow}</span>
+                  <span class="admin-overview-spotlight-caption">{overviewSpotlight.caption}</span>
+                </div>
                 <strong>{overviewSpotlight.title}</strong>
                 <p>{overviewSpotlight.detail}</p>
+                <button
+                  class="admin-overview-spotlight-action"
+                  type="button"
+                  onClick={() => setActiveTab(overviewSpotlight.tab)}
+                >
+                  {overviewSpotlight.cta}
+                </button>
               </div>
 
               <div class="admin-overview-actions">
@@ -2717,6 +2791,12 @@ export default function AdminApp() {
                     class={`admin-overview-action${action.primary ? " is-primary" : ""}`}
                     onClick={() => setActiveTab(action.tab)}
                   >
+                    <div class="admin-overview-action-top">
+                      <span class="admin-overview-action-badge">{action.badge}</span>
+                      <span class="admin-overview-action-arrow" aria-hidden="true">
+                        {"->"}
+                      </span>
+                    </div>
                     <strong>{action.label}</strong>
                     <span>{action.detail}</span>
                   </button>
@@ -2735,12 +2815,15 @@ export default function AdminApp() {
             </section>
 
             <div class="admin-overview-sections">
-              <section class="admin-panel">
-                <div class="admin-panel-head">
+              <section class="admin-panel admin-overview-panel">
+                <div class="admin-panel-head admin-overview-panel-head">
                   <div>
                     <h2>Vandaag te doen</h2>
                     <p>De belangrijkste dingen die nu het meeste impact hebben op de site.</p>
                   </div>
+                  <span class="admin-overview-section-count">
+                    {overviewTasks.slice(0, 4).length} focuspunten
+                  </span>
                 </div>
 
                 <div class="admin-overview-list">
@@ -2765,18 +2848,22 @@ export default function AdminApp() {
                 </div>
               </section>
 
-              <section class="admin-panel">
-                <div class="admin-panel-head">
+              <section class="admin-panel admin-overview-panel">
+                <div class="admin-panel-head admin-overview-panel-head">
                   <div>
                     <h2>Recente activiteit</h2>
                     <p>Wat er het laatst binnenkwam of aangepast werd in je beheer.</p>
                   </div>
+                  <span class="admin-overview-section-count">
+                    {recentActivity.length} recent
+                  </span>
                 </div>
 
                 <div class="admin-overview-activity-list">
                   {recentActivity.length ? (
                     recentActivity.map((item) => (
                       <article class="admin-overview-activity" key={item.key}>
+                        <span class="admin-overview-activity-dot" aria-hidden="true" />
                         <div class="admin-overview-activity-main">
                           <strong>{item.title}</strong>
                           <p>{item.detail}</p>
@@ -2804,12 +2891,13 @@ export default function AdminApp() {
             </div>
 
             <div class="admin-overview-sections">
-              <section class="admin-panel">
-                <div class="admin-panel-head">
+              <section class="admin-panel admin-overview-panel">
+                <div class="admin-panel-head admin-overview-panel-head">
                   <div>
                     <h2>Inhoudsstatus</h2>
                     <p>Zo zie je snel welke onderdelen van de site al volledig ingevuld zijn.</p>
                   </div>
+                  <span class="admin-overview-section-count">{healthItems.length} checks</span>
                 </div>
 
                 <div class="admin-overview-health-list">
@@ -2842,18 +2930,26 @@ export default function AdminApp() {
                 </div>
               </section>
 
-              <section class="admin-panel">
-                <div class="admin-panel-head">
+              <section class="admin-panel admin-overview-panel">
+                <div class="admin-panel-head admin-overview-panel-head">
                   <div>
                     <h2>Systeemstatus</h2>
                     <p>Handig om te zien of de basis van contact, kaart en metingen goed staat.</p>
                   </div>
+                  <span class="admin-overview-section-count">
+                    {systemStatusItems.filter((item) => item.ok).length}/{systemStatusItems.length} ok
+                  </span>
                 </div>
 
                 <div class="admin-overview-system-list">
                   {systemStatusItems.map((item) => (
                     <article class={`admin-overview-system${item.ok ? " is-ok" : " is-warning"}`} key={item.label}>
                       <div class="admin-overview-system-copy">
+                        <span
+                          class={`admin-overview-system-status${item.ok ? " is-ok" : " is-warning"}`}
+                        >
+                          {item.ok ? "Verbonden" : "Nakijken"}
+                        </span>
                         <strong>{item.label}</strong>
                         <p>{item.value}</p>
                       </div>
