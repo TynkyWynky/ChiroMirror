@@ -46,7 +46,9 @@ npm run check
 4. Zet in `Authentication > URL Configuration` minstens deze redirect URLs:
 
 - `http://localhost:4321/admin/`
+- `http://localhost:4321/admin/auth-action/`
 - `https://www.chironegenmanneke.be/admin/`
+- `https://www.chironegenmanneke.be/admin/auth-action/`
 
 5. Vul in `.env` deze variabelen in:
 
@@ -99,12 +101,32 @@ Node version:
 22.13.0
 ```
 
+Netlify Forms:
+
+- De contactpagina stuurt opnieuw een formulier door met form name `contact`.
+- Voeg in Netlify bij `Forms` een e-mailnotificatie toe naar het adres van Negenmanneke als die nog niet bestaat.
+- Hetzelfde bericht wordt tegelijk in de admin-tab `Berichten` opgeslagen.
+
 ## Eerste login
 
 - Open `/admin/` of klik op de subtiele footer-link `Leiding`.
 - Log in met het account dat je in Supabase hebt aangemaakt.
 - Een `admin` kan daarna andere leiders uitnodigen vanuit de tab `Team`.
-- Uitnodigingen en wachtwoord resets landen opnieuw op `/admin/`, waar de gebruiker meteen een nieuw wachtwoord kan instellen.
+- Uitnodigingen en wachtwoord resets landen eerst op `/admin/auth-action/` en gaan daarna automatisch door naar `/admin/`, waar de gebruiker meteen een nieuw wachtwoord kan instellen.
+
+## Betrouwbare Invite-Mails
+
+Supabase invite-links kunnen ongeldig worden als een mailscanner de standaardlink vooraf opent. Gebruik daarom in `Authentication > Email Templates > Invite user` best deze link naar de nieuwe auth-action pagina:
+
+```html
+<h2>Je bent uitgenodigd</h2>
+<p>Klik hieronder om je account te activeren en een wachtwoord te kiezen.</p>
+<p>
+  <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=invite">
+    Account activeren
+  </a>
+</p>
+```
 
 ## Belangrijke scripts
 
@@ -136,5 +158,5 @@ Database-tabellen:
 
 ## Opmerking
 
-- Het contactformulier verstuurt op dit moment geen mails. Nieuwe berichten komen terecht in de admin-tab `Berichten`.
+- Het contactformulier verstuurt opnieuw via Netlify Forms een mailnotificatie en slaat het bericht tegelijk op in de admin-tab `Berichten`.
 - Publieke pagina's lezen bewust via de publieke Supabase-sleutel; de service key wordt alleen server-side gebruikt voor admin-acties en het contact endpoint.

@@ -1515,7 +1515,7 @@ export default function AdminApp() {
 
     setNotice(null);
     const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-      redirectTo: `${window.location.origin}/admin/`
+      redirectTo: `${window.location.origin}/admin/auth-action/`
     });
 
     setNotice({

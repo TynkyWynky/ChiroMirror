@@ -73,7 +73,7 @@ export const POST: APIRoute = async ({ request }) => {
     return Response.json({ message: "De naam is te lang." }, { status: 400 });
   }
 
-  const redirectTo = new URL("/admin/", request.url).toString();
+  const redirectTo = new URL("/admin/auth-action/", request.url).toString();
   const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName },
     redirectTo
@@ -99,5 +99,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
   }
 
-  return Response.json({ message: "Uitnodiging verstuurd. De leider krijgt een mail om het account te activeren." });
+  return Response.json({
+    message: "Uitnodiging verstuurd. De leider krijgt een mail en komt daarna automatisch op de wachtwoordpagina terecht."
+  });
 };

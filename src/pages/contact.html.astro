@@ -35,6 +35,16 @@ const orderedGroups = [...groups].sort((left, right) => {
   description="Contacteer Chiro Negenmanneke: locatie, e-mail en sociale media."
   siteSettings={siteSettings}
 >
+  <form name="contact" method="POST" data-netlify="true" netlify-honeypot="website" hidden>
+    <input type="hidden" name="form-name" value="contact" />
+    <input name="naam" />
+    <input name="email" type="email" />
+    <input name="onderwerp" />
+    <input name="categorie" />
+    <textarea name="bericht"></textarea>
+    <input name="website" />
+  </form>
+
   <section class="hero">
     <h1>{contactPage.title}</h1>
 

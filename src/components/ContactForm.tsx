@@ -25,6 +25,12 @@ const initialState = (categories: string[]): FormState => ({
   website: ""
 });
 
+function encodeForm(data: Record<string, string>) {
+  return Object.entries(data)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
+}
+
 export default function ContactForm({
   categories,
   successMessage,
@@ -62,24 +68,78 @@ export default function ContactForm({
     }
 
     try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
+      const netlifyPayload = {
+        "form-name": "contact",
+        naam: payload.name,
+        email: payload.email,
+        onderwerp: payload.subject,
+        categorie: payload.category,
+        bericht: payload.message,
+        website: payload.website
+      };
 
-      const result = (await response.json().catch(() => null)) as { message?: string } | null;
-      if (!response.ok) {
-        setStatus("error");
-        setStatusMessage(result?.message || errorMessage);
+      const [netlifyResult, adminResult] = await Promise.allSettled([
+        fetch("/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: encodeForm(netlifyPayload)
+        }),
+        fetch("/api/contact", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        })
+      ]);
+
+      const adminResponse =
+        adminResult.status === "fulfilled"
+          ? adminResult.value
+          : null;
+      const adminBody =
+        adminResponse
+          ? ((await adminResponse.json().catch(() => null)) as { message?: string } | null)
+          : null;
+      const adminSucceeded = Boolean(adminResponse?.ok);
+      const netlifySucceeded =
+        netlifyResult.status === "fulfilled" &&
+        netlifyResult.value.ok;
+      const isLocalDev =
+        typeof window !== "undefined" &&
+        ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
+      if (adminSucceeded && (netlifySucceeded || isLocalDev)) {
+        setForm(initialState(categories));
+        setStatus("success");
+        setStatusMessage(
+          isLocalDev && !netlifySucceeded
+            ? "Bericht opgeslagen. De mailnotificatie werkt pas op Netlify."
+            : adminBody?.message || successMessage
+        );
         return;
       }
 
-      setForm(initialState(categories));
-      setStatus("success");
-      setStatusMessage(result?.message || successMessage);
+      if (adminSucceeded && !netlifySucceeded) {
+        setStatus("error");
+        setStatusMessage(
+          "Je bericht staat wel in de admin, maar de mail naar Chiro Negenmanneke kon niet verstuurd worden."
+        );
+        return;
+      }
+
+      if (!adminSucceeded && netlifySucceeded) {
+        setStatus("error");
+        setStatusMessage(
+          "De mail is wel vertrokken, maar het bericht kon niet in de admin opgeslagen worden."
+        );
+        return;
+      }
+
+      setStatus("error");
+      setStatusMessage(adminBody?.message || errorMessage);
     } catch (error) {
       console.error("Contact message could not be stored.", error);
       setStatus("error");
@@ -88,10 +148,20 @@ export default function ContactForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form
+      name="contact"
+      method="POST"
+      action="/"
+      data-netlify="true"
+      netlify-honeypot="website"
+      onSubmit={handleSubmit}
+    >
+      <input type="hidden" name="form-name" value="contact" />
+
       <label htmlFor="contact-name">Uw naam *</label>
       <input
         id="contact-name"
+        name="naam"
         required
         value={form.name}
         disabled={status === "loading"}
@@ -101,6 +171,7 @@ export default function ContactForm({
       <label htmlFor="contact-email">Uw e-mailadres *</label>
       <input
         id="contact-email"
+        name="email"
         required
         type="email"
         value={form.email}
@@ -111,6 +182,7 @@ export default function ContactForm({
       <label htmlFor="contact-subject">Onderwerp *</label>
       <input
         id="contact-subject"
+        name="onderwerp"
         required
         value={form.subject}
         disabled={status === "loading"}
@@ -122,6 +194,7 @@ export default function ContactForm({
       <label htmlFor="contact-category">Categorie *</label>
       <select
         id="contact-category"
+        name="categorie"
         required
         value={form.category}
         disabled={status === "loading"}
@@ -137,6 +210,7 @@ export default function ContactForm({
       <label htmlFor="contact-message">Bericht *</label>
       <textarea
         id="contact-message"
+        name="bericht"
         required
         rows={6}
         value={form.message}
@@ -151,6 +225,7 @@ export default function ContactForm({
       </label>
       <input
         id="contact-website"
+        name="website"
         tabIndex={-1}
         autoComplete="off"
         value={form.website}
