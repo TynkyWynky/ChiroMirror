@@ -8,6 +8,7 @@ import type {
   ContactMessage,
   ContactSection,
   Group,
+  GroupCardLink,
   HomePage,
   LinkAction,
   PageCard,
@@ -604,6 +605,29 @@ function getPostPublishError(post: Post) {
   }
 
   return null;
+}
+
+function orderGroupsForContact(groups: Group[], groupCards: GroupCardLink[]) {
+  const orderLookup = new Map(groupCards.map((item, index) => [item.groupSlug, index]));
+
+  return [...groups].sort((left, right) => {
+    const leftOrder = orderLookup.get(left.slug);
+    const rightOrder = orderLookup.get(right.slug);
+
+    if (leftOrder !== undefined && rightOrder !== undefined) {
+      return leftOrder - rightOrder;
+    }
+
+    if (leftOrder !== undefined) {
+      return -1;
+    }
+
+    if (rightOrder !== undefined) {
+      return 1;
+    }
+
+    return left.sortOrder - right.sortOrder || left.name.localeCompare(right.name, "nl");
+  });
 }
 
 function mapContactMessage(row: Record<string, unknown>): ContactMessage {
@@ -1453,6 +1477,7 @@ export default function AdminApp() {
     { id: "pages" as TabId, label: "Overige pagina's" },
     { id: "messages" as TabId, label: "Berichten" }
   ];
+  const orderedContactGroups = orderGroupsForContact(groups, pages.contact.groupCards);
 
   if (profile?.role === "admin") {
     availableTabs.push({ id: "team", label: "Team" });
@@ -1629,6 +1654,27 @@ export default function AdminApp() {
       return;
     }
 
+    const groupsOnContactPage = orderedContactGroups.filter(
+      (group) => group.id && !group.id.startsWith("temp-")
+    );
+
+    if (groupsOnContactPage.length) {
+      const leaderUpdates = await Promise.all(
+        groupsOnContactPage.map((group) =>
+          supabase
+            .from("groups")
+            .update({ leaders: group.leaders })
+            .eq("id", group.id as string)
+        )
+      );
+      const leaderUpdateError = leaderUpdates.find((result) => result.error)?.error;
+
+      if (leaderUpdateError) {
+        setNotice({ type: "error", message: leaderUpdateError.message });
+        return;
+      }
+    }
+
     const { error } = await supabase
       .from("contact_sections")
       .upsert(contactSections.map(toContactSectionRow));
@@ -1648,8 +1694,10 @@ export default function AdminApp() {
       }
     }
 
-    setNotice({ type: "success", message: "Contactgegevens opgeslagen." });
-    await loadDashboard();
+    const refreshed = await loadDashboard();
+    if (refreshed) {
+      setNotice({ type: "success", message: "Contactgegevens en groepsleiding opgeslagen." });
+    }
   }
 
   async function saveSongs() {
@@ -2276,7 +2324,7 @@ export default function AdminApp() {
             <div class="admin-panel-head">
               <div>
                 <h2>Contact</h2>
-                <p>Algemene contactpagina en extra contactblokken.</p>
+                <p>Algemene contactpagina, groepsleiding en extra contactblokken.</p>
               </div>
               <button class="btn" type="button" onClick={saveContact}>
                 Opslaan
@@ -2292,6 +2340,38 @@ export default function AdminApp() {
               <TextAreaField label="Foutmelding" value={pages.contact.errorMessage} onInput={(value) => setPages((current) => ({ ...current, contact: { ...current.contact, errorMessage: value } }))} />
               <TextField label="Sectietitel rechts" value={pages.contact.sectionsTitle} onInput={(value) => setPages((current) => ({ ...current, contact: { ...current.contact, sectionsTitle: value } }))} />
               <TextAreaField label="Formuliercategorieen (1 per regel)" value={joinLines(pages.contact.formCategories)} onInput={(value) => setPages((current) => ({ ...current, contact: { ...current.contact, formCategories: splitLines(value) } }))} />
+            </div>
+
+            <div class="admin-subpanel">
+              <div class="admin-subpanel-head">
+                <div>
+                  <h4>Leiding per groep</h4>
+                  <p class="muted-small">
+                    Deze kaarten verschijnen op de contactpagina en gebruiken dezelfde leiding als in `Groepen`.
+                  </p>
+                </div>
+              </div>
+              {orderedContactGroups.map((group, index) => (
+                <div class="admin-card-editor" key={group.id ?? group.slug ?? index}>
+                  <div class="admin-subpanel-head">
+                    <div>
+                      <h4>{group.name}</h4>
+                      <p class="muted-small">Pas hier de contactpersonen van {group.name} aan.</p>
+                    </div>
+                  </div>
+                  <PeopleEditor
+                    title="Leiding"
+                    people={group.leaders}
+                    onChange={(people) =>
+                      setGroups((current) =>
+                        current.map((item) =>
+                          item.id === group.id || item.slug === group.slug ? { ...item, leaders: people } : item
+                        )
+                      )
+                    }
+                  />
+                </div>
+              ))}
             </div>
 
             <div class="admin-subpanel">

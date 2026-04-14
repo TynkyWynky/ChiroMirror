@@ -7,10 +7,27 @@ import { loadSiteContent } from "@/lib/content";
 const content = await loadSiteContent();
 const { siteSettings, pages, groups, contactSections } = content;
 const contactPage = pages.contact;
-const groupLookup = new Map(groups.map((group) => [group.slug, group]));
-const orderedGroups = contactPage.groupCards
-  .map((item) => groupLookup.get(item.groupSlug))
-  .filter((group): group is (typeof groups)[number] => Boolean(group));
+const groupOrderLookup = new Map(
+  contactPage.groupCards.map((item, index) => [item.groupSlug, index])
+);
+const orderedGroups = [...groups].sort((left, right) => {
+  const leftOrder = groupOrderLookup.get(left.slug);
+  const rightOrder = groupOrderLookup.get(right.slug);
+
+  if (leftOrder !== undefined && rightOrder !== undefined) {
+    return leftOrder - rightOrder;
+  }
+
+  if (leftOrder !== undefined) {
+    return -1;
+  }
+
+  if (rightOrder !== undefined) {
+    return 1;
+  }
+
+  return left.sortOrder - right.sortOrder || left.name.localeCompare(right.name, "nl");
+});
 ---
 
 <PublicLayout
