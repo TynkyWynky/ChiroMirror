@@ -15,7 +15,7 @@
     "@astrojs/netlify": "^7.0.6",
     "@astrojs/preact": "^5.1.1",
     "@supabase/supabase-js": "^2.103.0",
-    "astro": "^6.1.5",
+    "astro": "^6.1.6",
     "marked": "^18.0.0",
     "preact": "^10.29.1"
   },
