@@ -1988,6 +1988,60 @@ export default function AdminApp() {
       tab: "messages" as TabId
     }
   ];
+  const overviewReadiness = healthItems.map((item) => ({
+    ...item,
+    percentage: item.total ? Math.max(8, Math.round((item.value / item.total) * 100)) : 0
+  }));
+  const overviewFocusLane = overviewTasks.slice(0, 3).map((task, index) => ({
+    ...task,
+    index: index + 1,
+    stateLabel:
+      task.tone === "urgent" ? "Nu aanpakken" : task.tone === "good" ? "In orde" : "Binnenkort"
+  }));
+  const overviewSignalCards: Array<{
+    label: string;
+    value: string;
+    detail: string;
+    tone: "urgent" | "active" | "calm";
+  }> = [
+    {
+      label: "Inbox",
+      value: recentMessages.length
+        ? formatCount(recentMessages.length, "nieuw bericht", "nieuwe berichten")
+        : "Rustig",
+      detail: messages[0]
+        ? `${messages[0].name || messages[0].email}${messages[0].createdAt ? ` · ${formatRelativeDate(messages[0].createdAt)}` : ""}`
+        : "Geen recente contactvragen",
+      tone: recentMessages.length ? "urgent" : "calm"
+    },
+    {
+      label: "Volgende live focus",
+      value: nextUpcomingPost?.title || readyDraftPosts[0]?.title || "Geen planning open",
+      detail: nextUpcomingPost
+        ? `${
+            formatAdminDate(nextUpcomingPost.eventDate, {
+              day: "numeric",
+              month: "short",
+              year: undefined,
+              hour: undefined,
+              minute: undefined
+            }) || "Datum nog invullen"
+          }${nextUpcomingPost.featured ? " · uitgelicht" : ""}`
+        : readyDraftPosts[0]
+          ? "Er staat een concept klaar om live te zetten."
+          : "Vandaag is er geen directe publicatiedruk.",
+      tone: nextUpcomingPost || readyDraftPosts[0] ? "active" : "calm"
+    },
+    {
+      label: "Site dekking",
+      value: `${siteReadyCount}/${siteChecks.length} basischecks`,
+      detail:
+        siteReadyCount === siteChecks.length
+          ? "URL, mail, adres en kaart staan goed."
+          : `Nog na te kijken: ${missingSiteLabels.join(", ")}.`,
+      tone: siteReadyCount === siteChecks.length ? "calm" : "active"
+    }
+  ];
 
   async function signIn() {
     if (!supabase) {
@@ -2781,6 +2835,90 @@ export default function AdminApp() {
                 >
                   {overviewSpotlight.cta}
                 </button>
+              </div>
+
+              <div class="admin-overview-pulse-grid">
+                <article class="admin-overview-pulse-card admin-overview-pulse-card-readiness">
+                  <div class="admin-overview-pulse-head">
+                    <div>
+                      <p class="admin-kicker">Content radar</p>
+                      <h3>Waar de site al sterk staat</h3>
+                    </div>
+                    <span class="admin-overview-section-count">
+                      {overviewReadiness.filter((item) => item.total && item.value === item.total).length}/
+                      {overviewReadiness.length} klaar
+                    </span>
+                  </div>
+
+                  <div class="admin-overview-readiness-chart">
+                    {overviewReadiness.map((item) => (
+                      <article class="admin-overview-readiness-row" key={item.label}>
+                        <div class="admin-overview-readiness-meta">
+                          <div>
+                            <strong>{item.label}</strong>
+                            <p>{item.summary}</p>
+                          </div>
+                          <span>{item.total ? `${item.value}/${item.total}` : "Nog leeg"}</span>
+                        </div>
+                        <div class="admin-overview-readiness-track" aria-hidden="true">
+                          <span style={{ width: `${item.percentage}%` }} />
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </article>
+
+                <article class="admin-overview-pulse-card admin-overview-pulse-card-focus">
+                  <div class="admin-overview-pulse-head">
+                    <div>
+                      <p class="admin-kicker">Focus lane</p>
+                      <h3>Belangrijkste acties eerst</h3>
+                    </div>
+                    <span class="admin-overview-section-count">{overviewFocusLane.length} zichtbaar</span>
+                  </div>
+
+                  <div class="admin-overview-focus-list">
+                    {overviewFocusLane.map((task) => (
+                      <button
+                        class={`admin-overview-focus-item is-${task.tone}`}
+                        key={task.title}
+                        type="button"
+                        onClick={() => setActiveTab(task.tab)}
+                      >
+                        <span class="admin-overview-focus-index">
+                          {String(task.index).padStart(2, "0")}
+                        </span>
+                        <div class="admin-overview-focus-copy">
+                          <span class={`admin-overview-pill is-${task.tone}`}>{task.stateLabel}</span>
+                          <strong>{task.title}</strong>
+                          <p>{task.detail}</p>
+                        </div>
+                        <span class="admin-overview-focus-arrow" aria-hidden="true">
+                          {"->"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </article>
+
+                <article class="admin-overview-pulse-card admin-overview-pulse-card-signals">
+                  <div class="admin-overview-pulse-head">
+                    <div>
+                      <p class="admin-kicker">Live signalen</p>
+                      <h3>Wat nu binnenkomt</h3>
+                    </div>
+                  </div>
+
+                  <div class="admin-overview-signal-grid">
+                    {overviewSignalCards.map((item) => (
+                      <article class={`admin-overview-signal is-${item.tone}`} key={item.label}>
+                        <span>{item.label}</span>
+                        <strong>{item.value}</strong>
+                        <p>{item.detail}</p>
+                      </article>
+                    ))}
+                  </div>
+                </article>
               </div>
 
               <div class="admin-overview-actions">

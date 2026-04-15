@@ -715,6 +715,248 @@
   border-color: rgba(255, 255, 255, .3);
 }
 
+.admin-overview-pulse-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-overview-pulse-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(15, 23, 42, .08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6);
+}
+
+.admin-overview-pulse-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(239, 68, 68, .35), rgba(249, 115, 22, 0));
+  pointer-events: none;
+}
+
+.admin-overview-pulse-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-overview-pulse-card-readiness {
+  background:
+    radial-gradient(circle at top right, rgba(251, 191, 36, .12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .98));
+}
+
+.admin-overview-pulse-card-focus {
+  background:
+    radial-gradient(circle at top right, rgba(248, 113, 113, .16), transparent 26%),
+    linear-gradient(180deg, rgba(255, 250, 250, .98), rgba(255, 255, 255, .98));
+}
+
+.admin-overview-pulse-card-signals {
+  background:
+    radial-gradient(circle at bottom left, rgba(125, 211, 252, .18), transparent 28%),
+    linear-gradient(180deg, rgba(248, 250, 252, .98), rgba(255, 255, 255, .98));
+}
+
+.admin-overview-pulse-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.admin-overview-pulse-head h3,
+.admin-overview-focus-copy strong,
+.admin-overview-readiness-meta strong,
+.admin-overview-signal strong {
+  margin: 0;
+}
+
+.admin-overview-pulse-head h3 {
+  font-size: 22px;
+  line-height: 1.08;
+  letter-spacing: -.03em;
+}
+
+.admin-overview-readiness-chart,
+.admin-overview-focus-list,
+.admin-overview-signal-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-overview-readiness-row {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-overview-readiness-meta {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.admin-overview-readiness-meta strong,
+.admin-overview-focus-copy strong,
+.admin-overview-signal strong {
+  display: block;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.admin-overview-readiness-meta p,
+.admin-overview-focus-copy p,
+.admin-overview-signal p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.admin-overview-readiness-meta > span {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .05);
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-overview-readiness-track {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, .85);
+}
+
+.admin-overview-readiness-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ef4444, #f97316, #facc15);
+  box-shadow: 0 8px 18px rgba(239, 68, 68, .18);
+}
+
+.admin-overview-focus-item {
+  appearance: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid rgba(15, 23, 42, .08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .84);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease;
+}
+
+.admin-overview-focus-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(185, 28, 28, .16);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, .08);
+}
+
+.admin-overview-focus-item.is-urgent {
+  background: linear-gradient(180deg, rgba(254, 242, 242, .98), rgba(255, 255, 255, .92));
+}
+
+.admin-overview-focus-item.is-good {
+  background: linear-gradient(180deg, rgba(240, 253, 244, .98), rgba(255, 255, 255, .92));
+}
+
+.admin-overview-focus-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: 14px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.admin-overview-focus-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .05);
+  color: #0f172a;
+  font-weight: 900;
+}
+
+.admin-overview-focus-copy {
+  min-width: 0;
+}
+
+.admin-overview-focus-copy .admin-overview-pill {
+  margin-bottom: 12px;
+}
+
+.admin-overview-signal {
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(15, 23, 42, .08);
+  background: rgba(255, 255, 255, .84);
+}
+
+.admin-overview-signal span {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  background: rgba(226, 232, 240, .84);
+  color: #475569;
+}
+
+.admin-overview-signal strong {
+  margin-top: 14px;
+  font-size: 21px;
+  line-height: 1.18;
+  letter-spacing: -.03em;
+}
+
+.admin-overview-signal.is-urgent span {
+  background: rgba(239, 68, 68, .12);
+  color: #b91c1c;
+}
+
+.admin-overview-signal.is-active span {
+  background: rgba(249, 115, 22, .14);
+  color: #c2410c;
+}
+
+.admin-overview-signal.is-calm span {
+  background: rgba(34, 197, 94, .12);
+  color: #166534;
+}
+
 .admin-overview-pill.is-soft,
 .admin-overview-section-count {
   background: rgba(185, 28, 28, .08);
@@ -1179,6 +1421,12 @@
     align-content: space-between;
   }
 
+  .admin-overview-pulse-grid {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(260px, .85fr);
+    align-items: stretch;
+  }
+
   .admin-overview-actions,
   .admin-overview-stats {
     grid-column: 1 / -1;
@@ -1190,12 +1438,14 @@
   .admin-inline-grid,
   .admin-inline-grid-wide,
   .admin-overview-stats,
-  .admin-overview-sections {
+  .admin-overview-sections,
+  .admin-overview-pulse-grid {
     grid-template-columns: 1fr;
   }
 
   .admin-overview-item,
-  .admin-overview-system {
+  .admin-overview-system,
+  .admin-overview-focus-item {
     grid-template-columns: 1fr;
   }
 
@@ -1212,5 +1462,9 @@
   .admin-overview-activity .btn,
   .admin-overview-system .btn {
     justify-self: start;
+  }
+
+  .admin-overview-readiness-meta {
+    flex-direction: column;
   }
 }
