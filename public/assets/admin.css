@@ -1378,6 +1378,700 @@
   gap: 18px;
 }
 
+.admin-overview-stage {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  color: #e5eefc;
+  border: 1px solid rgba(15, 23, 42, .1);
+  background:
+    radial-gradient(circle at top left, rgba(251, 146, 60, .24), transparent 24%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, .2), transparent 28%),
+    linear-gradient(145deg, #0b1220, #111827 45%, #1f2937 100%);
+  box-shadow: 0 30px 60px rgba(15, 23, 42, .18);
+}
+
+.admin-overview-stage::before,
+.admin-overview-stage::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.admin-overview-stage::before {
+  inset: -20% auto auto -10%;
+  width: 320px;
+  height: 320px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(239, 68, 68, .18), transparent 72%);
+}
+
+.admin-overview-stage::after {
+  inset: auto -10% -22% auto;
+  width: 380px;
+  height: 380px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(125, 211, 252, .16), transparent 72%);
+}
+
+.admin-overview-stage > * {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-overview-stage-main,
+.admin-overview-stage-side,
+.admin-overview-stage-summary,
+.admin-overview-signal-row,
+.admin-overview-metric-grid,
+.admin-overview-workspace,
+.admin-overview-priority-stack,
+.admin-overview-command-deck,
+.admin-overview-stream,
+.admin-overview-health-board,
+.admin-overview-system-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-overview-stage-main {
+  align-content: start;
+}
+
+.admin-overview-stage-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.admin-overview-stage-date,
+.admin-overview-stage-chart-total {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  color: rgba(255, 255, 255, .86);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.admin-overview-stage-copy h2,
+.admin-overview-priority-copy h3,
+.admin-overview-stage-chart-head h3,
+.admin-overview-cluster-head h2 {
+  margin: 0;
+}
+
+.admin-overview-stage-copy h2 {
+  font-size: clamp(34px, 5vw, 54px);
+  line-height: .96;
+  letter-spacing: -.05em;
+  color: #fff;
+}
+
+.admin-overview-stage-copy p:last-child {
+  max-width: 60ch;
+  margin: 14px 0 0;
+  color: rgba(226, 232, 240, .86);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.admin-overview-glance {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-overview-glance-card,
+.admin-overview-signal-card,
+.admin-overview-metric-card,
+.admin-overview-stage-chart,
+.admin-overview-stage-summary-item {
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.admin-overview-glance-card {
+  padding: 18px;
+  background: rgba(255, 255, 255, .07);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+.admin-overview-glance-card span,
+.admin-overview-signal-card span,
+.admin-overview-metric-card span,
+.admin-overview-stage-summary-item span {
+  display: inline-flex;
+  align-items: center;
+  color: rgba(191, 219, 254, .84);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-overview-glance-card strong,
+.admin-overview-signal-card strong,
+.admin-overview-stage-spotlight strong,
+.admin-overview-metric-card strong,
+.admin-overview-stage-summary-item strong {
+  display: block;
+  margin-top: 12px;
+  color: #fff;
+  line-height: 1.06;
+  letter-spacing: -.04em;
+}
+
+.admin-overview-glance-card strong {
+  font-size: 30px;
+}
+
+.admin-overview-glance-card p,
+.admin-overview-signal-card p,
+.admin-overview-metric-card p,
+.admin-overview-stage-summary-item p {
+  margin: 8px 0 0;
+  color: rgba(226, 232, 240, .74);
+  line-height: 1.55;
+}
+
+.admin-overview-signal-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-overview-signal-card {
+  padding: 18px;
+  background: rgba(15, 23, 42, .36);
+}
+
+.admin-overview-signal-card strong {
+  font-size: 24px;
+}
+
+.admin-overview-signal-card.is-urgent {
+  background: linear-gradient(180deg, rgba(127, 29, 29, .8), rgba(69, 10, 10, .7));
+}
+
+.admin-overview-signal-card.is-active {
+  background: linear-gradient(180deg, rgba(154, 52, 18, .72), rgba(120, 53, 15, .66));
+}
+
+.admin-overview-signal-card.is-calm {
+  background: linear-gradient(180deg, rgba(21, 128, 61, .5), rgba(20, 83, 45, .44));
+}
+
+.admin-overview-metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-overview-metric-card {
+  padding: 18px;
+  background: rgba(15, 23, 42, .3);
+}
+
+.admin-overview-metric-card strong {
+  font-size: 34px;
+}
+
+.admin-overview-stage-side {
+  align-content: start;
+}
+
+.admin-overview-stage-spotlight,
+.admin-overview-stage-chart,
+.admin-overview-stage-summary {
+  padding: 20px;
+  border-radius: 24px;
+}
+
+.admin-overview-stage-spotlight {
+  background:
+    radial-gradient(circle at top right, rgba(251, 146, 60, .2), transparent 28%),
+    linear-gradient(160deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02));
+  border: 1px solid rgba(255, 255, 255, .1);
+}
+
+.admin-overview-stage-spotlight-head,
+.admin-overview-stage-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-overview-stage-pill,
+.admin-overview-stage-caption,
+.admin-overview-command-badge,
+.admin-overview-system-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-overview-stage-pill {
+  background: rgba(248, 113, 113, .18);
+  color: #fecaca;
+}
+
+.admin-overview-stage-caption {
+  background: rgba(255, 255, 255, .08);
+  color: rgba(255, 255, 255, .74);
+}
+
+.admin-overview-stage-spotlight strong {
+  font-size: 34px;
+}
+
+.admin-overview-stage-spotlight p {
+  margin: 14px 0 0;
+  color: rgba(226, 232, 240, .82);
+  line-height: 1.6;
+}
+
+.admin-overview-stage-button {
+  appearance: none;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: #fff;
+  padding: 13px 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 16px 28px rgba(239, 68, 68, .24);
+}
+
+.admin-overview-stage-chart {
+  background: rgba(255, 255, 255, .05);
+}
+
+.admin-overview-stage-chart-head h3 {
+  font-size: 22px;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.admin-overview-bar-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+  min-height: 180px;
+  margin-top: 18px;
+}
+
+.admin-overview-bar-column {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  align-content: end;
+  min-height: 100%;
+}
+
+.admin-overview-bar-column strong,
+.admin-overview-bar-column small {
+  color: rgba(226, 232, 240, .82);
+}
+
+.admin-overview-bar-column strong {
+  font-size: 14px;
+}
+
+.admin-overview-bar-column small {
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.admin-overview-bar {
+  width: 100%;
+  min-height: 14px;
+  border-radius: 18px 18px 8px 8px;
+  background: linear-gradient(180deg, #38bdf8, #0ea5e9 45%, #fb7185 100%);
+  box-shadow: 0 14px 28px rgba(14, 165, 233, .18);
+}
+
+.admin-overview-stage-chart-note {
+  margin: 14px 0 0;
+  color: rgba(226, 232, 240, .72);
+  line-height: 1.55;
+}
+
+.admin-overview-stage-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0;
+  background: transparent;
+}
+
+.admin-overview-stage-summary-item {
+  padding: 18px;
+  background: rgba(255, 255, 255, .05);
+}
+
+.admin-overview-stage-summary-item strong {
+  font-size: 32px;
+}
+
+.admin-overview-workspace {
+  margin-top: 18px;
+}
+
+.admin-overview-workspace > .admin-panel {
+  margin-top: 0;
+}
+
+.admin-overview-cluster {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .98));
+}
+
+.admin-overview-cluster-head {
+  margin-bottom: 6px;
+}
+
+.admin-overview-cluster-head h2 {
+  margin-bottom: 4px;
+}
+
+.admin-overview-cluster-head p {
+  margin: 0;
+}
+
+.admin-overview-priority-card,
+.admin-overview-command-card,
+.admin-overview-health-card {
+  appearance: none;
+  width: 100%;
+  border: 1px solid rgba(15, 23, 42, .08);
+  cursor: pointer;
+  text-align: left;
+}
+
+.admin-overview-priority-stack {
+  gap: 12px;
+}
+
+.admin-overview-priority-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 18px;
+  border-radius: 22px;
+  background: #fff;
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease;
+}
+
+.admin-overview-priority-card:hover,
+.admin-overview-command-card:hover,
+.admin-overview-health-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(185, 28, 28, .18);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, .08);
+}
+
+.admin-overview-priority-card.is-urgent {
+  background: linear-gradient(180deg, rgba(254, 242, 242, .98), #fff);
+}
+
+.admin-overview-priority-card.is-good {
+  background: linear-gradient(180deg, rgba(240, 253, 244, .98), #fff);
+}
+
+.admin-overview-priority-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.admin-overview-priority-copy h3 {
+  margin-top: 12px;
+  font-size: 22px;
+  line-height: 1.14;
+  color: #0f172a;
+}
+
+.admin-overview-priority-copy p,
+.admin-overview-command-card p,
+.admin-overview-stream-copy p,
+.admin-overview-health-card p,
+.admin-overview-system-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.58;
+}
+
+.admin-overview-priority-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .05);
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-overview-command-deck {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-overview-command-card {
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+  border-radius: 22px;
+  background: #fff;
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease;
+}
+
+.admin-overview-command-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, #fb7185, #ef4444);
+}
+
+.admin-overview-command-card.is-primary {
+  border-color: transparent;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, .22), transparent 26%),
+    linear-gradient(135deg, #b91c1c, #ef4444 56%, #fb923c);
+  color: #fff;
+}
+
+.admin-overview-command-card.is-primary::before {
+  background: rgba(255, 255, 255, .3);
+}
+
+.admin-overview-command-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.admin-overview-command-badge {
+  background: rgba(226, 232, 240, .8);
+  color: #475569;
+}
+
+.admin-overview-command-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .05);
+  color: #0f172a;
+  font-weight: 900;
+}
+
+.admin-overview-command-card strong,
+.admin-overview-stream-copy strong,
+.admin-overview-health-card strong,
+.admin-overview-system-card strong {
+  display: block;
+  margin: 0;
+  color: #0f172a;
+}
+
+.admin-overview-command-card strong {
+  font-size: 20px;
+  line-height: 1.12;
+}
+
+.admin-overview-command-card.is-primary strong,
+.admin-overview-command-card.is-primary p,
+.admin-overview-command-card.is-primary .admin-overview-command-badge,
+.admin-overview-command-card.is-primary .admin-overview-command-arrow {
+  color: #fff;
+}
+
+.admin-overview-command-card.is-primary .admin-overview-command-badge,
+.admin-overview-command-card.is-primary .admin-overview-command-arrow {
+  background: rgba(255, 255, 255, .14);
+}
+
+.admin-overview-stream {
+  position: relative;
+}
+
+.admin-overview-stream::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 12px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(248, 113, 113, .24), rgba(148, 163, 184, .14));
+}
+
+.admin-overview-stream-item,
+.admin-overview-system-card {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+}
+
+.admin-overview-stream-item {
+  position: relative;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  padding: 0 0 0 0;
+}
+
+.admin-overview-stream-dot {
+  width: 14px;
+  height: 14px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ef4444, #fb923c);
+  box-shadow: 0 0 0 5px #fff;
+}
+
+.admin-overview-stream-copy {
+  padding: 0 0 0 6px;
+}
+
+.admin-overview-stream-copy strong {
+  font-size: 17px;
+}
+
+.admin-overview-stream-meta {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 10px;
+}
+
+.admin-overview-stream-meta > span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.admin-overview-health-board {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-overview-health-card {
+  padding: 18px;
+  border-radius: 22px;
+  background: #fff;
+}
+
+.admin-overview-health-card-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-overview-health-card-top span {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .05);
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-overview-health-track {
+  height: 12px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, .85);
+}
+
+.admin-overview-health-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ef4444, #f97316, #facc15);
+}
+
+.admin-overview-system-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-overview-system-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(15, 23, 42, .08);
+  background: #fff;
+}
+
+.admin-overview-system-card.is-ok {
+  background: linear-gradient(180deg, rgba(240, 253, 244, .98), #fff);
+}
+
+.admin-overview-system-card.is-warning {
+  background: linear-gradient(180deg, rgba(255, 247, 237, .98), #fff);
+}
+
+.admin-overview-system-chip {
+  margin-bottom: 12px;
+  background: rgba(226, 232, 240, .85);
+  color: #475569;
+}
+
+.admin-overview-system-chip.is-ok {
+  background: rgba(34, 197, 94, .14);
+  color: #166534;
+}
+
+.admin-overview-system-chip.is-warning {
+  background: rgba(249, 115, 22, .14);
+  color: #c2410c;
+}
+
+.admin-overview-empty {
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px dashed rgba(15, 23, 42, .12);
+  color: var(--muted);
+  background: linear-gradient(180deg, #f8fafc, #fff);
+}
+
 @keyframes admin-loader-sweep {
   from {
     transform: translateX(-100%);
@@ -1412,24 +2106,31 @@
     padding: 28px 26px 40px;
   }
 
-  .admin-overview-hero {
-    grid-template-columns: minmax(0, 1.4fr) minmax(300px, .92fr);
+  .admin-overview-stage {
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, .92fr);
     align-items: stretch;
   }
 
-  .admin-overview-hero-main {
-    align-content: space-between;
+  .admin-overview-workspace {
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);
   }
 
-  .admin-overview-pulse-grid {
-    grid-column: 1 / -1;
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(260px, .85fr);
-    align-items: stretch;
+  .admin-overview-cluster-focus,
+  .admin-overview-cluster-health {
+    grid-column: 1;
   }
 
-  .admin-overview-actions,
-  .admin-overview-stats {
-    grid-column: 1 / -1;
+  .admin-overview-cluster-actions,
+  .admin-overview-cluster-activity {
+    grid-column: 2;
+  }
+
+  .admin-overview-cluster-actions {
+    margin-top: 0;
+  }
+
+  .admin-overview-cluster-activity {
+    align-self: start;
   }
 }
 
@@ -1437,34 +2138,38 @@
   .admin-grid,
   .admin-inline-grid,
   .admin-inline-grid-wide,
-  .admin-overview-stats,
-  .admin-overview-sections,
-  .admin-overview-pulse-grid {
+  .admin-overview-glance,
+  .admin-overview-signal-row,
+  .admin-overview-metric-grid,
+  .admin-overview-stage-summary,
+  .admin-overview-command-deck,
+  .admin-overview-health-board,
+  .admin-overview-system-grid,
+  .admin-overview-workspace {
     grid-template-columns: 1fr;
   }
 
-  .admin-overview-item,
-  .admin-overview-system,
-  .admin-overview-focus-item {
+  .admin-overview-stage,
+  .admin-overview-priority-card,
+  .admin-overview-stream-item,
+  .admin-overview-system-card {
     grid-template-columns: 1fr;
   }
 
-  .admin-overview-activity {
-    grid-template-columns: 18px minmax(0, 1fr);
-  }
-
-  .admin-overview-activity-meta {
-    grid-column: 2;
-    justify-items: start;
-  }
-
-  .admin-overview-item .btn,
-  .admin-overview-activity .btn,
-  .admin-overview-system .btn {
+  .admin-overview-stream-meta,
+  .admin-overview-system-card .btn {
     justify-self: start;
   }
 
-  .admin-overview-readiness-meta {
-    flex-direction: column;
+  .admin-overview-stream::before {
+    display: none;
+  }
+
+  .admin-overview-stream-copy {
+    padding-left: 0;
+  }
+
+  .admin-overview-stage-copy h2 {
+    font-size: 34px;
   }
 }

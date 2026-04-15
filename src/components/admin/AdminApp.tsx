@@ -1992,11 +1992,22 @@ export default function AdminApp() {
     ...item,
     percentage: item.total ? Math.max(8, Math.round((item.value / item.total) * 100)) : 0
   }));
-  const overviewFocusLane = overviewTasks.slice(0, 3).map((task, index) => ({
+  const overviewTodayLabel = now.toLocaleDateString("nl-BE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long"
+  });
+  const overviewCompletionRate = overviewReadiness.length
+    ? Math.round(
+        overviewReadiness.reduce((sum, item) => sum + item.percentage, 0) / overviewReadiness.length
+      )
+    : 0;
+  const overviewSystemOkCount = systemStatusItems.filter((item) => item.ok).length;
+  const overviewPriorityCards = overviewTasks.slice(0, 4).map((task, index) => ({
     ...task,
     index: index + 1,
     stateLabel:
-      task.tone === "urgent" ? "Nu aanpakken" : task.tone === "good" ? "In orde" : "Binnenkort"
+      task.tone === "urgent" ? "Direct" : task.tone === "good" ? "In orde" : "Binnenkort"
   }));
   const overviewSignalCards: Array<{
     label: string;
@@ -2042,6 +2053,41 @@ export default function AdminApp() {
       tone: siteReadyCount === siteChecks.length ? "calm" : "active"
     }
   ];
+  const overviewWeeklyPulse = Array.from({ length: 7 }, (_, index) => {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - index));
+    const end = new Date(start);
+    end.setDate(start.getDate() + 1);
+    const startTime = start.getTime();
+    const endTime = end.getTime();
+    const inboxCount = messages.filter((message) => {
+      const timestamp = parseDateValue(message.createdAt)?.getTime();
+      return timestamp !== undefined && timestamp >= startTime && timestamp < endTime;
+    }).length;
+    const postCount = posts.filter((post) => {
+      const timestamp = parseDateValue(post.createdAt)?.getTime();
+      return timestamp !== undefined && timestamp >= startTime && timestamp < endTime;
+    }).length;
+    const teamCount =
+      profile?.role === "admin"
+        ? profiles.filter((item) => {
+            const timestamp = parseDateValue(item.created_at)?.getTime();
+            return timestamp !== undefined && timestamp >= startTime && timestamp < endTime;
+          }).length
+        : 0;
+    const total = inboxCount + postCount + teamCount;
+
+    return {
+      label: start.toLocaleDateString("nl-BE", { weekday: "short" }).replace(".", ""),
+      total,
+      detail: [inboxCount ? `${inboxCount} inbox` : "", postCount ? `${postCount} posts` : "", teamCount ? `${teamCount} team` : ""]
+        .filter(Boolean)
+        .join(" · ")
+    };
+  });
+  const overviewWeeklyPulseMax = Math.max(
+    1,
+    ...overviewWeeklyPulse.map((item) => item.total)
+  );
 
   async function signIn() {
     if (!supabase) {
@@ -2799,14 +2845,17 @@ export default function AdminApp() {
 
         {activeTab === "overview" && (
           <>
-            <section class="admin-panel admin-overview-hero">
-              <div class="admin-overview-hero-main">
-                <div class="admin-overview-hero-copy">
-                  <p class="admin-kicker">Dashboard</p>
+            <section class="admin-panel admin-overview-stage">
+              <div class="admin-overview-stage-main">
+                <div class="admin-overview-stage-copy">
+                  <div class="admin-overview-stage-meta">
+                    <p class="admin-kicker">Dashboard</p>
+                    <span class="admin-overview-stage-date">{overviewTodayLabel}</span>
+                  </div>
                   <h2>Welkom terug, {profileName}</h2>
                   <p>
-                    Hier zie je in één oogopslag wat vandaag aandacht vraagt op de website, in de
-                    inbox en in het team.
+                    Vandaag stuur je de site vanuit één centrale cockpit: wat vraagt aandacht,
+                    wat staat al sterk en waar kun je meteen op klikken.
                   </p>
                 </div>
 
@@ -2819,194 +2868,185 @@ export default function AdminApp() {
                     </article>
                   ))}
                 </div>
-              </div>
 
-              <div class="admin-overview-spotlight">
-                <div class="admin-overview-spotlight-head">
-                  <span class="admin-overview-spotlight-label">{overviewSpotlight.eyebrow}</span>
-                  <span class="admin-overview-spotlight-caption">{overviewSpotlight.caption}</span>
+                <div class="admin-overview-signal-row">
+                  {overviewSignalCards.map((item) => (
+                    <article class={`admin-overview-signal-card is-${item.tone}`} key={item.label}>
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                      <p>{item.detail}</p>
+                    </article>
+                  ))}
                 </div>
-                <strong>{overviewSpotlight.title}</strong>
-                <p>{overviewSpotlight.detail}</p>
-                <button
-                  class="admin-overview-spotlight-action"
-                  type="button"
-                  onClick={() => setActiveTab(overviewSpotlight.tab)}
-                >
-                  {overviewSpotlight.cta}
-                </button>
+
+                <div class="admin-overview-metric-grid">
+                  {overviewMetrics.map((metric) => (
+                    <article class="admin-overview-metric-card" key={metric.label}>
+                      <span>{metric.label}</span>
+                      <strong>{metric.value}</strong>
+                      <p>{metric.meta}</p>
+                    </article>
+                  ))}
+                </div>
               </div>
 
-              <div class="admin-overview-pulse-grid">
-                <article class="admin-overview-pulse-card admin-overview-pulse-card-readiness">
-                  <div class="admin-overview-pulse-head">
+              <div class="admin-overview-stage-side">
+                <article class="admin-overview-stage-spotlight">
+                  <div class="admin-overview-stage-spotlight-head">
+                    <span class="admin-overview-stage-pill">{overviewSpotlight.eyebrow}</span>
+                    <span class="admin-overview-stage-caption">{overviewSpotlight.caption}</span>
+                  </div>
+                  <strong>{overviewSpotlight.title}</strong>
+                  <p>{overviewSpotlight.detail}</p>
+                  <button
+                    class="admin-overview-stage-button"
+                    type="button"
+                    onClick={() => setActiveTab(overviewSpotlight.tab)}
+                  >
+                    {overviewSpotlight.cta}
+                  </button>
+                </article>
+
+                <article class="admin-overview-stage-chart">
+                  <div class="admin-overview-stage-chart-head">
                     <div>
-                      <p class="admin-kicker">Content radar</p>
-                      <h3>Waar de site al sterk staat</h3>
+                      <p class="admin-kicker">Weekpuls</p>
+                      <h3>Beweging van de laatste 7 dagen</h3>
                     </div>
-                    <span class="admin-overview-section-count">
-                      {overviewReadiness.filter((item) => item.total && item.value === item.total).length}/
-                      {overviewReadiness.length} klaar
+                    <span class="admin-overview-stage-chart-total">
+                      {overviewWeeklyPulse.reduce((sum, item) => sum + item.total, 0)} signalen
                     </span>
                   </div>
-
-                  <div class="admin-overview-readiness-chart">
-                    {overviewReadiness.map((item) => (
-                      <article class="admin-overview-readiness-row" key={item.label}>
-                        <div class="admin-overview-readiness-meta">
-                          <div>
-                            <strong>{item.label}</strong>
-                            <p>{item.summary}</p>
-                          </div>
-                          <span>{item.total ? `${item.value}/${item.total}` : "Nog leeg"}</span>
-                        </div>
-                        <div class="admin-overview-readiness-track" aria-hidden="true">
-                          <span style={{ width: `${item.percentage}%` }} />
-                        </div>
-                      </article>
+                  <div class="admin-overview-bar-chart" aria-hidden="true">
+                    {overviewWeeklyPulse.map((item) => (
+                      <div class="admin-overview-bar-column" key={item.label}>
+                        <span
+                          class="admin-overview-bar"
+                          style={{
+                            height: `${Math.max(
+                              14,
+                              Math.round((item.total / overviewWeeklyPulseMax) * 100)
+                            )}%`
+                          }}
+                        />
+                        <strong>{item.total}</strong>
+                        <small>{item.label}</small>
+                      </div>
                     ))}
                   </div>
+                  <p class="admin-overview-stage-chart-note">
+                    {overviewWeeklyPulse.some((item) => item.total > 0)
+                      ? overviewWeeklyPulse
+                          .filter((item) => item.total > 0)
+                          .map((item) => `${item.label}: ${item.detail || `${item.total} updates`}`)
+                          .slice(-3)
+                          .join(" | ")
+                      : "Nog weinig beweging in inbox, posts of team deze week."}
+                  </p>
                 </article>
 
-                <article class="admin-overview-pulse-card admin-overview-pulse-card-focus">
-                  <div class="admin-overview-pulse-head">
-                    <div>
-                      <p class="admin-kicker">Focus lane</p>
-                      <h3>Belangrijkste acties eerst</h3>
-                    </div>
-                    <span class="admin-overview-section-count">{overviewFocusLane.length} zichtbaar</span>
+                <article class="admin-overview-stage-summary">
+                  <div class="admin-overview-stage-summary-item">
+                    <span>Health score</span>
+                    <strong>{overviewCompletionRate}%</strong>
+                    <p>Gemiddelde vulling van je belangrijkste siteblokken.</p>
                   </div>
-
-                  <div class="admin-overview-focus-list">
-                    {overviewFocusLane.map((task) => (
-                      <button
-                        class={`admin-overview-focus-item is-${task.tone}`}
-                        key={task.title}
-                        type="button"
-                        onClick={() => setActiveTab(task.tab)}
-                      >
-                        <span class="admin-overview-focus-index">
-                          {String(task.index).padStart(2, "0")}
-                        </span>
-                        <div class="admin-overview-focus-copy">
-                          <span class={`admin-overview-pill is-${task.tone}`}>{task.stateLabel}</span>
-                          <strong>{task.title}</strong>
-                          <p>{task.detail}</p>
-                        </div>
-                        <span class="admin-overview-focus-arrow" aria-hidden="true">
-                          {"->"}
-                        </span>
-                      </button>
-                    ))}
+                  <div class="admin-overview-stage-summary-item">
+                    <span>Systeemchecks</span>
+                    <strong>
+                      {overviewSystemOkCount}/{systemStatusItems.length}
+                    </strong>
+                    <p>Basis van mail, kaart, analytics en inbox.</p>
+                  </div>
+                  <div class="admin-overview-stage-summary-item">
+                    <span>Open focus</span>
+                    <strong>{openTaskCount}</strong>
+                    <p>Acties die vandaag het meeste impact maken.</p>
                   </div>
                 </article>
-
-                <article class="admin-overview-pulse-card admin-overview-pulse-card-signals">
-                  <div class="admin-overview-pulse-head">
-                    <div>
-                      <p class="admin-kicker">Live signalen</p>
-                      <h3>Wat nu binnenkomt</h3>
-                    </div>
-                  </div>
-
-                  <div class="admin-overview-signal-grid">
-                    {overviewSignalCards.map((item) => (
-                      <article class={`admin-overview-signal is-${item.tone}`} key={item.label}>
-                        <span>{item.label}</span>
-                        <strong>{item.value}</strong>
-                        <p>{item.detail}</p>
-                      </article>
-                    ))}
-                  </div>
-                </article>
-              </div>
-
-              <div class="admin-overview-actions">
-                {overviewActions.map((action) => (
-                  <button
-                    key={action.label}
-                    type="button"
-                    class={`admin-overview-action${action.primary ? " is-primary" : ""}`}
-                    onClick={() => setActiveTab(action.tab)}
-                  >
-                    <div class="admin-overview-action-top">
-                      <span class="admin-overview-action-badge">{action.badge}</span>
-                      <span class="admin-overview-action-arrow" aria-hidden="true">
-                        {"->"}
-                      </span>
-                    </div>
-                    <strong>{action.label}</strong>
-                    <span>{action.detail}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div class="admin-overview-stats">
-                {overviewMetrics.map((metric) => (
-                  <article class="admin-overview-stat" key={metric.label}>
-                    <span>{metric.label}</span>
-                    <strong>{metric.value}</strong>
-                    <p>{metric.meta}</p>
-                  </article>
-                ))}
               </div>
             </section>
 
-            <div class="admin-overview-sections">
-              <section class="admin-panel admin-overview-panel">
-                <div class="admin-panel-head admin-overview-panel-head">
+            <div class="admin-overview-workspace">
+              <section class="admin-panel admin-overview-cluster admin-overview-cluster-focus">
+                <div class="admin-panel-head admin-overview-cluster-head">
                   <div>
-                    <h2>Vandaag te doen</h2>
-                    <p>De belangrijkste dingen die nu het meeste impact hebben op de site.</p>
+                    <h2>Focus stack</h2>
+                    <p>De kortste route naar een sterkere site en snellere opvolging.</p>
                   </div>
-                  <span class="admin-overview-section-count">
-                    {overviewTasks.slice(0, 4).length} focuspunten
-                  </span>
+                  <span class="admin-overview-section-count">{overviewPriorityCards.length} items</span>
                 </div>
 
-                <div class="admin-overview-list">
-                  {overviewTasks.slice(0, 4).map((task) => (
-                    <article class={`admin-overview-item is-${task.tone}`} key={task.title}>
-                      <div>
-                        <span class={`admin-overview-pill is-${task.tone}`}>
-                          {task.tone === "urgent"
-                            ? "Aandacht"
-                            : task.tone === "good"
-                              ? "Klaar"
-                              : "Te verbeteren"}
-                        </span>
+                <div class="admin-overview-priority-stack">
+                  {overviewPriorityCards.map((task) => (
+                    <button
+                      class={`admin-overview-priority-card is-${task.tone}`}
+                      key={task.title}
+                      type="button"
+                      onClick={() => setActiveTab(task.tab)}
+                    >
+                      <span class="admin-overview-priority-index">
+                        {String(task.index).padStart(2, "0")}
+                      </span>
+                      <div class="admin-overview-priority-copy">
+                        <span class={`admin-overview-pill is-${task.tone}`}>{task.stateLabel}</span>
                         <h3>{task.title}</h3>
                         <p>{task.detail}</p>
                       </div>
-                      <button class="btn btn-light" type="button" onClick={() => setActiveTab(task.tab)}>
-                        {task.cta}
-                      </button>
-                    </article>
+                      <span class="admin-overview-priority-cta">{task.cta}</span>
+                    </button>
                   ))}
                 </div>
               </section>
 
-              <section class="admin-panel admin-overview-panel">
-                <div class="admin-panel-head admin-overview-panel-head">
+              <section class="admin-panel admin-overview-cluster admin-overview-cluster-actions">
+                <div class="admin-panel-head admin-overview-cluster-head">
                   <div>
-                    <h2>Recente activiteit</h2>
-                    <p>Wat er het laatst binnenkwam of aangepast werd in je beheer.</p>
+                    <h2>Command deck</h2>
+                    <p>Snel naar de plekken waar je meestal als eerste moet zijn.</p>
                   </div>
-                  <span class="admin-overview-section-count">
-                    {recentActivity.length} recent
-                  </span>
                 </div>
 
-                <div class="admin-overview-activity-list">
+                <div class="admin-overview-command-deck">
+                  {overviewActions.map((action) => (
+                    <button
+                      key={action.label}
+                      type="button"
+                      class={`admin-overview-command-card${action.primary ? " is-primary" : ""}`}
+                      onClick={() => setActiveTab(action.tab)}
+                    >
+                      <div class="admin-overview-command-card-top">
+                        <span class="admin-overview-command-badge">{action.badge}</span>
+                        <span class="admin-overview-command-arrow" aria-hidden="true">
+                          {"->"}
+                        </span>
+                      </div>
+                      <strong>{action.label}</strong>
+                      <p>{action.detail}</p>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section class="admin-panel admin-overview-cluster admin-overview-cluster-activity">
+                <div class="admin-panel-head admin-overview-cluster-head">
+                  <div>
+                    <h2>Activity stream</h2>
+                    <p>Wat er het laatst binnenkwam of aangepast werd in je beheer.</p>
+                  </div>
+                  <span class="admin-overview-section-count">{recentActivity.length} recent</span>
+                </div>
+
+                <div class="admin-overview-stream">
                   {recentActivity.length ? (
                     recentActivity.map((item) => (
-                      <article class="admin-overview-activity" key={item.key}>
-                        <span class="admin-overview-activity-dot" aria-hidden="true" />
-                        <div class="admin-overview-activity-main">
+                      <article class="admin-overview-stream-item" key={item.key}>
+                        <span class="admin-overview-stream-dot" aria-hidden="true" />
+                        <div class="admin-overview-stream-copy">
                           <strong>{item.title}</strong>
                           <p>{item.detail}</p>
                         </div>
-                        <div class="admin-overview-activity-meta">
+                        <div class="admin-overview-stream-meta">
                           <span>{item.timeLabel}</span>
                           <button
                             class="btn btn-light"
@@ -3026,66 +3066,46 @@ export default function AdminApp() {
                   )}
                 </div>
               </section>
-            </div>
 
-            <div class="admin-overview-sections">
-              <section class="admin-panel admin-overview-panel">
-                <div class="admin-panel-head admin-overview-panel-head">
+              <section class="admin-panel admin-overview-cluster admin-overview-cluster-health">
+                <div class="admin-panel-head admin-overview-cluster-head">
                   <div>
-                    <h2>Inhoudsstatus</h2>
-                    <p>Zo zie je snel welke onderdelen van de site al volledig ingevuld zijn.</p>
-                  </div>
-                  <span class="admin-overview-section-count">{healthItems.length} checks</span>
-                </div>
-
-                <div class="admin-overview-health-list">
-                  {healthItems.map((item) => {
-                    const percentage = item.total
-                      ? Math.max(8, Math.round((item.value / item.total) * 100))
-                      : 0;
-
-                    return (
-                      <article class="admin-overview-health" key={item.label}>
-                        <div class="admin-overview-health-head">
-                          <div>
-                            <strong>{item.label}</strong>
-                            <p>{item.summary}</p>
-                          </div>
-                          <button
-                            class="admin-overview-link"
-                            type="button"
-                            onClick={() => setActiveTab(item.tab)}
-                          >
-                            {item.total ? `${item.value}/${item.total}` : "Nog leeg"}
-                          </button>
-                        </div>
-                        <div class="admin-overview-progress" aria-hidden="true">
-                          <span style={{ width: `${percentage}%` }} />
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section class="admin-panel admin-overview-panel">
-                <div class="admin-panel-head admin-overview-panel-head">
-                  <div>
-                    <h2>Systeemstatus</h2>
-                    <p>Handig om te zien of de basis van contact, kaart en metingen goed staat.</p>
+                    <h2>Health & systeem</h2>
+                    <p>Zo zie je meteen waar content compleet is en waar de basis nog werk vraagt.</p>
                   </div>
                   <span class="admin-overview-section-count">
-                    {systemStatusItems.filter((item) => item.ok).length}/{systemStatusItems.length} ok
+                    {overviewSystemOkCount}/{systemStatusItems.length} live checks
                   </span>
                 </div>
 
-                <div class="admin-overview-system-list">
+                <div class="admin-overview-health-board">
+                  {overviewReadiness.map((item) => (
+                    <button
+                      class="admin-overview-health-card"
+                      key={item.label}
+                      type="button"
+                      onClick={() => setActiveTab(item.tab)}
+                    >
+                      <div class="admin-overview-health-card-top">
+                        <strong>{item.label}</strong>
+                        <span>{item.total ? `${item.value}/${item.total}` : "Nog leeg"}</span>
+                      </div>
+                      <p>{item.summary}</p>
+                      <div class="admin-overview-health-track" aria-hidden="true">
+                        <span style={{ width: `${item.percentage}%` }} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div class="admin-overview-system-grid">
                   {systemStatusItems.map((item) => (
-                    <article class={`admin-overview-system${item.ok ? " is-ok" : " is-warning"}`} key={item.label}>
-                      <div class="admin-overview-system-copy">
-                        <span
-                          class={`admin-overview-system-status${item.ok ? " is-ok" : " is-warning"}`}
-                        >
+                    <article
+                      class={`admin-overview-system-card${item.ok ? " is-ok" : " is-warning"}`}
+                      key={item.label}
+                    >
+                      <div>
+                        <span class={`admin-overview-system-chip${item.ok ? " is-ok" : " is-warning"}`}>
                           {item.ok ? "Verbonden" : "Nakijken"}
                         </span>
                         <strong>{item.label}</strong>
