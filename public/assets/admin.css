@@ -349,6 +349,43 @@
   text-decoration: none;
 }
 
+.admin-app .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(185, 28, 28, .18);
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease,
+    background .18s ease;
+}
+
+.admin-app .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(185, 28, 28, .22);
+}
+
+.admin-app .btn.btn-light {
+  background: rgba(255, 255, 255, .88);
+  color: #0f172a;
+  border-color: rgba(15, 23, 42, .08);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .06);
+}
+
+.admin-app .btn.btn-light:hover {
+  background: #fff;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, .08);
+}
+
 .admin-main {
   padding: 20px 16px 40px;
 }
@@ -1426,7 +1463,9 @@
 .admin-overview-stage-summary,
 .admin-overview-signal-row,
 .admin-overview-metric-grid,
+.admin-overview-quick-actions,
 .admin-overview-workspace,
+.admin-overview-secondary,
 .admin-overview-priority-stack,
 .admin-overview-command-deck,
 .admin-overview-stream,
@@ -1490,6 +1529,58 @@
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-overview-quick-actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-overview-quick-action {
+  appearance: none;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(255, 255, 255, .05);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform .18s ease,
+    background .18s ease,
+    border-color .18s ease;
+}
+
+.admin-overview-quick-action:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, .08);
+  border-color: rgba(255, 255, 255, .14);
+}
+
+.admin-overview-quick-action span {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  color: rgba(191, 219, 254, .92);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-overview-quick-action strong {
+  font-size: 16px;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+}
+
+.admin-overview-quick-action.is-primary {
+  background: linear-gradient(135deg, rgba(239, 68, 68, .3), rgba(249, 115, 22, .22));
 }
 
 .admin-overview-glance-card,
@@ -1733,6 +1824,14 @@
 }
 
 .admin-overview-workspace > .admin-panel {
+  margin-top: 0;
+}
+
+.admin-overview-secondary {
+  margin-top: 16px;
+}
+
+.admin-overview-secondary > .admin-panel {
   margin-top: 0;
 }
 
@@ -1986,8 +2085,20 @@
   text-transform: uppercase;
 }
 
+.admin-overview-stream.is-compact {
+  gap: 12px;
+}
+
+.admin-overview-stream.is-compact .admin-overview-stream-item {
+  padding: 0;
+}
+
 .admin-overview-health-board {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-overview-health-board.is-compact {
+  grid-template-columns: 1fr;
 }
 
 .admin-overview-health-card {
@@ -2030,6 +2141,10 @@
 
 .admin-overview-system-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-overview-system-grid.is-compact {
+  grid-template-columns: 1fr;
 }
 
 .admin-overview-system-card {
@@ -2112,25 +2227,11 @@
   }
 
   .admin-overview-workspace {
-    grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);
+    grid-template-columns: 1fr;
   }
 
-  .admin-overview-cluster-focus,
-  .admin-overview-cluster-health {
-    grid-column: 1;
-  }
-
-  .admin-overview-cluster-actions,
-  .admin-overview-cluster-activity {
-    grid-column: 2;
-  }
-
-  .admin-overview-cluster-actions {
-    margin-top: 0;
-  }
-
-  .admin-overview-cluster-activity {
-    align-self: start;
+  .admin-overview-secondary {
+    grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
   }
 }
 
@@ -2141,10 +2242,12 @@
   .admin-overview-glance,
   .admin-overview-signal-row,
   .admin-overview-metric-grid,
+  .admin-overview-quick-actions,
   .admin-overview-stage-summary,
   .admin-overview-command-deck,
   .admin-overview-health-board,
   .admin-overview-system-grid,
+  .admin-overview-secondary,
   .admin-overview-workspace {
     grid-template-columns: 1fr;
   }

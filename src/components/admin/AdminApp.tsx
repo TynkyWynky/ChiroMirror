@@ -1605,12 +1605,6 @@ export default function AdminApp() {
   const draftPosts = posts.filter((post) => !post.published);
   const readyDraftPosts = draftPosts.filter((post) => !getPostPublishError(normalizePost(post)));
   const recentMessages = messages.filter((message) => isWithinLastDays(message.createdAt, 7));
-  const teamAdminCount = profiles.filter((item) => item.role === "admin").length;
-  const teamEditorCount = profiles.filter((item) => item.role === "editor").length;
-  const totalLeaderCount = groups.reduce(
-    (count, group) => count + group.leaders.filter(hasPersonDetails).length,
-    0
-  );
   const groupsWithoutLeaders = groups.filter(
     (group) => group.leaders.filter(hasPersonDetails).length === 0
   );
@@ -1690,36 +1684,6 @@ export default function AdminApp() {
             cta: "Bekijk checks",
             tab: "site" as TabId
           };
-  const overviewMetrics = [
-    {
-      label: "Berichten",
-      value: String(messages.length),
-      meta: recentMessages.length
-        ? `${formatCount(recentMessages.length, "nieuw bericht", "nieuwe berichten")} in de laatste 7 dagen`
-        : "Geen nieuwe berichten in de laatste 7 dagen"
-    },
-    {
-      label: "Posts live",
-      value: String(publishedPosts.length),
-      meta: posts.length
-        ? draftPosts.length
-          ? `${formatCount(draftPosts.length, "concept", "concepten")} staan nog klaar`
-          : "Alles wat gemaakt is staat live"
-        : "Nog geen posts aangemaakt"
-    },
-    {
-      label: "Leiding op site",
-      value: String(totalLeaderCount),
-      meta: groups.length
-        ? `${formatCount(groups.length, "groep", "groepen")} zichtbaar in contact`
-        : "Nog geen groepen toegevoegd"
-    },
-    {
-      label: "Teamaccounts",
-      value: String(profiles.length),
-      meta: `${teamAdminCount} admins · ${teamEditorCount} editors`
-    }
-  ];
   const overviewActions: Array<{
     label: string;
     detail: string;
@@ -2003,56 +1967,16 @@ export default function AdminApp() {
       )
     : 0;
   const overviewSystemOkCount = systemStatusItems.filter((item) => item.ok).length;
-  const overviewPriorityCards = overviewTasks.slice(0, 4).map((task, index) => ({
+  const overviewPriorityCards = overviewTasks.slice(0, 3).map((task, index) => ({
     ...task,
     index: index + 1,
     stateLabel:
       task.tone === "urgent" ? "Direct" : task.tone === "good" ? "In orde" : "Binnenkort"
   }));
-  const overviewSignalCards: Array<{
-    label: string;
-    value: string;
-    detail: string;
-    tone: "urgent" | "active" | "calm";
-  }> = [
-    {
-      label: "Inbox",
-      value: recentMessages.length
-        ? formatCount(recentMessages.length, "nieuw bericht", "nieuwe berichten")
-        : "Rustig",
-      detail: messages[0]
-        ? `${messages[0].name || messages[0].email}${messages[0].createdAt ? ` · ${formatRelativeDate(messages[0].createdAt)}` : ""}`
-        : "Geen recente contactvragen",
-      tone: recentMessages.length ? "urgent" : "calm"
-    },
-    {
-      label: "Volgende live focus",
-      value: nextUpcomingPost?.title || readyDraftPosts[0]?.title || "Geen planning open",
-      detail: nextUpcomingPost
-        ? `${
-            formatAdminDate(nextUpcomingPost.eventDate, {
-              day: "numeric",
-              month: "short",
-              year: undefined,
-              hour: undefined,
-              minute: undefined
-            }) || "Datum nog invullen"
-          }${nextUpcomingPost.featured ? " · uitgelicht" : ""}`
-        : readyDraftPosts[0]
-          ? "Er staat een concept klaar om live te zetten."
-          : "Vandaag is er geen directe publicatiedruk.",
-      tone: nextUpcomingPost || readyDraftPosts[0] ? "active" : "calm"
-    },
-    {
-      label: "Site dekking",
-      value: `${siteReadyCount}/${siteChecks.length} basischecks`,
-      detail:
-        siteReadyCount === siteChecks.length
-          ? "URL, mail, adres en kaart staan goed."
-          : `Nog na te kijken: ${missingSiteLabels.join(", ")}.`,
-      tone: siteReadyCount === siteChecks.length ? "calm" : "active"
-    }
-  ];
+  const overviewQuickActions = overviewActions.slice(0, 4);
+  const overviewRecentItems = recentActivity.slice(0, 3);
+  const overviewHealthHighlights = overviewReadiness.slice(0, 3);
+  const overviewSystemHighlights = systemStatusItems.slice(0, 3);
   const overviewWeeklyPulse = Array.from({ length: 7 }, (_, index) => {
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - index));
     const end = new Date(start);
@@ -2869,23 +2793,17 @@ export default function AdminApp() {
                   ))}
                 </div>
 
-                <div class="admin-overview-signal-row">
-                  {overviewSignalCards.map((item) => (
-                    <article class={`admin-overview-signal-card is-${item.tone}`} key={item.label}>
-                      <span>{item.label}</span>
-                      <strong>{item.value}</strong>
-                      <p>{item.detail}</p>
-                    </article>
-                  ))}
-                </div>
-
-                <div class="admin-overview-metric-grid">
-                  {overviewMetrics.map((metric) => (
-                    <article class="admin-overview-metric-card" key={metric.label}>
-                      <span>{metric.label}</span>
-                      <strong>{metric.value}</strong>
-                      <p>{metric.meta}</p>
-                    </article>
+                <div class="admin-overview-quick-actions">
+                  {overviewQuickActions.map((action) => (
+                    <button
+                      key={action.label}
+                      type="button"
+                      class={`admin-overview-quick-action${action.primary ? " is-primary" : ""}`}
+                      onClick={() => setActiveTab(action.tab)}
+                    >
+                      <span>{action.badge}</span>
+                      <strong>{action.label}</strong>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -2998,48 +2916,23 @@ export default function AdminApp() {
                   ))}
                 </div>
               </section>
+            </div>
 
-              <section class="admin-panel admin-overview-cluster admin-overview-cluster-actions">
-                <div class="admin-panel-head admin-overview-cluster-head">
-                  <div>
-                    <h2>Command deck</h2>
-                    <p>Snel naar de plekken waar je meestal als eerste moet zijn.</p>
-                  </div>
-                </div>
-
-                <div class="admin-overview-command-deck">
-                  {overviewActions.map((action) => (
-                    <button
-                      key={action.label}
-                      type="button"
-                      class={`admin-overview-command-card${action.primary ? " is-primary" : ""}`}
-                      onClick={() => setActiveTab(action.tab)}
-                    >
-                      <div class="admin-overview-command-card-top">
-                        <span class="admin-overview-command-badge">{action.badge}</span>
-                        <span class="admin-overview-command-arrow" aria-hidden="true">
-                          {"->"}
-                        </span>
-                      </div>
-                      <strong>{action.label}</strong>
-                      <p>{action.detail}</p>
-                    </button>
-                  ))}
-                </div>
-              </section>
-
+            <div class="admin-overview-secondary">
               <section class="admin-panel admin-overview-cluster admin-overview-cluster-activity">
                 <div class="admin-panel-head admin-overview-cluster-head">
                   <div>
-                    <h2>Activity stream</h2>
-                    <p>Wat er het laatst binnenkwam of aangepast werd in je beheer.</p>
+                    <h2>Recent</h2>
+                    <p>Alleen de laatste dingen die echt nuttig zijn om te zien.</p>
                   </div>
-                  <span class="admin-overview-section-count">{recentActivity.length} recent</span>
+                  <button class="btn btn-light" type="button" onClick={() => setActiveTab("messages")}>
+                    Inbox openen
+                  </button>
                 </div>
 
-                <div class="admin-overview-stream">
-                  {recentActivity.length ? (
-                    recentActivity.map((item) => (
+                <div class="admin-overview-stream is-compact">
+                  {overviewRecentItems.length ? (
+                    overviewRecentItems.map((item) => (
                       <article class="admin-overview-stream-item" key={item.key}>
                         <span class="admin-overview-stream-dot" aria-hidden="true" />
                         <div class="admin-overview-stream-copy">
@@ -3060,8 +2953,7 @@ export default function AdminApp() {
                     ))
                   ) : (
                     <div class="admin-overview-empty">
-                      Nog geen recente activiteit gevonden. Zodra er berichten, posts of teamwijzigingen
-                      binnenkomen, zie je ze hier.
+                      Nog geen recente activiteit gevonden.
                     </div>
                   )}
                 </div>
@@ -3070,16 +2962,16 @@ export default function AdminApp() {
               <section class="admin-panel admin-overview-cluster admin-overview-cluster-health">
                 <div class="admin-panel-head admin-overview-cluster-head">
                   <div>
-                    <h2>Health & systeem</h2>
-                    <p>Zo zie je meteen waar content compleet is en waar de basis nog werk vraagt.</p>
+                    <h2>Status</h2>
+                    <p>Compact overzicht van content en systeem, zonder overload.</p>
                   </div>
-                  <span class="admin-overview-section-count">
-                    {overviewSystemOkCount}/{systemStatusItems.length} live checks
-                  </span>
+                  <button class="btn btn-light" type="button" onClick={() => setActiveTab("site")}>
+                    Site nakijken
+                  </button>
                 </div>
 
-                <div class="admin-overview-health-board">
-                  {overviewReadiness.map((item) => (
+                <div class="admin-overview-health-board is-compact">
+                  {overviewHealthHighlights.map((item) => (
                     <button
                       class="admin-overview-health-card"
                       key={item.label}
@@ -3098,8 +2990,8 @@ export default function AdminApp() {
                   ))}
                 </div>
 
-                <div class="admin-overview-system-grid">
-                  {systemStatusItems.map((item) => (
+                <div class="admin-overview-system-grid is-compact">
+                  {overviewSystemHighlights.map((item) => (
                     <article
                       class={`admin-overview-system-card${item.ok ? " is-ok" : " is-warning"}`}
                       key={item.label}
