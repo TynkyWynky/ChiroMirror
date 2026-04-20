@@ -1281,7 +1281,7 @@ function ChecklistEditor(props: {
   );
 }
 
-export default function AdminApp() {
+export default function AdminApp(props: { adminAuthActionPath: string }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -1604,7 +1604,7 @@ export default function AdminApp() {
 
     setNotice(null);
     const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-      redirectTo: toPublicSiteUrl("/admin/auth-action/")
+      redirectTo: toPublicSiteUrl(props.adminAuthActionPath)
     });
 
     setNotice({

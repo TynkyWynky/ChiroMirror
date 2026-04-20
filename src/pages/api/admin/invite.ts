@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
+import { getAdminAuthActionPath } from "@/lib/admin-path";
 import { toPublicSiteUrl } from "@/lib/site-url";
 
 type InvitePayload = {
@@ -74,7 +75,7 @@ export const POST: APIRoute = async ({ request }) => {
     return Response.json({ message: "De naam is te lang." }, { status: 400 });
   }
 
-  const redirectTo = toPublicSiteUrl("/admin/auth-action/");
+  const redirectTo = toPublicSiteUrl(getAdminAuthActionPath());
   const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName },
     redirectTo

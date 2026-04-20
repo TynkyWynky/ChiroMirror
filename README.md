@@ -2,7 +2,7 @@
 
 Nieuwe Astro/Supabase-versie van de site met:
 
-- gewone login voor de leiding via `/admin/`
+- gewone login voor de leiding via een verborgen admin-pad
 - verborgen login-link in de footer
 - CRUD voor groepen, contactblokken, liedjes en posts
 - beheerbare vaste pagina's zoals home, inschrijven, kamp, verhuur, verzekering en privacy
@@ -45,10 +45,10 @@ npm run check
 3. Maak in `Authentication > Users` eerst je eigen account aan of nodig jezelf uit.
 4. Zet in `Authentication > URL Configuration` minstens deze redirect URLs:
 
-- `http://localhost:4321/admin/`
-- `http://localhost:4321/admin/auth-action/`
-- `https://www.chironegenmanneke.be/admin/`
-- `https://www.chironegenmanneke.be/admin/auth-action/`
+- `http://localhost:4321/<jouw-admin-pad>/`
+- `http://localhost:4321/<jouw-admin-pad>/auth-action/`
+- `https://www.chironegenmanneke.be/<jouw-admin-pad>/`
+- `https://www.chironegenmanneke.be/<jouw-admin-pad>/auth-action/`
 
 5. Vul in `.env` deze variabelen in:
 
@@ -56,6 +56,7 @@ npm run check
 PUBLIC_SUPABASE_URL=...
 PUBLIC_SUPABASE_ANON_KEY=...
 PUBLIC_SITE_URL=https://www.chironegenmanneke.be
+ADMIN_PATH_SLUG=leiding-login
 SUPABASE_SERVICE_ROLE_KEY=...
 ADMIN_EMAIL=jouw@adres.be
 ```
@@ -81,6 +82,7 @@ Zet dezelfde environment variables ook in Netlify:
 - `PUBLIC_SUPABASE_URL`
 - `PUBLIC_SUPABASE_ANON_KEY`
 - `PUBLIC_SITE_URL`
+- `ADMIN_PATH_SLUG`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 Laat `ADMIN_EMAIL` weg in Netlify.
@@ -112,10 +114,10 @@ Netlify Forms:
 
 ## Eerste login
 
-- Open `/admin/` of klik op de subtiele footer-link `Leiding`.
+- Open `/<jouw-admin-pad>/` of klik op de subtiele footer-link `Leiding`.
 - Log in met het account dat je in Supabase hebt aangemaakt.
 - Een `admin` kan daarna andere leiders uitnodigen vanuit de tab `Team`.
-- Uitnodigingen en wachtwoord resets landen eerst op `/admin/auth-action/` en gaan daarna automatisch door naar `/admin/`, waar de gebruiker meteen een nieuw wachtwoord kan instellen.
+- Uitnodigingen en wachtwoord resets landen eerst op `/<jouw-admin-pad>/auth-action/` en gaan daarna automatisch door naar `/<jouw-admin-pad>/`, waar de gebruiker meteen een nieuw wachtwoord kan instellen.
 
 ## Betrouwbare Invite-Mails
 

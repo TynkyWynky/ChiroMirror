@@ -1,0 +1,44 @@
+---
+import AdminAuthAction from "@/components/admin/AdminAuthAction";
+import { getAdminBasePath, isConfiguredAdminPathSlug } from "@/lib/admin-path";
+
+const isValidAdminRoute = isConfiguredAdminPathSlug(Astro.params.adminSlug);
+
+if (isValidAdminRoute) {
+  Astro.response.headers.set("Cache-Control", "no-store");
+  Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+} else {
+  Astro.response.status = 404;
+}
+
+const adminBasePath = getAdminBasePath();
+---
+
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{isValidAdminRoute ? "Admin verificatie • Chiro Negenmanneke" : "Pagina niet gevonden"}</title>
+    <meta name="robots" content={isValidAdminRoute ? "noindex, nofollow" : "noindex, nofollow, noarchive"} />
+    <link rel="icon" type="image/png" href="/assets/Chirologo_700px.png" />
+    <link rel="stylesheet" href="/assets/styles.css" />
+    {isValidAdminRoute && <link rel="stylesheet" href="/assets/admin.css" />}
+  </head>
+  <body>
+    {
+      isValidAdminRoute ? (
+        <AdminAuthAction adminBasePath={adminBasePath} client:load />
+      ) : (
+        <main class="section">
+          <div class="container">
+            <div class="card">
+              <h1>Pagina niet gevonden</h1>
+              <p class="muted">Deze pagina bestaat niet of is niet publiek beschikbaar.</p>
+            </div>
+          </div>
+        </main>
+      )
+    }
+  </body>
+</html>

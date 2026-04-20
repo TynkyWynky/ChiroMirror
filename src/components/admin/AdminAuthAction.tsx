@@ -63,7 +63,7 @@ function getAuthActionCopy(type: AuthActionType) {
       };
 }
 
-export default function AdminAuthAction() {
+export default function AdminAuthAction(props: { adminBasePath: string }) {
   const [copy, setCopy] = useState(() => getAuthActionCopy("invite"));
   const [error, setError] = useState<string | null>(null);
 
@@ -129,7 +129,7 @@ export default function AdminAuthAction() {
           throw new Error("Deze link is onvolledig of verlopen. Vraag een nieuwe uitnodiging of resetmail.");
         }
 
-        window.location.replace(`/admin/?type=${actionType}`);
+        window.location.replace(`${props.adminBasePath}?type=${actionType}`);
       } catch (currentError) {
         console.error("Admin auth action failed.", currentError);
         setError(
@@ -151,7 +151,7 @@ export default function AdminAuthAction() {
         <p class="muted">{error ?? copy.body}</p>
         {error ? (
           <div class="admin-auth-actions">
-            <a class="btn" href="/admin/">
+            <a class="btn" href={props.adminBasePath}>
               Naar admin-login
             </a>
           </div>

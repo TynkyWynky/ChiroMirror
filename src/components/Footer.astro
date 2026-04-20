@@ -1,5 +1,6 @@
 ---
 import type { SiteSettings } from "@/types/content";
+import { getAdminBasePath } from "@/lib/admin-path";
 import { withDevFresh } from "@/lib/href";
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 const { siteSettings, showMap = false } = Astro.props;
+const adminLinkLabel = siteSettings.footerAdminLabel.trim();
 ---
 
 <footer>
@@ -68,10 +70,14 @@ const { siteSettings, showMap = false } = Astro.props;
 
     <p class="muted">{siteSettings.footerCopyright}</p>
     <p class="muted">{siteSettings.footerDeveloper}</p>
-    <p class="footer-meta">
-      <a class="admin-link" href={withDevFresh("/admin/")} rel="nofollow">
-        {siteSettings.footerAdminLabel}
-      </a>
-    </p>
+    {
+      adminLinkLabel && (
+        <p class="footer-meta">
+          <a class="admin-link" href={withDevFresh(getAdminBasePath())} rel="nofollow">
+            {adminLinkLabel}
+          </a>
+        </p>
+      )
+    }
   </div>
 </footer>
