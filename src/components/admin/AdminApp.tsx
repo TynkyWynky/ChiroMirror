@@ -831,6 +831,107 @@ function isFinanceInMonth(transaction: FinanceTransaction, monthValue: string) {
   return transaction.date.startsWith(monthValue);
 }
 
+function shiftMonthKey(monthKey: string, delta: number) {
+  const [yearPart, monthPart] = monthKey.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+
+  if (!year || !month) {
+    return getCurrentMonthInputValue();
+  }
+
+  const shifted = new Date(year, month - 1 + delta, 1);
+  const nextYear = shifted.getFullYear();
+  const nextMonth = String(shifted.getMonth() + 1).padStart(2, "0");
+  return `${nextYear}-${nextMonth}`;
+}
+
+function formatFinanceMonthLabel(monthKey: string) {
+  const date = parseDateValue(`${monthKey}-01`);
+
+  if (!date) {
+    return monthKey;
+  }
+
+  return date.toLocaleDateString("nl-BE", {
+    month: "short"
+  });
+}
+
+function getRecentFinanceMonthKeys(count: number) {
+  const currentMonth = getCurrentMonthInputValue();
+  return Array.from({ length: count }, (_, index) => shiftMonthKey(currentMonth, index - (count - 1)));
+}
+
+function getFinanceTrendData(transactions: FinanceTransaction[], count = 6) {
+  const monthKeys = getRecentFinanceMonthKeys(count);
+
+  return monthKeys.map((monthKey) => {
+    const monthTransactions = transactions.filter((transaction) => isFinanceInMonth(transaction, monthKey));
+    const settledTransactions = monthTransactions.filter(isFinanceSettled);
+    const income = settledTransactions
+      .filter((transaction) => transaction.type === "income")
+      .reduce((total, transaction) => total + transaction.amount, 0);
+    const expenses = settledTransactions
+      .filter((transaction) => transaction.type === "expense")
+      .reduce((total, transaction) => total + transaction.amount, 0);
+    const pending = monthTransactions.filter((transaction) => transaction.status === "pending").length;
+
+    return {
+      key: monthKey,
+      label: formatFinanceMonthLabel(monthKey),
+      income,
+      expenses,
+      pending,
+      balance: income - expenses
+    };
+  });
+}
+
+function getFinanceCategoryBreakdown(
+  transactions: FinanceTransaction[],
+  type: FinanceType
+) {
+  const bucket = new Map<string, number>();
+
+  for (const transaction of transactions) {
+    if (transaction.type !== type || !isFinanceSettled(transaction)) {
+      continue;
+    }
+
+    const currentAmount = bucket.get(transaction.categoryKey) ?? 0;
+    bucket.set(transaction.categoryKey, currentAmount + transaction.amount);
+  }
+
+  return [...bucket.entries()]
+    .map(([key, amount]) => ({
+      key,
+      label: getFinanceCategoryLabel(key),
+      amount
+    }))
+    .sort((left, right) => right.amount - left.amount);
+}
+
+function getFinanceDonutStyle(items: Array<{ amount: number }>, colors: string[]) {
+  const total = items.reduce((sum, item) => sum + item.amount, 0);
+
+  if (!total) {
+    return "conic-gradient(#e2e8f0 0deg 360deg)";
+  }
+
+  let angle = 0;
+  const stops = items.map((item, index) => {
+    const slice = (item.amount / total) * 360;
+    const start = angle;
+    angle += slice;
+    const end = index === items.length - 1 ? 360 : angle;
+    const color = colors[index % colors.length];
+    return `${color} ${start}deg ${end}deg`;
+  });
+
+  return `conic-gradient(${stops.join(", ")})`;
+}
+
 function createEmptyPost(): Post {
   return {
     id: tempId("post"),
@@ -1998,6 +2099,45 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
 
       return Math.abs(right.balance) - Math.abs(left.balance);
     });
+  const financeTrendData = getFinanceTrendData(financeVisibleTransactions, 6);
+  const financeTrendPeak = Math.max(
+    1,
+    ...financeTrendData.flatMap((month) => [month.income, month.expenses, Math.abs(month.balance)])
+  );
+  const financeExpenseBreakdown = getFinanceCategoryBreakdown(
+    financeSelectedMonthTransactions,
+    "expense"
+  ).slice(0, 5);
+  const financeIncomeBreakdown = getFinanceCategoryBreakdown(
+    financeSelectedMonthTransactions,
+    "income"
+  ).slice(0, 5);
+  const financeExpenseBreakdownTotal = financeExpenseBreakdown.reduce(
+    (total, item) => total + item.amount,
+    0
+  );
+  const financeIncomeBreakdownTotal = financeIncomeBreakdown.reduce(
+    (total, item) => total + item.amount,
+    0
+  );
+  const financeExpenseDonutStyle = getFinanceDonutStyle(financeExpenseBreakdown, [
+    "#f97316",
+    "#fb7185",
+    "#f59e0b",
+    "#ef4444",
+    "#fbbf24"
+  ]);
+  const financeIncomeDonutStyle = getFinanceDonutStyle(financeIncomeBreakdown, [
+    "#10b981",
+    "#22c55e",
+    "#14b8a6",
+    "#2dd4bf",
+    "#84cc16"
+  ]);
+  const financeLargestExpense = financeExpenseBreakdown[0] ?? null;
+  const financeLargestIncome = financeIncomeBreakdown[0] ?? null;
+  const financeNetMonthBalance = financeMonthIncome - financeMonthExpenses;
+  const financeSelectedMonthTransactionCount = financeSelectedMonthTransactions.length;
   const financeDraftCategoryOptions = financeDraft
     ? getFinanceCategoryOptions(financeDraft.type)
     : financeExpenseCategories;
@@ -3011,41 +3151,93 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
             )}
 
             <div class="admin-finance-hero">
-              <div class="admin-finance-hero-copy">
-                <span class="admin-finance-pill">Werkmaand: {financeMonthLabel}</span>
-                <h3>Een duidelijk penningmeester-overzicht zonder spreadsheetstress.</h3>
-                <p>
-                  Voeg transacties toe, hou openstaande terugbetalingen in de gaten en zie meteen
-                  waar elke groep staat.
-                </p>
+              <div class="admin-finance-hero-main">
+                <div class="admin-finance-hero-copy">
+                  <span class="admin-finance-pill">Werkmaand: {financeMonthLabel}</span>
+                  <h3>Een duidelijk penningmeester-overzicht zonder spreadsheetstress.</h3>
+                  <p>
+                    Voeg transacties toe, hou openstaande terugbetalingen in de gaten en zie
+                    meteen waar elke groep staat.
+                  </p>
+                </div>
+                <div class="admin-finance-hero-badges">
+                  <span class="admin-finance-hero-badge is-positive">
+                    {financeMonthIncome >= financeMonthExpenses ? "Gezonde maand" : "Uitgaven hoger"}
+                  </span>
+                  <span class="admin-finance-hero-badge is-neutral">
+                    {financeSelectedMonthTransactionCount} beweging(en) deze maand
+                  </span>
+                  <span class="admin-finance-hero-badge is-warning">
+                    {financePendingTransactions.length} openstaand
+                  </span>
+                </div>
               </div>
-              <div class="admin-finance-hero-status">
-                <strong>{financeDirty ? "Nog niet opgeslagen" : "Alles gesynchroniseerd"}</strong>
-                <p>
-                  {financeDirty
-                    ? "Je hebt lokale wijzigingen in Financiën. Klik bovenaan op opslaan om ze vast te zetten."
-                    : "Je finance-overzicht komt overeen met de laatst geladen data uit Supabase."}
+
+              <div class="admin-finance-trend-card">
+                <div class="admin-finance-trend-head">
+                  <div>
+                    <span class="admin-finance-pill">Trend</span>
+                    <h4>Laatste 6 maanden</h4>
+                  </div>
+                  <div class="admin-finance-hero-status">
+                    <strong>{financeDirty ? "Nog niet opgeslagen" : "Alles gesynchroniseerd"}</strong>
+                    <p>
+                      {financeDirty
+                        ? "Je hebt lokale wijzigingen. Sla op om alles definitief te maken."
+                        : "Je finance-overzicht loopt gelijk met Supabase."}
+                    </p>
+                  </div>
+                </div>
+                <div class="admin-finance-trend-chart" aria-hidden="true">
+                  {financeTrendData.map((month) => (
+                    <div class="admin-finance-trend-column" key={month.key}>
+                      <span class="admin-finance-trend-value">
+                        {month.balance >= 0 ? "+" : "-"}
+                        {formatCurrency(Math.abs(month.balance))}
+                      </span>
+                      <div class="admin-finance-trend-bars">
+                        <span
+                          class="admin-finance-trend-bar is-income"
+                          style={{
+                            height: `${Math.max(12, (month.income / financeTrendPeak) * 100)}%`
+                          }}
+                        />
+                        <span
+                          class="admin-finance-trend-bar is-expense"
+                          style={{
+                            height: `${Math.max(12, (month.expenses / financeTrendPeak) * 100)}%`
+                          }}
+                        />
+                      </div>
+                      <strong>{month.label}</strong>
+                      <small>{month.pending ? `${month.pending} open` : "afgerond"}</small>
+                    </div>
+                  ))}
+                </div>
+                <p class="admin-finance-trend-note">
+                  Groen toont inkomsten, oranje toont uitgaven. Zo zie je snel welke maanden het
+                  zwaarst of sterkst waren.
                 </p>
               </div>
             </div>
 
             <div class="admin-finance-metrics">
-              <article class="admin-finance-metric-card">
+              <article class="admin-finance-metric-card is-balance">
                 <span>Huidig saldo</span>
                 <strong>{formatCurrency(financeCurrentBalance)}</strong>
                 <p>Alle bevestigde inkomsten en uitgaven samen, zonder geannuleerde of gearchiveerde items.</p>
               </article>
-              <article class="admin-finance-metric-card">
+              <article class="admin-finance-metric-card is-income">
                 <span>Inkomsten deze maand</span>
                 <strong>{formatCurrency(financeMonthIncome)}</strong>
                 <p>Bevestigde inkomsten in {financeMonthLabel}.</p>
               </article>
-              <article class="admin-finance-metric-card">
+              <article class="admin-finance-metric-card is-expense">
                 <span>Uitgaven deze maand</span>
                 <strong>{formatCurrency(financeMonthExpenses)}</strong>
                 <p>Bevestigde uitgaven in {financeMonthLabel}.</p>
               </article>
-              <article class="admin-finance-metric-card">
+              <article class="admin-finance-metric-card is-pending">
                 <span>Openstaand</span>
                 <strong>{formatCurrency(financePendingExpenseTotal + financePendingIncomeTotal)}</strong>
                 <p>
@@ -3054,6 +3246,120 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                   {formatCurrency(financePendingIncomeTotal)} inkomsten.
                 </p>
               </article>
+            </div>
+
+            <div class="admin-finance-storyboard">
+              <section class="admin-subpanel admin-finance-chart-card">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Uitgavenmix</h4>
+                    <p class="muted-small">Waar het geld naartoe ging in {financeMonthLabel}.</p>
+                  </div>
+                  <span class="admin-finance-count">{formatCurrency(financeExpenseBreakdownTotal)}</span>
+                </div>
+                <div class="admin-finance-donut-layout">
+                  <div
+                    class="admin-finance-donut"
+                    style={{ background: financeExpenseDonutStyle }}
+                    aria-hidden="true"
+                  >
+                    <div class="admin-finance-donut-center">
+                      <strong>{financeExpenseBreakdown.length || 0}</strong>
+                      <span>categorieën</span>
+                    </div>
+                  </div>
+                  <div class="admin-finance-breakdown-list">
+                    {financeExpenseBreakdown.length ? (
+                      financeExpenseBreakdown.map((item, index) => (
+                        <div class="admin-finance-breakdown-item" key={item.key}>
+                          <span
+                            class="admin-finance-breakdown-dot"
+                            style={{
+                              background: ["#f97316", "#fb7185", "#f59e0b", "#ef4444", "#fbbf24"][index]
+                            }}
+                          />
+                          <div>
+                            <strong>{item.label}</strong>
+                            <p>{formatCurrency(item.amount)}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div class="admin-finance-empty">
+                        <strong>Nog geen uitgaven in deze maand.</strong>
+                        <p>De verdeling verschijnt zodra je bevestigde uitgaven hebt.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {financeLargestExpense && (
+                  <p class="admin-finance-insight">
+                    Grootste uitgavencategorie: <strong>{financeLargestExpense.label}</strong> met{" "}
+                    {formatCurrency(financeLargestExpense.amount)}.
+                  </p>
+                )}
+              </section>
+
+              <section class="admin-subpanel admin-finance-chart-card">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Inkomstenmix</h4>
+                    <p class="muted-small">Waar het geld vandaan kwam in {financeMonthLabel}.</p>
+                  </div>
+                  <span class="admin-finance-count">{formatCurrency(financeIncomeBreakdownTotal)}</span>
+                </div>
+                <div class="admin-finance-donut-layout">
+                  <div
+                    class="admin-finance-donut is-income"
+                    style={{ background: financeIncomeDonutStyle }}
+                    aria-hidden="true"
+                  >
+                    <div class="admin-finance-donut-center">
+                      <strong>{financeIncomeBreakdown.length || 0}</strong>
+                      <span>bronnen</span>
+                    </div>
+                  </div>
+                  <div class="admin-finance-breakdown-list">
+                    {financeIncomeBreakdown.length ? (
+                      financeIncomeBreakdown.map((item, index) => (
+                        <div class="admin-finance-breakdown-item" key={item.key}>
+                          <span
+                            class="admin-finance-breakdown-dot"
+                            style={{
+                              background: ["#10b981", "#22c55e", "#14b8a6", "#2dd4bf", "#84cc16"][index]
+                            }}
+                          />
+                          <div>
+                            <strong>{item.label}</strong>
+                            <p>{formatCurrency(item.amount)}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div class="admin-finance-empty">
+                        <strong>Nog geen inkomsten in deze maand.</strong>
+                        <p>De verdeling verschijnt zodra je bevestigde inkomsten hebt.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p class="admin-finance-insight">
+                  Netto resultaat in {financeMonthLabel}:{" "}
+                  <strong
+                    class={
+                      financeNetMonthBalance >= 0
+                        ? "admin-finance-inline-positive"
+                        : "admin-finance-inline-negative"
+                    }
+                  >
+                    {formatCurrency(financeNetMonthBalance)}
+                  </strong>
+                  .
+                  {financeLargestIncome
+                    ? ` Sterkste bron: ${financeLargestIncome.label}.`
+                    : " Voeg inkomsten toe om trends te zien."}
+                </p>
+              </section>
             </div>
 
             <div class="admin-finance-layout">
@@ -3282,7 +3588,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                     </span>
                   </div>
 
-                  <div class="admin-inline-grid admin-inline-grid-wide">
+                  <div class="admin-inline-grid admin-inline-grid-wide admin-finance-filter-grid">
                     <TextField
                       label="Zoeken"
                       value={financeSearch}
