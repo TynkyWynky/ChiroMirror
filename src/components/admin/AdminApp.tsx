@@ -82,6 +82,22 @@ type AdminLoadingStep = {
   detail: string;
   delayedDetail?: string;
 };
+type AdminTabGroupId = "cockpit" | "website" | "content" | "organisatie";
+type AdminTabMeta = {
+  id: TabId;
+  label: string;
+  description: string;
+  group: AdminTabGroupId;
+  requiresFinance?: boolean;
+  requiresAdmin?: boolean;
+};
+type AdminReadinessItem = {
+  id: string;
+  label: string;
+  detail: string;
+  status: "ok" | "warning";
+  tabId: TabId;
+};
 
 const publicSupabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const publicSupabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -139,6 +155,94 @@ const financeCurrencyFormatter = new Intl.NumberFormat("nl-BE", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
 });
+const adminTabDefinitions: AdminTabMeta[] = [
+  {
+    id: "overview",
+    label: "Overzicht",
+    description: "Start hier voor prioriteiten, publicatiestatus en recente activiteit.",
+    group: "cockpit"
+  },
+  {
+    id: "finance",
+    label: "Financiën",
+    description: "Beheer inkomsten, uitgaven en groepsbudgetten vanuit een aparte workspace.",
+    group: "cockpit",
+    requiresFinance: true
+  },
+  {
+    id: "site",
+    label: "Site",
+    description: "Globale instellingen zoals naam, links, footer en basisinformatie.",
+    group: "website"
+  },
+  {
+    id: "home",
+    label: "Home",
+    description: "Beheer de homepage, banner, intro, praktische info en galerij.",
+    group: "website"
+  },
+  {
+    id: "groups",
+    label: "Groepen",
+    description: "Werk groepskaarten, leeftijden, beschrijvingen en leiding bij.",
+    group: "website"
+  },
+  {
+    id: "contact",
+    label: "Contact",
+    description: "Pas de contactpagina, formulierteksten en extra blokken aan.",
+    group: "website"
+  },
+  {
+    id: "registration",
+    label: "Inschrijven",
+    description: "Beheer het inschrijftraject, stappen, kledij en merchinfo.",
+    group: "website"
+  },
+  {
+    id: "camp",
+    label: "Kamp",
+    description: "Werk alle kampinformatie, checklisten en inschrijvingsblokken bij.",
+    group: "website"
+  },
+  {
+    id: "pages",
+    label: "Overige pagina's",
+    description: "Activiteiten, verhuur, verzekering en privacy op één plek.",
+    group: "website"
+  },
+  {
+    id: "posts",
+    label: "Posts",
+    description: "Schrijf, bewaar en publiceer nieuws en activiteitenberichten.",
+    group: "content"
+  },
+  {
+    id: "songs",
+    label: "Liedjes",
+    description: "Beheer de liedjespagina en de volledige liedbundel.",
+    group: "content"
+  },
+  {
+    id: "messages",
+    label: "Berichten",
+    description: "Bekijk wat binnenkomt via het contactformulier en ruim je inbox op.",
+    group: "organisatie"
+  },
+  {
+    id: "team",
+    label: "Team",
+    description: "Nodig leiding uit, beheer rollen en koppel groepen aan editors.",
+    group: "organisatie",
+    requiresAdmin: true
+  }
+];
+const adminTabGroupLabels: Record<AdminTabGroupId, string> = {
+  cockpit: "Cockpit",
+  website: "Website",
+  content: "Content",
+  organisatie: "Organisatie"
+};
 
 function cloneDefaults() {
   if (typeof structuredClone === "function") {
@@ -667,6 +771,56 @@ function shiftMonthInputValue(value: string, offset: number) {
 
 function formatCurrency(value: number) {
   return financeCurrencyFormatter.format(Number.isFinite(value) ? value : 0);
+}
+
+function hasText(value: string | null | undefined) {
+  return Boolean(value?.trim());
+}
+
+function countMissingTextValues(values: Array<string | null | undefined>) {
+  return values.reduce((total, value) => total + (hasText(value) ? 0 : 1), 0);
+}
+
+function getDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function getRecentDayBuckets(values: Array<string | null | undefined>, days: number) {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1));
+  const buckets = Array.from({ length: days }, (_, index) => {
+    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
+    return {
+      key: getDateKey(date),
+      label: date.toLocaleDateString("nl-BE", { weekday: "short" }),
+      count: 0
+    };
+  });
+  const bucketMap = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+
+  values.forEach((value) => {
+    const date = parseDateValue(value);
+    if (!date) {
+      return;
+    }
+
+    const bucket = bucketMap.get(getDateKey(date));
+    if (bucket) {
+      bucket.count += 1;
+    }
+  });
+
+  return buckets;
+}
+
+function getReadinessPercent(completed: number, total: number) {
+  if (!total) {
+    return 100;
+  }
+
+  return Math.max(0, Math.min(100, Math.round((completed / total) * 100)));
 }
 
 function formatFinancePercentage(value: number) {
@@ -2040,28 +2194,43 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     }
   }, [session, authMode]);
 
-  const availableTabs = [
-    { id: "overview" as TabId, label: "Overzicht" },
-    { id: "site" as TabId, label: "Site" },
-    { id: "home" as TabId, label: "Home" },
-    { id: "groups" as TabId, label: "Groepen" },
-    { id: "contact" as TabId, label: "Contact" },
-    { id: "songs" as TabId, label: "Liedjes" },
-    { id: "posts" as TabId, label: "Posts" },
-    { id: "registration" as TabId, label: "Inschrijven" },
-    { id: "camp" as TabId, label: "Kamp" },
-    { id: "pages" as TabId, label: "Overige pagina's" },
-    { id: "messages" as TabId, label: "Berichten" }
-  ];
+  const canUseFinance = canAccessFinance(profile);
+  const availableTabs = adminTabDefinitions.filter((tab) => {
+    if (tab.requiresFinance && !canUseFinance) {
+      return false;
+    }
+
+    if (tab.requiresAdmin && profile?.role !== "admin") {
+      return false;
+    }
+
+    return true;
+  });
+  const activeAdminTab = availableTabs.find((tab) => tab.id === activeTab) ?? availableTabs[0];
+  const adminSidebarGroups = (Object.entries(adminTabGroupLabels) as Array<
+    [AdminTabGroupId, string]
+  >)
+    .map(([groupId, label]) => ({
+      groupId,
+      label,
+      tabs: availableTabs.filter((tab) => tab.group === groupId)
+    }))
+    .filter((group) => group.tabs.length > 0);
   const orderedContactGroups = orderGroupsForContact(groups, pages.contact.groupCards);
-
-  if (canAccessFinance(profile)) {
-    availableTabs.splice(1, 0, { id: "finance", label: "Financiën" });
-  }
-
-  if (profile?.role === "admin") {
-    availableTabs.push({ id: "team", label: "Team" });
-  }
+  const adminDateLabel = new Date().toLocaleDateString("nl-BE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+  const adminScopeLabel =
+    profile?.role === "admin"
+      ? `Toegang tot alle ${groups.length || 0} groepen`
+      : `${profile?.managedGroupSlugs.length || 0} gekoppelde groep${
+          profile?.managedGroupSlugs.length === 1 ? "" : "en"
+        }`;
+  const adminUserLabel =
+    profile?.full_name?.trim() || profile?.email?.trim() || session?.user.email || "Leiding";
 
   const overviewRecentMessages = [...messages]
     .sort((left, right) => {
@@ -2334,6 +2503,485 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     ...item,
     share: financeIncomeBreakdownTotal ? (item.amount / financeIncomeBreakdownTotal) * 100 : 0
   }));
+  const publishedPostsCount = posts.filter((post) => post.published).length;
+  const draftPostsCount = posts.length - publishedPostsCount;
+  const postValidationIssuesCount = posts.filter(
+    (post) => countMissingTextValues([post.title, post.summary, post.body]) > 0
+  ).length;
+  const groupsWithoutLeadersCount = groups.filter((group) => group.leaders.length === 0).length;
+  const groupsMissingProfileCount = groups.filter(
+    (group) =>
+      countMissingTextValues([
+        group.slug,
+        group.name,
+        group.ageRange,
+        group.description,
+        group.imageUrl
+      ]) > 0
+  ).length;
+  const siteReadinessFields = [
+    siteSettings.siteName,
+    siteSettings.siteUrl,
+    siteSettings.email,
+    siteSettings.address,
+    siteSettings.mapEmbedUrl,
+    siteSettings.footerCopyright,
+    siteSettings.footerAdminLabel
+  ];
+  const siteMissingCount = countMissingTextValues(siteReadinessFields);
+  const siteReadinessPercent = getReadinessPercent(
+    siteReadinessFields.length - siteMissingCount,
+    siteReadinessFields.length
+  );
+  const homeReadinessFields = [
+    pages.home.banner.title,
+    pages.home.banner.subtitle,
+    pages.home.banner.imageUrl,
+    pages.home.hero.title,
+    pages.home.hero.lead,
+    pages.home.about.title,
+    pages.home.about.body,
+    pages.home.practical.title,
+    pages.home.history.title,
+    pages.home.history.body
+  ];
+  const homeMissingCount =
+    countMissingTextValues(homeReadinessFields) +
+    (pages.home.gallery.length ? 0 : 1) +
+    (pages.home.practical.items.length ? 0 : 1);
+  const homeReadinessPercent = getReadinessPercent(
+    homeReadinessFields.length +
+      (pages.home.gallery.length ? 1 : 0) +
+      (pages.home.practical.items.length ? 1 : 0) -
+      countMissingTextValues(homeReadinessFields),
+    homeReadinessFields.length + 2
+  );
+  const contactReadinessFields = [
+    pages.contact.title,
+    pages.contact.generalTitle,
+    pages.contact.generalBody,
+    pages.contact.formTitle,
+    pages.contact.successMessage,
+    pages.contact.errorMessage,
+    pages.contact.sectionsTitle
+  ];
+  const contactMissingCount =
+    countMissingTextValues(contactReadinessFields) +
+    (pages.contact.formCategories.length ? 0 : 1) +
+    (contactSections.length ? 0 : 1);
+  const contactReadinessPercent = getReadinessPercent(
+    contactReadinessFields.length +
+      (pages.contact.formCategories.length ? 1 : 0) +
+      (contactSections.length ? 1 : 0) -
+      countMissingTextValues(contactReadinessFields),
+    contactReadinessFields.length + 2
+  );
+  const songsMissingCount =
+    countMissingTextValues([pages.songs.title, pages.songs.lead]) + (songs.length ? 0 : 1);
+  const registrationReadinessFields = [
+    pages.registration.title,
+    pages.registration.lead,
+    pages.registration.stepsTitle,
+    pages.registration.tip,
+    pages.registration.groupsTitle,
+    pages.registration.clothesTitle,
+    pages.registration.clothesBody,
+    pages.registration.merch.title,
+    pages.registration.merch.subtitle,
+    pages.registration.merch.body,
+    pages.registration.merch.note,
+    pages.registration.merch.imageUrl
+  ];
+  const registrationMissingCount =
+    countMissingTextValues(registrationReadinessFields) +
+    (pages.registration.steps.length ? 0 : 1) +
+    (pages.registration.merch.prices.length ? 0 : 1) +
+    (pages.registration.merch.actions.length ? 0 : 1);
+  const registrationReadinessPercent = getReadinessPercent(
+    registrationReadinessFields.length +
+      (pages.registration.steps.length ? 1 : 0) +
+      (pages.registration.merch.prices.length ? 1 : 0) +
+      (pages.registration.merch.actions.length ? 1 : 0) -
+      countMissingTextValues(registrationReadinessFields),
+    registrationReadinessFields.length + 3
+  );
+  const campReadinessFields = [
+    pages.camp.kicker,
+    pages.camp.title,
+    pages.camp.lead,
+    pages.camp.heroImageUrl,
+    pages.camp.heroImageAlt,
+    pages.camp.overviewTitle,
+    pages.camp.importantTitle,
+    pages.camp.importantImageUrl,
+    pages.camp.priceTitle,
+    pages.camp.bankAccount,
+    pages.camp.bankMessage,
+    pages.camp.cancellationPolicy,
+    pages.camp.signupTitle,
+    pages.camp.signupIntro,
+    pages.camp.signupLinkLabel,
+    pages.camp.signupLinkUrl,
+    pages.camp.checklistTitle
+  ];
+  const campMissingCount =
+    countMissingTextValues(campReadinessFields) +
+    (pages.camp.ctas.length ? 0 : 1) +
+    (pages.camp.jumpLinks.length ? 0 : 1) +
+    (pages.camp.overviewItems.length ? 0 : 1) +
+    (pages.camp.importantItems.length ? 0 : 1) +
+    (pages.camp.priceItems.length ? 0 : 1) +
+    (pages.camp.supportBoxes.length ? 0 : 1) +
+    (pages.camp.signupSteps.length ? 0 : 1) +
+    (pages.camp.checklistSections.length ? 0 : 1);
+  const campReadinessPercent = getReadinessPercent(
+    campReadinessFields.length +
+      (pages.camp.ctas.length ? 1 : 0) +
+      (pages.camp.jumpLinks.length ? 1 : 0) +
+      (pages.camp.overviewItems.length ? 1 : 0) +
+      (pages.camp.importantItems.length ? 1 : 0) +
+      (pages.camp.priceItems.length ? 1 : 0) +
+      (pages.camp.supportBoxes.length ? 1 : 0) +
+      (pages.camp.signupSteps.length ? 1 : 0) +
+      (pages.camp.checklistSections.length ? 1 : 0) -
+      countMissingTextValues(campReadinessFields),
+    campReadinessFields.length + 8
+  );
+  const otherPagesReadinessFields = [
+    pages.activities.slug,
+    pages.activities.title,
+    pages.activities.lead,
+    pages.activities.description,
+    pages.activities.postsTitle,
+    pages.activities.postsEmptyText,
+    pages.activities.bookletUrl,
+    pages.rental.slug,
+    pages.rental.title,
+    pages.rental.lead,
+    pages.rental.description,
+    pages.insurance.slug,
+    pages.insurance.title,
+    pages.insurance.lead,
+    pages.insurance.description,
+    pages.privacy.slug,
+    pages.privacy.title,
+    pages.privacy.lead,
+    pages.privacy.description
+  ];
+  const otherPagesCardsCount =
+    pages.activities.cards.length +
+    pages.rental.cards.length +
+    pages.insurance.cards.length +
+    pages.privacy.cards.length;
+  const otherPagesMissingCount =
+    countMissingTextValues(otherPagesReadinessFields) + (otherPagesCardsCount ? 0 : 1);
+  const otherPagesReadinessPercent = getReadinessPercent(
+    otherPagesReadinessFields.length + (otherPagesCardsCount ? 1 : 0) -
+      countMissingTextValues(otherPagesReadinessFields),
+    otherPagesReadinessFields.length + 1
+  );
+  const teamEditorsWithoutGroupsCount = profiles.filter(
+    (currentProfile) =>
+      currentProfile.role === "editor" && currentProfile.managedGroupSlugs.length === 0
+  ).length;
+  const overviewMessageTrendData = getRecentDayBuckets(
+    messages.map((message) => message.createdAt),
+    7
+  );
+  const overviewMessageTrendPeak = Math.max(
+    1,
+    ...overviewMessageTrendData.map((item) => item.count)
+  );
+  const overviewMessagesThisWeek = overviewMessageTrendData.reduce(
+    (total, item) => total + item.count,
+    0
+  );
+  const adminReadinessItems: AdminReadinessItem[] = [
+    {
+      id: "site-settings",
+      label: "Sitebasis",
+      detail: siteMissingCount
+        ? `${siteMissingCount} basisvelden missen nog een waarde.`
+        : "Naam, contactinfo, kaart en footer staan klaar.",
+      status: siteMissingCount ? "warning" : "ok",
+      tabId: "site"
+    },
+    {
+      id: "home-page",
+      label: "Homepage",
+      detail: homeMissingCount
+        ? `${homeMissingCount} onderdelen op home zijn nog onvolledig.`
+        : "Banner, intro, praktische info en galerij zijn ingevuld.",
+      status: homeMissingCount ? "warning" : "ok",
+      tabId: "home"
+    },
+    {
+      id: "groups",
+      label: "Groepen",
+      detail:
+        groupsWithoutLeadersCount || groupsMissingProfileCount
+          ? `${groupsWithoutLeadersCount ? `${groupsWithoutLeadersCount} groep${groupsWithoutLeadersCount === 1 ? "" : "en"} zonder leiding` : ""}${
+              groupsWithoutLeadersCount && groupsMissingProfileCount ? " en " : ""
+            }${
+              groupsMissingProfileCount
+                ? `${groupsMissingProfileCount} kaart${groupsMissingProfileCount === 1 ? "" : "en"} met ontbrekende info`
+                : ""
+            }.`
+          : `${groups.length} groepen hebben een publieke kaart en leiding.`,
+      status: groupsWithoutLeadersCount || groupsMissingProfileCount ? "warning" : "ok",
+      tabId: "groups"
+    },
+    {
+      id: "contact",
+      label: "Contactflow",
+      detail:
+        contactMissingCount || groupsWithoutLeadersCount
+          ? `${contactMissingCount ? `${contactMissingCount} contactonderdelen missen nog inhoud` : "De contactstructuur staat klaar"}${
+              contactMissingCount && groupsWithoutLeadersCount ? " en " : "."
+            }${
+              groupsWithoutLeadersCount
+                ? ` ${groupsWithoutLeadersCount} groep${groupsWithoutLeadersCount === 1 ? "" : "en"} heeft nog geen contactleiding.`
+                : ""
+            }`
+          : "Formulier, meldingen en extra contactblokken zijn ingevuld.",
+      status: contactMissingCount || groupsWithoutLeadersCount ? "warning" : "ok",
+      tabId: "contact"
+    },
+    {
+      id: "posts",
+      label: "Posts",
+      detail: postValidationIssuesCount
+        ? `${postValidationIssuesCount} conceptpost${postValidationIssuesCount === 1 ? "" : "s"} mist nog titel, samenvatting of inhoud.`
+        : draftPostsCount
+          ? `${draftPostsCount} conceptpost${draftPostsCount === 1 ? "" : "s"} wacht${draftPostsCount === 1 ? "" : "en"} nog op publicatie.`
+          : publishedPostsCount
+            ? `${publishedPostsCount} posts staan klaar of live op de site.`
+            : "Maak je eerste post klaar voor de activiteitenpagina.",
+      status: postValidationIssuesCount ? "warning" : "ok",
+      tabId: "posts"
+    },
+    {
+      id: "songs",
+      label: "Liedjes",
+      detail: songsMissingCount
+        ? `${songsMissingCount} onderdelen ontbreken nog in de liedjesmodule.`
+        : `${songs.length} liedjes staan klaar met titel en tekst.`,
+      status: songsMissingCount ? "warning" : "ok",
+      tabId: "songs"
+    },
+    {
+      id: "registration",
+      label: "Inschrijven",
+      detail: registrationMissingCount
+        ? `${registrationMissingCount} blokken vragen nog extra invulling.`
+        : "Stappenplan, groepenoverzicht en merchblok zijn compleet.",
+      status: registrationMissingCount ? "warning" : "ok",
+      tabId: "registration"
+    },
+    {
+      id: "camp",
+      label: "Kamp",
+      detail: campMissingCount
+        ? `${campMissingCount} kamponderdelen zijn nog niet volledig ingevuld.`
+        : "Hero, springlinks, prijzen, stappen en checklist staan klaar.",
+      status: campMissingCount ? "warning" : "ok",
+      tabId: "camp"
+    },
+    {
+      id: "other-pages",
+      label: "Overige pagina's",
+      detail: otherPagesMissingCount
+        ? `${otherPagesMissingCount} velden of kaarten ontbreken nog op activiteiten, verhuur, verzekering of privacy.`
+        : "Alle ondersteunende pagina's hebben tekst en kaartinhoud.",
+      status: otherPagesMissingCount ? "warning" : "ok",
+      tabId: "pages"
+    },
+    ...(canUseFinance
+      ? [
+          {
+            id: "finance",
+            label: "Financiën",
+            detail: financeSchemaError
+              ? "De finance-databank moet nog geactiveerd worden in Supabase."
+              : financePendingTransactions.length
+                ? `${financePendingTransactions.length} transacties staan nog open voor opvolging.`
+                : "De finance-omgeving is actief en zonder openstaande transacties.",
+            status: financeSchemaError ? ("warning" as const) : ("ok" as const),
+            tabId: "finance" as TabId
+          }
+        ]
+      : []),
+    ...(profile?.role === "admin"
+      ? [
+          {
+            id: "team",
+            label: "Teamtoegang",
+            detail: teamEditorsWithoutGroupsCount
+              ? `${teamEditorsWithoutGroupsCount} editor${teamEditorsWithoutGroupsCount === 1 ? "" : "s"} heeft nog geen gekoppelde groep.`
+              : "Rollen en groepstoegang zijn netjes toegewezen.",
+            status: teamEditorsWithoutGroupsCount ? ("warning" as const) : ("ok" as const),
+            tabId: "team" as TabId
+          }
+        ]
+      : [])
+  ];
+  const overviewReadyCount = adminReadinessItems.filter((item) => item.status === "ok").length;
+  const overviewWarningItems = adminReadinessItems.filter((item) => item.status === "warning");
+  const overviewReadinessPercent = getReadinessPercent(
+    overviewReadyCount,
+    adminReadinessItems.length
+  );
+  const overviewSpotlightItem = overviewWarningItems[0] ?? adminReadinessItems[0] ?? null;
+  const overviewPriorityItems = (overviewWarningItems.length
+    ? overviewWarningItems
+    : adminReadinessItems
+  ).slice(0, 5);
+  const overviewQuickActions = [
+    {
+      tabId: "posts" as TabId,
+      badge: draftPostsCount ? `${draftPostsCount} concepten` : "Nieuws",
+      title: "Werk posts en activiteiten bij",
+      detail: "Publiceer nieuws of werk bestaande activiteiten verder uit.",
+      primary: true
+    },
+    {
+      tabId: "groups" as TabId,
+      badge: `${groups.length} groepen`,
+      title: "Controleer groepen en leiding",
+      detail: "Zorg dat elke groep een kaart, afbeelding en leiding heeft."
+    },
+    {
+      tabId: "messages" as TabId,
+      badge: `${messages.length} berichten`,
+      title: "Verwerk je inbox",
+      detail: "Bekijk de recentste contactvragen en ruim oude berichten op."
+    },
+    {
+      tabId: canUseFinance ? ("finance" as TabId) : ("site" as TabId),
+      badge: canUseFinance
+        ? financeSchemaError
+          ? "Setup nodig"
+          : `${financePendingTransactions.length} open`
+        : "Sitebasis",
+      title: canUseFinance ? "Open de finance-workspace" : "Werk site-instellingen bij",
+      detail: canUseFinance
+        ? "Ga rechtstreeks naar budgetten, transacties en groepssaldo's."
+        : "Vul sitenaam, contactinfo en footer aan voor een nette publicatie."
+    }
+  ].filter((item) => availableTabs.some((tab) => tab.id === item.tabId));
+  const overviewHealthCards = [
+    {
+      tabId: "site" as TabId,
+      label: "Site-instellingen",
+      statusLabel: siteMissingCount ? `${siteMissingCount} open` : "Volledig",
+      detail: "Logo, contact, kaart en footer",
+      progress: siteReadinessPercent
+    },
+    {
+      tabId: "home" as TabId,
+      label: "Homepage",
+      statusLabel: homeMissingCount ? `${homeMissingCount} open` : "Klaar",
+      detail: "Banner, intro, galerij en praktische blokken",
+      progress: homeReadinessPercent
+    },
+    {
+      tabId: "contact" as TabId,
+      label: "Contact",
+      statusLabel: contactMissingCount ? `${contactMissingCount} open` : "Klaar",
+      detail: "Formulier, categorieen en extra contactblokken",
+      progress: contactReadinessPercent
+    },
+    {
+      tabId: "registration" as TabId,
+      label: "Inschrijven",
+      statusLabel: registrationMissingCount ? `${registrationMissingCount} open` : "Klaar",
+      detail: "Stappen, groepen, kledij en merch",
+      progress: registrationReadinessPercent
+    },
+    {
+      tabId: "camp" as TabId,
+      label: "Kamp",
+      statusLabel: campMissingCount ? `${campMissingCount} open` : "Klaar",
+      detail: "Hero, prijzen, stappen en checklist",
+      progress: campReadinessPercent
+    },
+    {
+      tabId: "pages" as TabId,
+      label: "Overige pagina's",
+      statusLabel: otherPagesMissingCount ? `${otherPagesMissingCount} open` : "Klaar",
+      detail: "Activiteiten, verhuur, verzekering en privacy",
+      progress: otherPagesReadinessPercent
+    }
+  ];
+  const overviewCommandCards = [
+    {
+      tabId: "site" as TabId,
+      badge: "Basis",
+      title: "Werk de globale site-identiteit bij",
+      detail: "Pas sitenaam, footer, socials en kaartlinks aan."
+    },
+    {
+      tabId: "contact" as TabId,
+      badge: "Contact",
+      title: "Maak contact duidelijker",
+      detail: "Houd formulierteksten, categorieen en contactblokken overzichtelijk."
+    },
+    {
+      tabId: "pages" as TabId,
+      badge: "Pagina's",
+      title: "Controleer ondersteunende pagina's",
+      detail: "Activiteiten, verhuur, verzekering en privacy zitten op een plek."
+    },
+    {
+      tabId: profile?.role === "admin" ? ("team" as TabId) : ("messages" as TabId),
+      badge: profile?.role === "admin" ? "Team" : "Inbox",
+      title:
+        profile?.role === "admin" ? "Beheer rollen en toegang" : "Bekijk recente berichten",
+      detail:
+        profile?.role === "admin"
+          ? "Koppel editors aan hun groepen en houd adminrechten helder."
+          : "Zie wie contact opnam en wanneer er opvolging nodig is.",
+      primary: profile?.role === "admin"
+    }
+  ].filter((item) => availableTabs.some((tab) => tab.id === item.tabId));
+  const adminTabBadges: Partial<Record<TabId, string>> = {
+    overview: overviewWarningItems.length ? `${overviewWarningItems.length} open` : "Klaar",
+    groups: groupsWithoutLeadersCount
+      ? `${groupsWithoutLeadersCount} zonder leiding`
+      : `${groups.length} groepen`,
+    posts: draftPostsCount ? `${draftPostsCount} concepten` : `${publishedPostsCount} live`,
+    messages: messages.length ? `${messages.length} berichten` : "Leeg"
+  };
+
+  if (canUseFinance) {
+    adminTabBadges.finance = financeSchemaError
+      ? "Setup"
+      : financePendingTransactions.length
+        ? `${financePendingTransactions.length} open`
+        : "Actueel";
+  }
+
+  if (profile?.role === "admin") {
+    adminTabBadges.team = `${profiles.length} leden`;
+  }
+
+  useEffect(() => {
+    const nextAvailableTabs = adminTabDefinitions.filter((tab) => {
+      if (tab.requiresFinance && !canAccessFinance(profile)) {
+        return false;
+      }
+
+      if (tab.requiresAdmin && profile?.role !== "admin") {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (!nextAvailableTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(nextAvailableTabs[0]?.id ?? "overview");
+    }
+  }, [activeTab, profile]);
 
   useEffect(() => {
     if (!canAccessFinance(profile)) {
@@ -3374,25 +4022,45 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   return (
     <div class="admin-app">
       <aside class="admin-sidebar">
-        <div>
+        <div class="admin-sidebar-brand">
           <p class="admin-kicker">Beheer</p>
           <h1>Chiro Negenmanneke</h1>
-          <p class="muted">Inhoud live aanpassen zonder code.</p>
+          <p class="muted">Een duidelijke werkplek om je site, team en financiën veilig te beheren.</p>
         </div>
-        <nav class="admin-tabs">
-          {availableTabs.map((tab) => (
-            <button
-              type="button"
-              class={activeTab === tab.id ? "is-active" : ""}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
+
+        <div class="admin-sidebar-status-card">
+          <span>{profile.role === "admin" ? "Admin" : "Editor"}</span>
+          <strong>{adminUserLabel}</strong>
+          <p>{adminScopeLabel}</p>
+        </div>
+
+        <nav class="admin-sidebar-nav" aria-label="Admin onderdelen">
+          {adminSidebarGroups.map((group) => (
+            <section class="admin-sidebar-section" key={group.groupId}>
+              <p class="admin-sidebar-section-label">{group.label}</p>
+              <div class="admin-sidebar-section-stack">
+                {group.tabs.map((tab) => (
+                  <button
+                    type="button"
+                    key={tab.id}
+                    class={`admin-sidebar-tab ${activeTab === tab.id ? "is-active" : ""}`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    <div class="admin-sidebar-tab-copy">
+                      <strong>{tab.label}</strong>
+                      <span>{tab.description}</span>
+                    </div>
+                    {adminTabBadges[tab.id] && <small>{adminTabBadges[tab.id]}</small>}
+                  </button>
+                ))}
+              </div>
+            </section>
           ))}
         </nav>
+
         <div class="admin-sidebar-foot">
           <p class="muted-small">
-            Ingelogd als <strong>{profile?.email ?? session.user.email}</strong>
+            Ingelogd als <strong>{profile.email ?? session.user.email}</strong>
           </p>
           <div class="admin-sidebar-actions">
             <a class="btn btn-light" href="/">
@@ -3406,49 +4074,424 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       </aside>
 
       <main class="admin-main">
-        {notice && <div class={`admin-notice admin-notice-${notice.type}`}>{notice.message}</div>}
-        {dataLoading && <div class="admin-loading-inline">Data verversen...</div>}
+        <div class={`admin-main-shell ${activeTab === "finance" ? "is-finance" : ""}`}>
+          {notice && <div class={`admin-notice admin-notice-${notice.type}`}>{notice.message}</div>}
+          {dataLoading && <div class="admin-loading-inline">Data verversen...</div>}
 
-        {activeTab === "overview" && (
-          <section class="admin-panel admin-overview-inbox">
-            <div class="admin-panel-head admin-overview-inbox-head">
-              <div>
-                <p class="admin-kicker">Overzicht</p>
-                <h2>Berichten</h2>
-                <p>Hier zie je alleen de recentste berichten en wanneer ze verstuurd zijn.</p>
+          {activeTab !== "finance" && activeAdminTab && (
+            <header class="admin-shell-bar">
+              <div class="admin-shell-copy">
+                <p class="admin-kicker">{adminTabGroupLabels[activeAdminTab.group]}</p>
+                <h2>{activeAdminTab.label}</h2>
+                <p>{activeAdminTab.description}</p>
               </div>
-              <button class="btn" type="button" onClick={() => setActiveTab("messages")}>
-                Naar berichten
-              </button>
-            </div>
-
-            <div class="admin-overview-message-list">
-              {overviewRecentMessages.length ? (
-                overviewRecentMessages.map((message) => (
-                  <article
-                    class="admin-overview-message-card"
-                    key={message.id ?? `${message.email}-${message.createdAt ?? message.subject}`}
-                  >
-                    <div class="admin-overview-message-main">
-                      <strong>{message.subject || message.category || "Bericht zonder onderwerp"}</strong>
-                      <p>{message.name || message.email}</p>
-                    </div>
-                    <div class="admin-overview-message-meta">
-                      <span>{formatAdminDate(message.createdAt) || "Onbekend tijdstip"}</span>
-                      <small>{formatRelativeDate(message.createdAt) || "recent"}</small>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div class="admin-overview-empty">
-                  Nog geen berichten ontvangen via het contactformulier.
+              <div class="admin-shell-actions">
+                <div class="admin-shell-chips">
+                  <span class="admin-shell-chip">{profile.role === "admin" ? "Admin" : "Editor"}</span>
+                  <span class="admin-shell-chip is-soft">{adminScopeLabel}</span>
+                  <span class="admin-shell-chip is-soft">{adminDateLabel}</span>
                 </div>
-              )}
-            </div>
-          </section>
-        )}
+                <div class="admin-shell-button-row">
+                  <button class="btn btn-light" type="button" onClick={() => void loadDashboard()}>
+                    Ververs gegevens
+                  </button>
+                  <a class="btn" href="/" target="_blank" rel="noreferrer">
+                    Bekijk site
+                  </a>
+                </div>
+              </div>
+            </header>
+          )}
 
-        {activeTab === "finance" && canAccessFinance(profile) && (
+          {activeTab === "overview" && (
+            <>
+              <section class="admin-overview-stage">
+                <div class="admin-overview-stage-main">
+                  <div class="admin-overview-stage-meta">
+                    <span class="admin-overview-stage-date">Admin cockpit</span>
+                    <span class="admin-overview-stage-date">{adminDateLabel}</span>
+                  </div>
+
+                  <div class="admin-overview-stage-copy">
+                    <h2>
+                      {overviewWarningItems.length
+                        ? "Zie meteen wat nog aandacht vraagt."
+                        : "Je admin staat netjes en publicatieklaar."}
+                    </h2>
+                    <p>
+                      Gebruik dit overzicht als cockpit voor content, teamtoegang, inbox en
+                      financiën. Zo ziet iedereen sneller waar iets nog ontbreekt en wat meteen
+                      klaar is om live te zetten.
+                    </p>
+                  </div>
+
+                  <div class="admin-overview-glance">
+                    <article class="admin-overview-glance-card">
+                      <span>Deploy readiness</span>
+                      <strong>{overviewReadinessPercent}%</strong>
+                      <p>
+                        {overviewReadyCount} van {adminReadinessItems.length} checks staan op groen.
+                      </p>
+                    </article>
+                    <article class="admin-overview-glance-card">
+                      <span>Groepsdekking</span>
+                      <strong>{groups.length}</strong>
+                      <p>
+                        {groupsWithoutLeadersCount
+                          ? `${groupsWithoutLeadersCount} groep${
+                              groupsWithoutLeadersCount === 1 ? "" : "en"
+                            } mist nog leiding.`
+                          : "Alle groepen hebben minstens één leiding."}
+                      </p>
+                    </article>
+                    <article class="admin-overview-glance-card">
+                      <span>Posts live</span>
+                      <strong>{publishedPostsCount}</strong>
+                      <p>
+                        {draftPostsCount
+                          ? `${draftPostsCount} conceptpost${
+                              draftPostsCount === 1 ? "" : "s"
+                            } wacht${draftPostsCount === 1 ? "" : "en"} nog op publicatie.`
+                          : "Geen concepten die nog blijven liggen."}
+                      </p>
+                    </article>
+                  </div>
+
+                  <div class="admin-overview-quick-actions">
+                    {overviewQuickActions.map((item) => (
+                      <button
+                        class={`admin-overview-quick-action ${item.primary ? "is-primary" : ""}`}
+                        type="button"
+                        key={item.tabId}
+                        onClick={() => setActiveTab(item.tabId)}
+                      >
+                        <span>{item.badge}</span>
+                        <strong>{item.title}</strong>
+                        <small>{item.detail}</small>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div class="admin-overview-signal-row">
+                    <article class="admin-overview-signal-card is-urgent">
+                      <span>Actiepunten</span>
+                      <strong>{overviewWarningItems.length}</strong>
+                      <p>Modules die nog aandacht vragen voor je volgende update.</p>
+                    </article>
+                    <article class="admin-overview-signal-card is-active">
+                      <span>Inbox 7 dagen</span>
+                      <strong>{overviewMessagesThisWeek}</strong>
+                      <p>Nieuwe contactberichten in de laatste week.</p>
+                    </article>
+                    <article class="admin-overview-signal-card is-calm">
+                      <span>Team</span>
+                      <strong>{profiles.length}</strong>
+                      <p>
+                        {profile.role === "admin"
+                          ? teamEditorsWithoutGroupsCount
+                            ? `${teamEditorsWithoutGroupsCount} editor${
+                                teamEditorsWithoutGroupsCount === 1 ? "" : "s"
+                              } zonder groepstoegang.`
+                            : "Rollen en toegangen zijn gekoppeld."
+                          : "Je ziet alleen de modules die jij mag beheren."}
+                      </p>
+                    </article>
+                  </div>
+
+                  <div class="admin-overview-metric-grid">
+                    <article class="admin-overview-metric-card">
+                      <span>Contactblokken</span>
+                      <strong>{contactSections.length}</strong>
+                      <p>Extra secties op de contactpagina.</p>
+                    </article>
+                    <article class="admin-overview-metric-card">
+                      <span>Liedjes</span>
+                      <strong>{songs.length}</strong>
+                      <p>Items in de liedbundel.</p>
+                    </article>
+                    <article class="admin-overview-metric-card">
+                      <span>Inbox totaal</span>
+                      <strong>{messages.length}</strong>
+                      <p>Alle ontvangen contactberichten.</p>
+                    </article>
+                    <article class="admin-overview-metric-card">
+                      <span>{canUseFinance ? "Transacties" : "Pagina's"}</span>
+                      <strong>
+                        {canUseFinance ? financeVisibleTransactions.length : otherPagesCardsCount}
+                      </strong>
+                      <p>
+                        {canUseFinance
+                          ? "Financiële items in de huidige dataset."
+                          : "Kaarten over activiteiten, verhuur, verzekering en privacy."}
+                      </p>
+                    </article>
+                  </div>
+                </div>
+
+                <div class="admin-overview-stage-side">
+                  {overviewSpotlightItem && (
+                    <article class="admin-overview-stage-spotlight">
+                      <div class="admin-overview-stage-spotlight-head">
+                        <span class="admin-overview-stage-pill">
+                          {overviewSpotlightItem.status === "warning"
+                            ? "Actie nodig"
+                            : "Alles onder controle"}
+                        </span>
+                        <span class="admin-overview-stage-caption">
+                          {overviewReadinessPercent}% gereed
+                        </span>
+                      </div>
+                      <strong>{overviewSpotlightItem.label}</strong>
+                      <p>{overviewSpotlightItem.detail}</p>
+                      <button
+                        class="admin-overview-stage-button"
+                        type="button"
+                        onClick={() => setActiveTab(overviewSpotlightItem.tabId)}
+                      >
+                        Open {availableTabs.find((tab) => tab.id === overviewSpotlightItem.tabId)?.label}
+                      </button>
+                    </article>
+                  )}
+
+                  <article class="admin-overview-stage-chart">
+                    <div class="admin-overview-stage-chart-head">
+                      <div>
+                        <span class="admin-overview-stage-caption">Inbox ritme</span>
+                        <h3>Berichten in de laatste 7 dagen</h3>
+                      </div>
+                      <span class="admin-overview-stage-chart-total">
+                        {overviewMessagesThisWeek} totaal
+                      </span>
+                    </div>
+
+                    {overviewMessagesThisWeek ? (
+                      <div class="admin-overview-bar-chart" aria-hidden="true">
+                        {overviewMessageTrendData.map((item) => (
+                          <div class="admin-overview-bar-column" key={item.key}>
+                            <strong>{item.count}</strong>
+                            <div
+                              class="admin-overview-bar"
+                              style={{ height: `${Math.max(14, (item.count / overviewMessageTrendPeak) * 120)}px` }}
+                            />
+                            <small>{item.label}</small>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div class="admin-overview-empty">
+                        Nog geen recente berichten. Zodra er contactvragen binnenkomen, zie je hier
+                        meteen het ritme.
+                      </div>
+                    )}
+
+                    <p class="admin-overview-stage-chart-note">
+                      Gebruik deze trend om te zien wanneer je inbox piekt en wanneer snelle opvolging
+                      nodig is.
+                    </p>
+                  </article>
+
+                  <div class="admin-overview-stage-summary">
+                    <article class="admin-overview-stage-summary-item">
+                      <span>Financiën</span>
+                      <strong>
+                        {canUseFinance ? financePendingTransactions.length : adminReadinessItems.length}
+                      </strong>
+                      <p>
+                        {canUseFinance
+                          ? financeSchemaError
+                            ? "Setup nodig in Supabase."
+                            : "Openstaande transacties."
+                          : "Belangrijkste adminchecks."}
+                      </p>
+                    </article>
+                    <article class="admin-overview-stage-summary-item">
+                      <span>Contact</span>
+                      <strong>{overviewRecentMessages.length}</strong>
+                      <p>Recentste berichten direct zichtbaar.</p>
+                    </article>
+                    <article class="admin-overview-stage-summary-item">
+                      <span>Team</span>
+                      <strong>{profiles.length}</strong>
+                      <p>Accounts met toegang tot deze admin.</p>
+                    </article>
+                  </div>
+                </div>
+              </section>
+
+              <div class="admin-overview-workspace">
+                <section class="admin-panel admin-overview-cluster">
+                  <div class="admin-overview-cluster-head">
+                    <h2>Prioriteiten voor je volgende update</h2>
+                    <p>
+                      Dit zijn de snelste verbeteringen om de admin en site publicatieklaar te houden.
+                    </p>
+                  </div>
+
+                  <div class="admin-overview-priority-stack">
+                    {overviewPriorityItems.map((item, index) => (
+                      <button
+                        class={`admin-overview-priority-card ${
+                          item.status === "warning" ? "is-urgent" : "is-good"
+                        }`}
+                        type="button"
+                        key={item.id}
+                        onClick={() => setActiveTab(item.tabId)}
+                      >
+                        <span class="admin-overview-priority-index">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <div class="admin-overview-priority-copy">
+                          <span
+                            class={`admin-overview-system-chip ${
+                              item.status === "warning" ? "is-warning" : "is-ok"
+                            }`}
+                          >
+                            {item.status === "warning" ? "Aandacht" : "Klaar"}
+                          </span>
+                          <h3>{item.label}</h3>
+                          <p>{item.detail}</p>
+                        </div>
+                        <span class="admin-overview-priority-cta">Open</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </div>
+
+              <div class="admin-overview-secondary">
+                <section class="admin-panel admin-overview-cluster">
+                  <div class="admin-overview-cluster-head">
+                    <h2>Snelle routes</h2>
+                    <p>Spring meteen naar de belangrijkste beheertaken.</p>
+                  </div>
+                  <div class="admin-overview-command-deck">
+                    {overviewCommandCards.map((item) => (
+                      <button
+                        class={`admin-overview-command-card ${item.primary ? "is-primary" : ""}`}
+                        type="button"
+                        key={item.tabId}
+                        onClick={() => setActiveTab(item.tabId)}
+                      >
+                        <div class="admin-overview-command-card-top">
+                          <span class="admin-overview-command-badge">{item.badge}</span>
+                          <span class="admin-overview-command-arrow">→</span>
+                        </div>
+                        <strong>{item.title}</strong>
+                        <p>{item.detail}</p>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section class="admin-panel admin-overview-cluster">
+                  <div class="admin-overview-cluster-head">
+                    <h2>Recente inbox</h2>
+                    <p>De laatste berichten uit het contactformulier, zonder eerst naar inbox te gaan.</p>
+                  </div>
+
+                  {overviewRecentMessages.length ? (
+                    <div class="admin-overview-stream is-compact">
+                      {overviewRecentMessages.map((message) => (
+                        <article
+                          class="admin-overview-stream-item"
+                          key={message.id ?? `${message.email}-${message.createdAt ?? message.subject}`}
+                        >
+                          <span class="admin-overview-stream-dot" />
+                          <div class="admin-overview-stream-copy">
+                            <strong>
+                              {message.subject || message.category || "Bericht zonder onderwerp"}
+                            </strong>
+                            <p>
+                              {message.name || "Onbekende afzender"} via {message.email}
+                              {message.category ? ` | ${message.category}` : ""}
+                            </p>
+                          </div>
+                          <div class="admin-overview-stream-meta">
+                            <span>{formatAdminDate(message.createdAt) || "Onbekend"}</span>
+                            <button
+                              class="admin-overview-link"
+                              type="button"
+                              onClick={() => setActiveTab("messages")}
+                            >
+                              Open inbox
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div class="admin-overview-empty">
+                      Nog geen contactberichten ontvangen via de site.
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              <div class="admin-overview-secondary">
+                <section class="admin-panel admin-overview-cluster">
+                  <div class="admin-overview-cluster-head">
+                    <h2>Contentgezondheid</h2>
+                    <p>Per belangrijke pagina zie je hoe compleet de inhoud al is.</p>
+                  </div>
+                  <div class="admin-overview-health-board">
+                    {overviewHealthCards.map((item) => (
+                      <button
+                        class="admin-overview-health-card"
+                        type="button"
+                        key={item.tabId}
+                        onClick={() => setActiveTab(item.tabId)}
+                      >
+                        <div class="admin-overview-health-card-top">
+                          <div>
+                            <strong>{item.label}</strong>
+                            <p>{item.detail}</p>
+                          </div>
+                          <span>{item.statusLabel}</span>
+                        </div>
+                        <div class="admin-overview-health-track" aria-hidden="true">
+                          <span style={{ width: `${item.progress}%` }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section class="admin-panel admin-overview-cluster">
+                  <div class="admin-overview-cluster-head">
+                    <h2>Systeemstatus</h2>
+                    <p>Een compacte check van de modules die vandaag het belangrijkst zijn.</p>
+                  </div>
+                  <div class="admin-overview-system-grid">
+                    {adminReadinessItems.slice(0, 6).map((item) => (
+                      <button
+                        class={`admin-overview-system-card ${
+                          item.status === "warning" ? "is-warning" : "is-ok"
+                        }`}
+                        type="button"
+                        key={item.id}
+                        onClick={() => setActiveTab(item.tabId)}
+                      >
+                        <div class="admin-overview-system-copy">
+                          <span
+                            class={`admin-overview-system-chip ${
+                              item.status === "warning" ? "is-warning" : "is-ok"
+                            }`}
+                          >
+                            {item.status === "warning" ? "Aandacht" : "OK"}
+                          </span>
+                          <strong>{item.label}</strong>
+                          <p>{item.detail}</p>
+                        </div>
+                        <span class="admin-overview-command-arrow">→</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </>
+          )}
+
+          {activeTab === "finance" && canUseFinance && (
           <section class="admin-panel admin-finance-panel">
             <div class="admin-panel-head admin-finance-header">
               <div class="admin-finance-header-copy">
@@ -4897,31 +5940,71 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
               </button>
             </div>
 
-            <div class="admin-grid">
-              <TextField label="Banner eyebrow" value={pages.home.banner.eyebrow} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, eyebrow: value } } }))} />
-              <TextField label="Banner titel" value={pages.home.banner.title} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, title: value } } }))} />
-              <TextField label="Banner subtitel" value={pages.home.banner.subtitle} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, subtitle: value } } }))} />
-              <ImageField label="Banner afbeelding" value={pages.home.banner.imageUrl} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, imageUrl: value } } }))} client={supabase} folder="home" />
-              <TextField label="Banner alt-tekst" value={pages.home.banner.imageAlt} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, imageAlt: value } } }))} />
-              <TextField label="Primaire knop" value={pages.home.banner.primaryCtaLabel} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, primaryCtaLabel: value } } }))} />
-              <TextField label="Primaire knop link" value={pages.home.banner.primaryCtaHref} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, primaryCtaHref: value } } }))} />
-              <TextField label="Secundaire knop" value={pages.home.banner.secondaryCtaLabel} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, secondaryCtaLabel: value } } }))} />
-              <TextField label="Secundaire knop link" value={pages.home.banner.secondaryCtaHref} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, secondaryCtaHref: value } } }))} />
-              <TextField label="Hero badge" value={pages.home.hero.badge} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, hero: { ...current.home.hero, badge: value } } }))} />
-              <TextField label="Hero titel" value={pages.home.hero.title} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, hero: { ...current.home.hero, title: value } } }))} />
-              <TextAreaField label="Hero intro" value={pages.home.hero.lead} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, hero: { ...current.home.hero, lead: value } } }))} />
-              <TextField label="Blok: wat is chiro?" value={pages.home.about.title} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, about: { ...current.home.about, title: value } } }))} />
-              <TextAreaField label="Tekst: wat is chiro? (Markdown)" value={pages.home.about.body} rows={6} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, about: { ...current.home.about, body: value } } }))} />
-              <TextField label="CTA label" value={pages.home.about.ctaLabel} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, about: { ...current.home.about, ctaLabel: value } } }))} />
-              <TextField label="CTA link" value={pages.home.about.ctaHref} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, about: { ...current.home.about, ctaHref: value } } }))} />
-              <TextField label="Praktisch titel" value={pages.home.practical.title} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, practical: { ...current.home.practical, title: value } } }))} />
-              <TextAreaField label="Praktische items (1 per regel)" value={joinLines(pages.home.practical.items)} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, practical: { ...current.home.practical, items: splitLines(value) } } }))} />
-              <TextAreaField label="Praktische noot" value={pages.home.practical.note} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, practical: { ...current.home.practical, note: value } } }))} />
-              <TextField label="Geschiedenis titel" value={pages.home.history.title} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, history: { ...current.home.history, title: value } } }))} />
-              <TextAreaField label="Geschiedenis (Markdown)" value={pages.home.history.body} rows={16} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, history: { ...current.home.history, body: value } } }))} />
-            </div>
+            <div class="admin-stacked-panels">
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Banner & eerste indruk</h4>
+                    <p>Deze blok bepaalt wat bezoekers als eerste zien op de homepage.</p>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <TextField label="Bovenlabel banner" value={pages.home.banner.eyebrow} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, eyebrow: value } } }))} />
+                  <TextField label="Banner titel" value={pages.home.banner.title} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, title: value } } }))} />
+                  <TextField label="Banner subtitel" value={pages.home.banner.subtitle} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, subtitle: value } } }))} />
+                  <ImageField label="Banner afbeelding" value={pages.home.banner.imageUrl} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, imageUrl: value } } }))} client={supabase} folder="home" />
+                  <TextField label="Banner alt-tekst" value={pages.home.banner.imageAlt} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, imageAlt: value } } }))} />
+                  <TextField label="Primaire knop" value={pages.home.banner.primaryCtaLabel} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, primaryCtaLabel: value } } }))} />
+                  <TextField label="Primaire knop link" value={pages.home.banner.primaryCtaHref} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, primaryCtaHref: value } } }))} />
+                  <TextField label="Secundaire knop" value={pages.home.banner.secondaryCtaLabel} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, secondaryCtaLabel: value } } }))} />
+                  <TextField label="Secundaire knop link" value={pages.home.banner.secondaryCtaHref} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, banner: { ...current.home.banner, secondaryCtaHref: value } } }))} />
+                  <TextField label="Hero badge" value={pages.home.hero.badge} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, hero: { ...current.home.hero, badge: value } } }))} />
+                  <TextField label="Hero titel" value={pages.home.hero.title} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, hero: { ...current.home.hero, title: value } } }))} />
+                  <TextAreaField label="Hero intro" value={pages.home.hero.lead} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, hero: { ...current.home.hero, lead: value } } }))} />
+                </div>
+              </section>
 
-            <GalleryEditor items={pages.home.gallery} onChange={(items) => setPages((current) => ({ ...current, home: { ...current.home, gallery: items } }))} client={supabase} />
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Over Chiro</h4>
+                    <p>Gebruik dit blok om nieuwe bezoekers snel uit te leggen wie jullie zijn.</p>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <TextField label="Titel blok" value={pages.home.about.title} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, about: { ...current.home.about, title: value } } }))} />
+                  <TextField label="CTA label" value={pages.home.about.ctaLabel} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, about: { ...current.home.about, ctaLabel: value } } }))} />
+                  <TextAreaField label="Tekst (Markdown)" value={pages.home.about.body} rows={8} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, about: { ...current.home.about, body: value } } }))} />
+                  <TextField label="CTA link" value={pages.home.about.ctaHref} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, about: { ...current.home.about, ctaHref: value } } }))} />
+                </div>
+              </section>
+
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Praktisch & geschiedenis</h4>
+                    <p>Hier geef je context, verwachtingen en extra vertrouwen aan ouders en leden.</p>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <TextField label="Praktisch titel" value={pages.home.practical.title} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, practical: { ...current.home.practical, title: value } } }))} />
+                  <TextField label="Geschiedenis titel" value={pages.home.history.title} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, history: { ...current.home.history, title: value } } }))} />
+                  <TextAreaField label="Praktische items (1 per regel)" value={joinLines(pages.home.practical.items)} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, practical: { ...current.home.practical, items: splitLines(value) } } }))} />
+                  <TextAreaField label="Geschiedenis (Markdown)" value={pages.home.history.body} rows={14} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, history: { ...current.home.history, body: value } } }))} />
+                  <TextAreaField label="Praktische noot" value={pages.home.practical.note} onInput={(value) => setPages((current) => ({ ...current, home: { ...current.home, practical: { ...current.home.practical, note: value } } }))} />
+                </div>
+              </section>
+
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Galerij</h4>
+                    <p>Toon sfeerbeelden die de homepage levendiger en overtuigender maken.</p>
+                  </div>
+                </div>
+                <GalleryEditor items={pages.home.gallery} onChange={(items) => setPages((current) => ({ ...current, home: { ...current.home, gallery: items } }))} client={supabase} />
+              </section>
+            </div>
           </section>
         )}
 
@@ -5273,29 +6356,55 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
               </button>
             </div>
 
-            <div class="admin-grid">
-              <TextField label="Titel" value={pages.registration.title} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, title: value } }))} />
-              <TextAreaField label="Lead" value={pages.registration.lead} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, lead: value } }))} />
-              <TextField label="Stappen titel" value={pages.registration.stepsTitle} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, stepsTitle: value } }))} />
-              <TextAreaField label="Stappen (1 per regel)" value={joinLines(pages.registration.steps)} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, steps: splitLines(value) } }))} />
-              <TextAreaField label="Tip" value={pages.registration.tip} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, tip: value } }))} />
-              <TextField label="Groepentitel" value={pages.registration.groupsTitle} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, groupsTitle: value } }))} />
-              <TextField label="Kledij titel" value={pages.registration.clothesTitle} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, clothesTitle: value } }))} />
-              <TextAreaField label="Kledij tekst" value={pages.registration.clothesBody} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, clothesBody: value } }))} />
-            </div>
+            <div class="admin-stacked-panels">
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Intro & stappenplan</h4>
+                    <p>Dit deel begeleidt ouders en leden stap voor stap door de inschrijving.</p>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <TextField label="Titel" value={pages.registration.title} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, title: value } }))} />
+                  <TextAreaField label="Lead" value={pages.registration.lead} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, lead: value } }))} />
+                  <TextField label="Stappen titel" value={pages.registration.stepsTitle} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, stepsTitle: value } }))} />
+                  <TextAreaField label="Stappen (1 per regel)" value={joinLines(pages.registration.steps)} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, steps: splitLines(value) } }))} />
+                  <TextAreaField label="Tip" value={pages.registration.tip} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, tip: value } }))} />
+                </div>
+              </section>
 
-            <div class="admin-subpanel">
-              <h4>Merch</h4>
-              <div class="admin-grid">
-                <TextField label="Titel" value={pages.registration.merch.title} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, title: value } } }))} />
-                <TextField label="Subtitel" value={pages.registration.merch.subtitle} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, subtitle: value } } }))} />
-                <TextAreaField label="Items (1 per regel)" value={pages.registration.merch.body} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, body: value } } }))} />
-                <TextAreaField label="Nota" value={pages.registration.merch.note} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, note: value } } }))} />
-                <ImageField label="Merch afbeelding" value={pages.registration.merch.imageUrl} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, imageUrl: value } } }))} client={supabase} folder="merch" />
-                <TextField label="Alt-tekst afbeelding" value={pages.registration.merch.imageAlt} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, imageAlt: value } } }))} />
-                <TextAreaField label="Prijslabels (1 per regel)" value={joinLines(pages.registration.merch.prices)} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, prices: splitLines(value) } } }))} />
-              </div>
-              <LinkActionsEditor title="Merch acties" items={pages.registration.merch.actions} onChange={(items) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, actions: items } } }))} />
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Groepen & kledij</h4>
+                    <p>De groepen zelf beheer je in `Groepen`; hier stuur je alleen de introductietekst en kledijinfo.</p>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <TextField label="Groepentitel" value={pages.registration.groupsTitle} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, groupsTitle: value } }))} />
+                  <TextField label="Kledij titel" value={pages.registration.clothesTitle} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, clothesTitle: value } }))} />
+                  <TextAreaField label="Kledij tekst" value={pages.registration.clothesBody} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, clothesBody: value } }))} />
+                </div>
+              </section>
+
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Merch</h4>
+                    <p>Toon kleding, prijzen en acties op een manier die direct bruikbaar is voor ouders.</p>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <TextField label="Titel" value={pages.registration.merch.title} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, title: value } } }))} />
+                  <TextField label="Subtitel" value={pages.registration.merch.subtitle} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, subtitle: value } } }))} />
+                  <TextAreaField label="Items" value={pages.registration.merch.body} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, body: value } } }))} />
+                  <TextAreaField label="Nota" value={pages.registration.merch.note} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, note: value } } }))} />
+                  <ImageField label="Merch afbeelding" value={pages.registration.merch.imageUrl} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, imageUrl: value } } }))} client={supabase} folder="merch" />
+                  <TextField label="Alt-tekst afbeelding" value={pages.registration.merch.imageAlt} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, imageAlt: value } } }))} />
+                  <TextAreaField label="Prijslabels (1 per regel)" value={joinLines(pages.registration.merch.prices)} onInput={(value) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, prices: splitLines(value) } } }))} />
+                </div>
+                <LinkActionsEditor title="Merch acties" items={pages.registration.merch.actions} onChange={(items) => setPages((current) => ({ ...current, registration: { ...current.registration, merch: { ...current.registration.merch, actions: items } } }))} />
+              </section>
             </div>
           </section>
         )}
@@ -5312,36 +6421,78 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
               </button>
             </div>
 
-            <div class="admin-grid">
-              <TextField label="Kicker" value={pages.camp.kicker} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, kicker: value } }))} />
-              <TextField label="Titel" value={pages.camp.title} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, title: value } }))} />
-              <TextAreaField label="Lead" value={pages.camp.lead} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, lead: value } }))} />
-              <ImageField label="Hero afbeelding" value={pages.camp.heroImageUrl} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, heroImageUrl: value } }))} client={supabase} folder="camp" />
-              <TextField label="Alt-tekst hero" value={pages.camp.heroImageAlt} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, heroImageAlt: value } }))} />
-              <TextField label="Overzicht titel" value={pages.camp.overviewTitle} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, overviewTitle: value } }))} />
-              <TextField label="Belangrijk titel" value={pages.camp.importantTitle} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, importantTitle: value } }))} />
-              <ImageField label="Belangrijk afbeelding" value={pages.camp.importantImageUrl} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, importantImageUrl: value } }))} client={supabase} folder="camp" />
-              <TextField label="Belangrijk afbeelding alt" value={pages.camp.importantImageAlt} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, importantImageAlt: value } }))} />
-              <TextAreaField label="Belangrijk items (1 per regel)" value={joinLines(pages.camp.importantItems)} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, importantItems: splitLines(value) } }))} />
-              <TextAreaField label="Belangrijk callout" value={pages.camp.importantNotice} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, importantNotice: value } }))} />
-              <TextField label="Prijs titel" value={pages.camp.priceTitle} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, priceTitle: value } }))} />
-              <TextField label="Rekeningnummer" value={pages.camp.bankAccount} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, bankAccount: value } }))} />
-              <TextAreaField label="Mededeling" value={pages.camp.bankMessage} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, bankMessage: value } }))} />
-              <TextAreaField label="Annulatiebeleid" value={pages.camp.cancellationPolicy} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, cancellationPolicy: value } }))} />
-              <TextField label="Signup titel" value={pages.camp.signupTitle} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, signupTitle: value } }))} />
-              <TextAreaField label="Signup intro" value={pages.camp.signupIntro} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, signupIntro: value } }))} />
-              <TextField label="Signup link label" value={pages.camp.signupLinkLabel} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, signupLinkLabel: value } }))} />
-              <TextField label="Signup link URL" value={pages.camp.signupLinkUrl} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, signupLinkUrl: value } }))} />
-              <TextField label="Checklist titel" value={pages.camp.checklistTitle} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, checklistTitle: value } }))} />
-            </div>
+            <div class="admin-stacked-panels">
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Hero & navigatie</h4>
+                    <p>De bovenkant van de kamppagina moet meteen duidelijk, warm en praktisch aanvoelen.</p>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <TextField label="Kicker" value={pages.camp.kicker} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, kicker: value } }))} />
+                  <TextField label="Titel" value={pages.camp.title} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, title: value } }))} />
+                  <TextAreaField label="Lead" value={pages.camp.lead} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, lead: value } }))} />
+                  <ImageField label="Hero afbeelding" value={pages.camp.heroImageUrl} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, heroImageUrl: value } }))} client={supabase} folder="camp" />
+                  <TextField label="Alt-tekst hero" value={pages.camp.heroImageAlt} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, heroImageAlt: value } }))} />
+                </div>
+                <LinkActionsEditor title="Hero CTA's" items={pages.camp.ctas} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, ctas: items } }))} />
+                <LinkActionsEditor title="Springlinks" items={pages.camp.jumpLinks} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, jumpLinks: items } }))} />
+              </section>
 
-            <LinkActionsEditor title="Hero CTA's" items={pages.camp.ctas} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, ctas: items } }))} />
-            <LinkActionsEditor title="Springlinks" items={pages.camp.jumpLinks} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, jumpLinks: items } }))} />
-            <PairsEditor<CampOverviewItem> title="Overzicht items" items={pages.camp.overviewItems} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, overviewItems: items } }))} createItem={() => ({ title: "", text: "" })} firstLabel="Titel" secondLabel="Tekst" firstKey="title" secondKey="text" />
-            <PairsEditor<{ label: string; value: string }> title="Prijsregels" items={pages.camp.priceItems} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, priceItems: items } }))} createItem={() => ({ label: "", value: "" })} firstLabel="Label" secondLabel="Waarde" firstKey="label" secondKey="value" />
-            <PairsEditor<{ title: string; body: string }> title="Ondersteuningsblokken" items={pages.camp.supportBoxes} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, supportBoxes: items } }))} createItem={() => ({ title: "", body: "" })} firstLabel="Titel" secondLabel="Tekst" firstKey="title" secondKey="body" />
-            <PairsEditor<CampStep> title="Inschrijfstappen" items={pages.camp.signupSteps} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, signupSteps: items } }))} createItem={() => ({ title: "", text: "" })} firstLabel="Stap" secondLabel="Tekst" firstKey="title" secondKey="text" />
-            <ChecklistEditor sections={pages.camp.checklistSections} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, checklistSections: items } }))} />
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Overzicht & belangrijke info</h4>
+                    <p>Gebruik deze blokken om ouders snel gerust te stellen en de hoofdinfo uit te lichten.</p>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <TextField label="Overzicht titel" value={pages.camp.overviewTitle} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, overviewTitle: value } }))} />
+                  <TextField label="Belangrijk titel" value={pages.camp.importantTitle} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, importantTitle: value } }))} />
+                  <ImageField label="Belangrijk afbeelding" value={pages.camp.importantImageUrl} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, importantImageUrl: value } }))} client={supabase} folder="camp" />
+                  <TextField label="Belangrijk afbeelding alt" value={pages.camp.importantImageAlt} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, importantImageAlt: value } }))} />
+                  <TextAreaField label="Belangrijk items (1 per regel)" value={joinLines(pages.camp.importantItems)} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, importantItems: splitLines(value) } }))} />
+                  <TextAreaField label="Belangrijk callout" value={pages.camp.importantNotice} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, importantNotice: value } }))} />
+                </div>
+                <PairsEditor<CampOverviewItem> title="Overzicht items" items={pages.camp.overviewItems} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, overviewItems: items } }))} createItem={() => ({ title: "", text: "" })} firstLabel="Titel" secondLabel="Tekst" firstKey="title" secondKey="text" />
+              </section>
+
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Prijs & ondersteuning</h4>
+                    <p>Bundel hier de betaalinfo, annulatievoorwaarden en extra steunblokken.</p>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <TextField label="Prijs titel" value={pages.camp.priceTitle} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, priceTitle: value } }))} />
+                  <TextField label="Rekeningnummer" value={pages.camp.bankAccount} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, bankAccount: value } }))} />
+                  <TextAreaField label="Mededeling" value={pages.camp.bankMessage} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, bankMessage: value } }))} />
+                  <TextAreaField label="Annulatiebeleid" value={pages.camp.cancellationPolicy} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, cancellationPolicy: value } }))} />
+                </div>
+                <PairsEditor<{ label: string; value: string }> title="Prijsregels" items={pages.camp.priceItems} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, priceItems: items } }))} createItem={() => ({ label: "", value: "" })} firstLabel="Label" secondLabel="Waarde" firstKey="label" secondKey="value" />
+                <PairsEditor<{ title: string; body: string }> title="Ondersteuningsblokken" items={pages.camp.supportBoxes} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, supportBoxes: items } }))} createItem={() => ({ title: "", body: "" })} firstLabel="Titel" secondLabel="Tekst" firstKey="title" secondKey="body" />
+              </section>
+
+              <section class="admin-subpanel">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Inschrijven & checklist</h4>
+                    <p>Maak de laatste stap van de kamppagina helder en zonder twijfel voor ouders.</p>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <TextField label="Inschrijven titel" value={pages.camp.signupTitle} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, signupTitle: value } }))} />
+                  <TextAreaField label="Inschrijven intro" value={pages.camp.signupIntro} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, signupIntro: value } }))} />
+                  <TextField label="Inschrijven knop label" value={pages.camp.signupLinkLabel} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, signupLinkLabel: value } }))} />
+                  <TextField label="Inschrijven knop URL" value={pages.camp.signupLinkUrl} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, signupLinkUrl: value } }))} />
+                  <TextField label="Checklist titel" value={pages.camp.checklistTitle} onInput={(value) => setPages((current) => ({ ...current, camp: { ...current.camp, checklistTitle: value } }))} />
+                </div>
+                <PairsEditor<CampStep> title="Inschrijfstappen" items={pages.camp.signupSteps} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, signupSteps: items } }))} createItem={() => ({ title: "", text: "" })} firstLabel="Stap" secondLabel="Tekst" firstKey="title" secondKey="text" />
+                <ChecklistEditor sections={pages.camp.checklistSections} onChange={(items) => setPages((current) => ({ ...current, camp: { ...current.camp, checklistSections: items } }))} />
+              </section>
+            </div>
           </section>
         )}
 
@@ -5577,6 +6728,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
             </div>
           </section>
         )}
+        </div>
       </main>
     </div>
   );
