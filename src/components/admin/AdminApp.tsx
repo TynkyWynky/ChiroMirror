@@ -45,6 +45,7 @@ interface Profile {
   email: string;
   full_name: string;
   role: Role;
+  managedGroupSlugs: string[];
   created_at: string;
 }
 
@@ -676,6 +677,39 @@ function getFinanceGroupLabel(groupSlug: string, groups: Group[]) {
   return groups.find((group) => group.slug === groupSlug)?.name ?? "Onbekende groep";
 }
 
+function canAccessFinance(profile: Profile | null | undefined) {
+  return Boolean(profile && (profile.role === "admin" || profile.managedGroupSlugs.length > 0));
+}
+
+function canManageFinanceGroup(profile: Profile | null | undefined, groupSlug: string) {
+  if (!profile) {
+    return false;
+  }
+
+  if (profile.role === "admin") {
+    return true;
+  }
+
+  return Boolean(groupSlug && profile.managedGroupSlugs.includes(groupSlug));
+}
+
+function getFinanceGroupTheme(themeKey: string) {
+  const themeMap: Record<string, { accent: string; soft: string; glow: string }> = {
+    ribbels: { accent: "#ec4899", soft: "#fdf2f8", glow: "rgba(236, 72, 153, .18)" },
+    speelclub: { accent: "#8b5cf6", soft: "#f5f3ff", glow: "rgba(139, 92, 246, .18)" },
+    rakwi: { accent: "#f97316", soft: "#fff7ed", glow: "rgba(249, 115, 22, .18)" },
+    tito: { accent: "#10b981", soft: "#ecfdf5", glow: "rgba(16, 185, 129, .18)" },
+    keti: { accent: "#0ea5e9", soft: "#eff6ff", glow: "rgba(14, 165, 233, .18)" },
+    aspi: { accent: "#eab308", soft: "#fefce8", glow: "rgba(234, 179, 8, .2)" }
+  };
+
+  return themeMap[themeKey] ?? {
+    accent: "#1d4ed8",
+    soft: "#eff6ff",
+    glow: "rgba(29, 78, 216, .18)"
+  };
+}
+
 function sortFinanceTransactions(transactions: FinanceTransaction[]) {
   return [...transactions].sort((left, right) => {
     const leftDate = parseDateValue(left.date)?.getTime() ?? 0;
@@ -1012,6 +1046,9 @@ function mapProfile(row: Record<string, unknown>): Profile {
     email: String(row.email ?? ""),
     full_name: String(row.full_name ?? ""),
     role: (row.role as Role) ?? "editor",
+    managedGroupSlugs: Array.isArray(row.managed_group_slugs)
+      ? (row.managed_group_slugs as string[]).filter((item) => typeof item === "string")
+      : [],
     created_at: String(row.created_at ?? "")
   };
 }
@@ -1692,6 +1729,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const [financeStatusFilter, setFinanceStatusFilter] = useState<FinanceStatusFilter>("active");
   const [financeCategoryFilter, setFinanceCategoryFilter] = useState("all");
   const [financeSearch, setFinanceSearch] = useState("");
+  const [financeSelectedGroupSlug, setFinanceSelectedGroupSlug] = useState("");
 
   useEffect(() => {
     syncRememberedLogin(rememberLogin, loginEmail);
@@ -1827,7 +1865,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       setDeletedPostIds([]);
       setPostFeedback(null);
 
-      if (currentProfile.role === "admin") {
+      if (canAccessFinance(currentProfile)) {
         const financeResult = await supabase
           .from("finance_transactions")
           .select("*")
@@ -1858,6 +1896,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       setFinanceDraft(null);
       setFinanceEditingId(null);
       setFinanceDirty(false);
+      setFinanceSelectedGroupSlug("");
       return true;
     } catch (error) {
       console.error(error);
@@ -1952,6 +1991,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       setFinanceEditingId(null);
       setFinanceDirty(false);
       setFinanceSchemaError(null);
+      setFinanceSelectedGroupSlug("");
       setDataLoading(false);
       setDataStalled(false);
     }
@@ -1972,8 +2012,11 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   ];
   const orderedContactGroups = orderGroupsForContact(groups, pages.contact.groupCards);
 
-  if (profile?.role === "admin") {
+  if (canAccessFinance(profile)) {
     availableTabs.splice(1, 0, { id: "finance", label: "Financiën" });
+  }
+
+  if (profile?.role === "admin") {
     availableTabs.push({ id: "team", label: "Team" });
   }
 
@@ -1984,6 +2027,22 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       return rightTime - leftTime;
     })
     .slice(0, 8);
+  const financeAccessibleGroups =
+    profile?.role === "admin"
+      ? groups
+      : groups.filter((group) => profile?.managedGroupSlugs.includes(group.slug));
+  const financeGroupCards = [
+    ...(profile?.role === "admin"
+      ? [{ slug: "", name: "Algemeen", themeKey: "general", ageRange: "", schoolYears: "" }]
+      : []),
+    ...financeAccessibleGroups.map((group) => ({
+      slug: group.slug,
+      name: group.name,
+      themeKey: group.themeKey,
+      ageRange: group.ageRange,
+      schoolYears: group.schoolYears
+    }))
+  ];
   const financeCategoryOptions = [...financeIncomeCategories, ...financeExpenseCategories];
   const financeVisibleTransactions = financeTransactions.filter(isFinanceVisibleForSummary);
   const financeSettledTransactions = financeVisibleTransactions.filter(isFinanceSettled);
@@ -2062,10 +2121,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       return haystack.includes(financeSearchNeedle);
     })
   );
-  const financeGroupSummaries = [
-    { slug: "", name: "Algemeen" },
-    ...groups.map((group) => ({ slug: group.slug, name: group.name }))
-  ]
+  const financeGroupSummaries = financeGroupCards
     .map((group) => {
       const groupTransactions = financeSelectedMonthTransactions.filter(
         (transaction) => transaction.groupSlug === group.slug
@@ -2138,6 +2194,33 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const financeLargestIncome = financeIncomeBreakdown[0] ?? null;
   const financeNetMonthBalance = financeMonthIncome - financeMonthExpenses;
   const financeSelectedMonthTransactionCount = financeSelectedMonthTransactions.length;
+  const financeWorkspaceGroup =
+    financeGroupCards.find((group) => group.slug === financeSelectedGroupSlug) ??
+    financeGroupCards[0] ??
+    null;
+  const financeWorkspaceTheme = getFinanceGroupTheme(financeWorkspaceGroup?.themeKey ?? "general");
+  const financeWorkspaceTransactions = financeTransactions.filter(
+    (transaction) => transaction.groupSlug === (financeWorkspaceGroup?.slug ?? "")
+  );
+  const financeWorkspaceMonthTransactions = financeWorkspaceTransactions.filter((transaction) =>
+    isFinanceInMonth(transaction, financeMonthFilter)
+  );
+  const financeWorkspaceSettledTransactions = financeWorkspaceMonthTransactions.filter(
+    isFinanceSettled
+  );
+  const financeWorkspaceIncome = financeWorkspaceSettledTransactions
+    .filter((transaction) => transaction.type === "income")
+    .reduce((total, transaction) => total + transaction.amount, 0);
+  const financeWorkspaceExpenses = financeWorkspaceSettledTransactions
+    .filter((transaction) => transaction.type === "expense")
+    .reduce((total, transaction) => total + transaction.amount, 0);
+  const financeWorkspacePending = financeWorkspaceMonthTransactions
+    .filter((transaction) => transaction.status === "pending")
+    .reduce((total, transaction) => total + transaction.amount, 0);
+  const financeWorkspaceRecentTransactions = sortFinanceTransactions(financeWorkspaceTransactions).slice(
+    0,
+    5
+  );
   const financeDraftCategoryOptions = financeDraft
     ? getFinanceCategoryOptions(financeDraft.type)
     : financeExpenseCategories;
@@ -2147,6 +2230,33 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
         year: "numeric"
       }) ?? "de gekozen maand"
     : "alle maanden";
+
+  useEffect(() => {
+    if (!canAccessFinance(profile)) {
+      return;
+    }
+
+    const allowedSlugs = financeGroupCards.map((group) => group.slug);
+    if (!allowedSlugs.length) {
+      return;
+    }
+
+    if (!allowedSlugs.includes(financeSelectedGroupSlug)) {
+      setFinanceSelectedGroupSlug(allowedSlugs[0] ?? "");
+    }
+
+    if (
+      profile?.role !== "admin" &&
+      financeGroupFilter !== "all" &&
+      !allowedSlugs.includes(financeGroupFilter)
+    ) {
+      setFinanceGroupFilter(allowedSlugs[0] ?? "");
+    }
+
+    if (profile?.role !== "admin" && financeGroupFilter === "all") {
+      setFinanceGroupFilter(allowedSlugs[0] ?? "");
+    }
+  }, [profile, financeGroupCards, financeSelectedGroupSlug, financeGroupFilter]);
 
   async function signIn() {
     if (!supabase) {
@@ -2209,6 +2319,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     setFinanceEditingId(null);
     setFinanceDirty(false);
     setFinanceSchemaError(null);
+    setFinanceSelectedGroupSlug("");
   }
 
   async function updatePassword() {
@@ -2529,9 +2640,17 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   }
 
   function startFinanceDraft(source?: FinanceTransaction) {
+    const defaultGroupSlug =
+      profile?.role === "admin"
+        ? financeSelectedGroupSlug
+        : financeAccessibleGroups[0]?.slug ?? "";
     const nextDraft = source
       ? { ...source }
-      : createEmptyFinanceTransaction(groups);
+      : {
+          ...createEmptyFinanceTransaction(groups),
+          groupSlug: defaultGroupSlug,
+          groupLabel: getFinanceGroupLabel(defaultGroupSlug, groups)
+        };
 
     setFinanceEditingId(source?.id ?? null);
     setFinanceDraft(nextDraft);
@@ -2548,11 +2667,19 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   }
 
   function saveFinanceDraftToList() {
-    if (!financeDraft || !session) {
+    if (!financeDraft || !session || !profile) {
       return;
     }
 
     const normalizedDraft = normalizeFinanceTransaction(financeDraft, groups, session.user.id);
+    if (!canManageFinanceGroup(profile, normalizedDraft.groupSlug)) {
+      setNotice({
+        type: "error",
+        message: "Je kunt alleen transacties opslaan voor je eigen groep(en)."
+      });
+      return;
+    }
+
     const validationError = validateFinanceTransaction(normalizedDraft);
 
     if (validationError) {
@@ -2634,7 +2761,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   }
 
   async function saveFinanceTransactions() {
-    if (!supabase || !session || profile?.role !== "admin" || financeSaving) {
+    if (!supabase || !session || !canAccessFinance(profile) || financeSaving) {
       return;
     }
 
@@ -2662,6 +2789,18 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     const normalizedTransactions = financeTransactions.map((transaction) =>
       normalizeFinanceTransaction(transaction, groups, session.user.id)
     );
+    const restrictedTransaction = normalizedTransactions.find(
+      (transaction) => !canManageFinanceGroup(profile, transaction.groupSlug)
+    );
+
+    if (restrictedTransaction) {
+      setNotice({
+        type: "error",
+        message: "Minstens 1 transactie hoort bij een groep die je niet mag beheren."
+      });
+      return;
+    }
+
     const invalidTransaction = normalizedTransactions.find((transaction) =>
       Boolean(validateFinanceTransaction(transaction))
     );
@@ -2735,13 +2874,14 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
           user_id: current.user_id,
           email: current.email,
           full_name: current.full_name,
-          role: current.role
+          role: current.role,
+          managed_group_slugs: current.role === "admin" ? [] : current.managedGroupSlugs
         }))
       );
 
     setNotice({
       type: error ? "error" : "success",
-      message: error ? error.message : "Teamrollen bijgewerkt."
+      message: error ? error.message : "Teamrollen en groepsrechten bijgewerkt."
     });
   }
 
@@ -3125,13 +3265,19 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
           </section>
         )}
 
-        {activeTab === "finance" && profile?.role === "admin" && (
+        {activeTab === "finance" && canAccessFinance(profile) && (
           <section class="admin-panel admin-finance-panel">
             <div class="admin-panel-head">
               <div>
-                <p class="admin-kicker">Admin only</p>
+                <p class="admin-kicker">
+                  {profile?.role === "admin" ? "Admin overzicht" : "Jouw groepsruimte"}
+                </p>
                 <h2>Financiën</h2>
-                <p>Hou inkomsten, uitgaven en openstaande betalingen eenvoudig bij per groep.</p>
+                <p>
+                  {profile?.role === "admin"
+                    ? "Hou inkomsten, uitgaven en openstaande betalingen eenvoudig bij per groep."
+                    : "Beheer de financiën van je eigen groep zonder afleiding van de rest."}
+                </p>
               </div>
               <div class="admin-sidebar-actions">
                 <button class="btn btn-light" type="button" onClick={() => startFinanceDraft()}>
@@ -3247,6 +3393,142 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                 </p>
               </article>
             </div>
+
+            {financeGroupCards.length > 0 && (
+              <section class="admin-subpanel admin-finance-groups-shell">
+                <div class="admin-subpanel-head">
+                  <div>
+                    <h4>Groepspagina's</h4>
+                    <p class="muted-small">
+                      Kies een groep om een eigen finance-overzicht en recente bewegingen te zien.
+                    </p>
+                  </div>
+                  <span class="admin-finance-count">{financeGroupCards.length} ruimte(s)</span>
+                </div>
+
+                <div class="admin-finance-group-tabs">
+                  {financeGroupCards.map((group) => {
+                    const theme = getFinanceGroupTheme(group.themeKey);
+                    const isActive = financeWorkspaceGroup?.slug === group.slug;
+                    const groupSummary = financeGroupSummaries.find((item) => item.slug === group.slug);
+
+                    return (
+                      <button
+                        class={`admin-finance-group-tab ${isActive ? "is-active" : ""}`}
+                        type="button"
+                        key={group.slug || "general"}
+                        style={{
+                          "--finance-group-accent": theme.accent,
+                          "--finance-group-soft": theme.soft,
+                          "--finance-group-glow": theme.glow
+                        }}
+                        onClick={() => {
+                          setFinanceSelectedGroupSlug(group.slug);
+                          setFinanceGroupFilter(group.slug);
+                        }}
+                      >
+                        <strong>{group.name}</strong>
+                        <span>
+                          {group.slug
+                            ? group.ageRange || group.schoolYears || "Eigen groep"
+                            : "Gezamenlijke kosten"}
+                        </span>
+                        <small>{formatCurrency(groupSummary?.balance ?? 0)}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {financeWorkspaceGroup && (
+                  <article
+                    class="admin-finance-group-stage"
+                    style={{
+                      "--finance-group-accent": financeWorkspaceTheme.accent,
+                      "--finance-group-soft": financeWorkspaceTheme.soft,
+                      "--finance-group-glow": financeWorkspaceTheme.glow
+                    }}
+                  >
+                    <div class="admin-finance-group-stage-copy">
+                      <span class="admin-finance-group-stage-kicker">
+                        {financeWorkspaceGroup.slug ? "Geselecteerde groep" : "Algemene pot"}
+                      </span>
+                      <h4>{financeWorkspaceGroup.name}</h4>
+                      <p>
+                        {financeWorkspaceGroup.slug
+                          ? `Focus op ${financeWorkspaceGroup.name} in ${financeMonthLabel}.`
+                          : `Hier hou je gedeelde kosten en inkomsten bij voor ${financeMonthLabel}.`}
+                      </p>
+                    </div>
+
+                    <div class="admin-finance-group-stage-stats">
+                      <div class="admin-finance-group-stage-card">
+                        <span>Inkomsten</span>
+                        <strong>{formatCurrency(financeWorkspaceIncome)}</strong>
+                      </div>
+                      <div class="admin-finance-group-stage-card">
+                        <span>Uitgaven</span>
+                        <strong>{formatCurrency(financeWorkspaceExpenses)}</strong>
+                      </div>
+                      <div class="admin-finance-group-stage-card">
+                        <span>Openstaand</span>
+                        <strong>{formatCurrency(financeWorkspacePending)}</strong>
+                      </div>
+                      <div class="admin-finance-group-stage-card">
+                        <span>Bewegingen</span>
+                        <strong>{financeWorkspaceMonthTransactions.length}</strong>
+                      </div>
+                    </div>
+
+                    <div class="admin-finance-group-stage-stream">
+                      <div class="admin-finance-group-stage-stream-head">
+                        <strong>Laatste bewegingen</strong>
+                        <button
+                          class="btn btn-light"
+                          type="button"
+                          onClick={() => startFinanceDraft()}
+                        >
+                          Toevoegen aan {financeWorkspaceGroup.name}
+                        </button>
+                      </div>
+
+                      {financeWorkspaceRecentTransactions.length ? (
+                        <div class="admin-finance-group-stage-list">
+                          {financeWorkspaceRecentTransactions.map((transaction) => (
+                            <div
+                              class={`admin-finance-group-stage-item is-${transaction.type}`}
+                              key={transaction.id ?? `${transaction.title}-${transaction.date}`}
+                            >
+                              <div>
+                                <strong>{transaction.title}</strong>
+                                <p>
+                                  {formatAdminDate(transaction.date, {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: undefined,
+                                    minute: undefined
+                                  })}{" "}
+                                  • {getFinanceCategoryLabel(transaction.categoryKey)}
+                                </p>
+                              </div>
+                              <span>
+                                {transaction.type === "income" ? "+" : "-"}
+                                {formatCurrency(transaction.amount)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div class="admin-finance-empty">
+                          <strong>Nog geen transacties voor deze groep.</strong>
+                          <p>Gebruik de knop hierboven om de eerste beweging toe te voegen.</p>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                )}
+              </section>
+            )}
 
             <div class="admin-finance-storyboard">
               <section class="admin-subpanel admin-finance-chart-card">
@@ -3451,8 +3733,8 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                               }))
                             }
                           >
-                            <option value="">Algemeen</option>
-                            {groups.map((group) => (
+                            {profile?.role === "admin" && <option value="">Algemeen</option>}
+                            {financeAccessibleGroups.map((group) => (
                               <option value={group.slug} key={group.slug}>
                                 {group.name}
                               </option>
@@ -3613,8 +3895,8 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                         }
                       >
                         <option value="all">Alle groepen</option>
-                        <option value="">Algemeen</option>
-                        {groups.map((group) => (
+                        {profile?.role === "admin" && <option value="">Algemeen</option>}
+                        {financeAccessibleGroups.map((group) => (
                           <option value={group.slug} key={group.slug}>
                             {group.name}
                           </option>
@@ -4526,6 +4808,51 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                         <option value="admin">Admin</option>
                       </select>
                     </label>
+                  </div>
+                  <div class="admin-team-group-access">
+                    <div class="admin-team-group-access-head">
+                      <strong>Groepen die deze leider mag beheren</strong>
+                      <span>
+                        {currentProfile.role === "admin"
+                          ? "Admins zien alles"
+                          : currentProfile.managedGroupSlugs.length
+                            ? `${currentProfile.managedGroupSlugs.length} gekoppeld`
+                            : "Nog geen groepen"}
+                      </span>
+                    </div>
+                    <div class="admin-team-group-chips">
+                      {groups.map((group) => {
+                        const isActive = currentProfile.managedGroupSlugs.includes(group.slug);
+
+                        return (
+                          <button
+                            class={`admin-team-group-chip ${isActive ? "is-active" : ""}`}
+                            type="button"
+                            disabled={currentProfile.role === "admin"}
+                            onClick={() =>
+                              setProfiles((current) =>
+                                current.map((item, itemIndex) => {
+                                  if (itemIndex !== index) {
+                                    return item;
+                                  }
+
+                                  return {
+                                    ...item,
+                                    managedGroupSlugs: isActive
+                                      ? item.managedGroupSlugs.filter((slug) => slug !== group.slug)
+                                      : [...item.managedGroupSlugs, group.slug].sort((left, right) =>
+                                          left.localeCompare(right, "nl")
+                                        )
+                                  };
+                                })
+                              )
+                            }
+                          >
+                            {group.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div class="admin-team-actions">
                     <p class="muted-small">

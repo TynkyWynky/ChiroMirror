@@ -5,10 +5,12 @@ create table if not exists public.profiles (
   email text not null default '',
   full_name text not null default '',
   role text not null default 'editor' check (role in ('admin', 'editor')),
+  managed_group_slugs jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default timezone('utc', now())
 );
 
 alter table public.profiles add column if not exists email text not null default '';
+alter table public.profiles add column if not exists managed_group_slugs jsonb not null default '[]'::jsonb;
 
 create table if not exists public.site_settings (
   id integer primary key,
@@ -247,8 +249,34 @@ as $$
   );
 $$;
 
+create or replace function public.can_manage_group(target_group_slug text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where user_id = auth.uid()
+      and (
+        role = 'admin'
+        or (
+          coalesce(target_group_slug, '') <> ''
+          and exists (
+            select 1
+            from jsonb_array_elements_text(coalesce(managed_group_slugs, '[]'::jsonb)) as managed_slug
+            where managed_slug = target_group_slug
+          )
+        )
+      )
+  );
+$$;
+
 grant execute on function public.is_site_editor() to anon, authenticated;
 grant execute on function public.is_site_admin() to anon, authenticated;
+grant execute on function public.can_manage_group(text) to anon, authenticated;
 
 alter table public.profiles enable row level security;
 alter table public.site_settings enable row level security;
@@ -395,19 +423,20 @@ to authenticated
 using (public.is_site_editor());
 
 drop policy if exists "Admins read finance transactions" on public.finance_transactions;
-create policy "Admins read finance transactions"
+drop policy if exists "Group managers read finance transactions" on public.finance_transactions;
+create policy "Group managers read finance transactions"
 on public.finance_transactions
 for select
 to authenticated
-using (public.is_site_admin());
+using (public.can_manage_group(group_slug));
 
-drop policy if exists "Admins manage finance transactions" on public.finance_transactions;
-create policy "Admins manage finance transactions"
+drop policy if exists "Group managers manage finance transactions" on public.finance_transactions;
+create policy "Group managers manage finance transactions"
 on public.finance_transactions
 for all
 to authenticated
-using (public.is_site_admin())
-with check (public.is_site_admin());
+using (public.can_manage_group(group_slug))
+with check (public.can_manage_group(group_slug));
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
