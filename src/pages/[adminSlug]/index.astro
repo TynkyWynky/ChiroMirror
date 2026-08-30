@@ -1,8 +1,14 @@
 ---
 import AdminApp from "@/components/admin/AdminApp";
 import { getAdminAuthActionPath, isConfiguredAdminPathSlug } from "@/lib/admin-path";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 const isValidAdminRoute = isConfiguredAdminPathSlug(Astro.params.adminSlug);
+const adminCssVersion = createHash("sha1")
+  .update(readFileSync(new URL("../../../public/assets/admin.css", import.meta.url)))
+  .digest("hex")
+  .slice(0, 10);
 
 if (isValidAdminRoute) {
   Astro.response.headers.set("Cache-Control", "no-store");
@@ -23,7 +29,9 @@ const adminAuthActionPath = getAdminAuthActionPath();
     <meta name="robots" content={isValidAdminRoute ? "noindex, nofollow" : "noindex, nofollow, noarchive"} />
     <link rel="icon" type="image/png" href="/assets/Chirologo_700px.png" />
     <link rel="stylesheet" href="/assets/styles.css" />
-    {isValidAdminRoute && <link rel="stylesheet" href="/assets/admin.css" />}
+    {isValidAdminRoute && (
+      <link rel="stylesheet" href={`/assets/admin.css?v=${adminCssVersion}`} />
+    )}
   </head>
   <body>
     {
