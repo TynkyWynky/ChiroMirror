@@ -2357,6 +2357,121 @@
   background: linear-gradient(180deg, rgba(254, 242, 242, .98), rgba(255, 255, 255, .98));
 }
 
+.admin-finance-commandbar {
+  display: grid;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(15, 23, 42, .08);
+  background:
+    radial-gradient(circle at top right, rgba(191, 219, 254, .18), transparent 24%),
+    linear-gradient(180deg, rgba(248, 250, 252, .98), rgba(255, 255, 255, .98));
+  box-shadow: 0 18px 36px rgba(15, 23, 42, .05);
+}
+
+.admin-finance-command-copy,
+.admin-finance-command-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-finance-command-label {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .06);
+  color: #475569;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-finance-command-copy strong,
+.admin-finance-subtab strong,
+.admin-finance-shortcut strong {
+  color: #0f172a;
+}
+
+.admin-finance-command-copy strong {
+  font-size: 24px;
+  line-height: 1.06;
+  letter-spacing: -.03em;
+}
+
+.admin-finance-command-copy p,
+.admin-finance-subtab span,
+.admin-finance-shortcut span,
+.admin-finance-toolbar-pill {
+  margin: 0;
+  color: #64748b;
+}
+
+.admin-finance-command-controls {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-finance-compact-field {
+  margin-bottom: 0;
+}
+
+.admin-finance-compact-field input,
+.admin-finance-compact-field select {
+  background: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+.admin-finance-subtabs {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-finance-subtab {
+  appearance: none;
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(15, 23, 42, .08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .98));
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease,
+    background .18s ease;
+}
+
+.admin-finance-subtab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 30px rgba(15, 23, 42, .08);
+}
+
+.admin-finance-subtab.is-active {
+  border-color: rgba(29, 78, 216, .16);
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, .14), transparent 26%),
+    linear-gradient(180deg, rgba(239, 246, 255, .98), rgba(255, 255, 255, .98));
+  box-shadow:
+    0 22px 34px rgba(15, 23, 42, .1),
+    0 0 0 3px rgba(59, 130, 246, .08);
+}
+
+.admin-finance-subtab strong {
+  font-size: 17px;
+  line-height: 1.14;
+}
+
+.admin-finance-subtab span {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .admin-finance-hero {
   display: grid;
   gap: 16px;
@@ -2662,6 +2777,12 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.admin-finance-focus-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .admin-finance-groups-shell {
   display: grid;
   gap: 18px;
@@ -2887,6 +3008,65 @@
   background: rgba(15, 23, 42, .06);
   color: #334155;
   border: 1px solid rgba(15, 23, 42, .08);
+}
+
+.admin-finance-toolbar-pills,
+.admin-finance-shortcuts {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-finance-toolbar-pills {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.admin-finance-toolbar-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, .08);
+  background: rgba(255, 255, 255, .84);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.admin-finance-shortcut {
+  appearance: none;
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(15, 23, 42, .08);
+  background:
+    radial-gradient(circle at top right, rgba(191, 219, 254, .16), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .98));
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease;
+}
+
+.admin-finance-shortcut:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 30px rgba(15, 23, 42, .08);
+}
+
+.admin-finance-shortcut strong {
+  font-size: 17px;
+  line-height: 1.14;
+}
+
+.admin-finance-shortcut span {
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .admin-finance-row {
@@ -3156,6 +3336,15 @@
   border: 1px solid rgba(15, 23, 42, .08);
 }
 
+.admin-finance-editor-grid {
+  padding: 16px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(221, 214, 254, .2), transparent 22%),
+    linear-gradient(180deg, rgba(250, 245, 255, .98), rgba(255, 255, 255, .98));
+  border: 1px solid rgba(15, 23, 42, .08);
+}
+
 @keyframes admin-loader-sweep {
   from {
     transform: translateX(-100%);
@@ -3208,6 +3397,11 @@
     align-items: stretch;
   }
 
+  .admin-finance-commandbar {
+    grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr);
+    align-items: end;
+  }
+
   .admin-finance-hero-main {
     align-content: start;
   }
@@ -3228,6 +3422,18 @@
   .admin-finance-layout {
     grid-template-columns: minmax(0, 1.3fr) minmax(320px, .72fr);
     align-items: start;
+  }
+
+  .admin-finance-layout.is-dashboard {
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
+  }
+
+  .admin-finance-layout.is-transactions {
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, .55fr);
+  }
+
+  .admin-finance-layout.is-editor {
+    grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr);
   }
 
   .admin-finance-row {
@@ -3258,6 +3464,10 @@
   .admin-overview-workspace,
   .admin-finance-metrics,
   .admin-finance-storyboard,
+  .admin-finance-subtabs,
+  .admin-finance-command-controls,
+  .admin-finance-focus-grid,
+  .admin-finance-toolbar-pills,
   .admin-finance-layout {
     grid-template-columns: 1fr;
   }
