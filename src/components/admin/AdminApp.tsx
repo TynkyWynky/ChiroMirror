@@ -4184,6 +4184,24 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                       </span>
                     </div>
 
+                    <div class="admin-finance-toolbar-inline">
+                      <div class="admin-finance-toolbar-note">
+                        <strong>Werk sneller vanuit deze lijst</strong>
+                        <p>
+                          Open een detail rechts, dupliceer vaak gebruikte posten en wis filters als
+                          je opnieuw breed wil kijken.
+                        </p>
+                      </div>
+                      <div class="admin-sidebar-actions">
+                        <button class="btn btn-light" type="button" onClick={resetFinanceFilters}>
+                          Wis filters
+                        </button>
+                        <button class="btn" type="button" onClick={() => startFinanceDraft()}>
+                          Nieuwe transactie
+                        </button>
+                      </div>
+                    </div>
+
                     <div class="admin-finance-list">
                       {filteredFinanceTransactions.length ? (
                         filteredFinanceTransactions.map((transaction) => {
@@ -4198,6 +4216,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                                 financeSelectedTransactionId === transaction.id ? "is-selected" : ""
                               }`}
                               key={transaction.id ?? `${transaction.title}-${transaction.date}`}
+                              onClick={() => openFinanceTransactionDetail(transaction)}
                             >
                               <div class="admin-finance-row-main">
                                 <div class="admin-finance-row-top">
@@ -4487,32 +4506,33 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                               updateFinanceDraft((current) => ({ ...current, title: value }))
                             }
                           />
-                          <label class="admin-field">
+                          <div class="admin-field admin-finance-segmented-field">
                             <span>Type</span>
-                            <select
-                              value={financeDraft.type}
-                              onInput={(event) => {
-                                const nextType = (event.currentTarget as HTMLSelectElement)
-                                  .value as FinanceType;
-                                const nextOptions = getFinanceCategoryOptions(nextType);
-                                updateFinanceDraft((current) => ({
-                                  ...current,
-                                  type: nextType,
-                                  categoryKey: nextOptions.some(
-                                    (option) => option.key === current.categoryKey
-                                  )
-                                    ? current.categoryKey
-                                    : (nextOptions[0]?.key ?? "")
-                                }));
-                              }}
-                            >
+                            <div class="admin-finance-segmented" role="tablist" aria-label="Type transactie">
                               {financeTypeOptions.map((option) => (
-                                <option value={option.value} key={option.value}>
+                                <button
+                                  class={financeDraft.type === option.value ? "is-active" : ""}
+                                  type="button"
+                                  key={option.value}
+                                  onClick={() => {
+                                    const nextType = option.value as FinanceType;
+                                    const nextOptions = getFinanceCategoryOptions(nextType);
+                                    updateFinanceDraft((current) => ({
+                                      ...current,
+                                      type: nextType,
+                                      categoryKey: nextOptions.some(
+                                        (item) => item.key === current.categoryKey
+                                      )
+                                        ? current.categoryKey
+                                        : (nextOptions[0]?.key ?? "")
+                                    }));
+                                  }}
+                                >
                                   {option.label}
-                                </option>
+                                </button>
                               ))}
-                            </select>
-                          </label>
+                            </div>
+                          </div>
                           <label class="admin-field">
                             <span>Bedrag</span>
                             <input
@@ -4575,25 +4595,26 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                               ))}
                             </select>
                           </label>
-                          <label class="admin-field">
+                          <div class="admin-field admin-finance-segmented-field">
                             <span>Status</span>
-                            <select
-                              value={financeDraft.status}
-                              onInput={(event) =>
-                                updateFinanceDraft((current) => ({
-                                  ...current,
-                                  status: (event.currentTarget as HTMLSelectElement)
-                                    .value as FinanceStatus
-                                }))
-                              }
-                            >
+                            <div class="admin-finance-segmented is-wrap" role="tablist" aria-label="Status transactie">
                               {financeStatusOptions.map((option) => (
-                                <option value={option.value} key={option.value}>
+                                <button
+                                  class={financeDraft.status === option.value ? "is-active" : ""}
+                                  type="button"
+                                  key={option.value}
+                                  onClick={() =>
+                                    updateFinanceDraft((current) => ({
+                                      ...current,
+                                      status: option.value as FinanceStatus
+                                    }))
+                                  }
+                                >
                                   {option.label}
-                                </option>
+                                </button>
                               ))}
-                            </select>
-                          </label>
+                            </div>
+                          </div>
                           <label class="admin-field">
                             <span>Betaalmethode</span>
                             <select
