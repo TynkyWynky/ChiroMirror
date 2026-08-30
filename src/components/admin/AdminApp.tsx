@@ -654,8 +654,34 @@ function getCurrentMonthInputValue() {
   return getTodayDateInputValue().slice(0, 7);
 }
 
+function shiftMonthInputValue(value: string, offset: number) {
+  const baseDate = parseDateValue(value ? `${value}-01` : "");
+  if (!baseDate) {
+    return value;
+  }
+
+  return formatDateInput(
+    new Date(baseDate.getFullYear(), baseDate.getMonth() + offset, 1).toISOString()
+  ).slice(0, 7);
+}
+
 function formatCurrency(value: number) {
   return financeCurrencyFormatter.format(Number.isFinite(value) ? value : 0);
+}
+
+function formatFinancePercentage(value: number) {
+  return new Intl.NumberFormat("nl-BE", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  }).format(value);
+}
+
+function getFinancePercentChange(current: number, previous: number) {
+  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) {
+    return null;
+  }
+
+  return ((current - previous) / Math.abs(previous)) * 100;
 }
 
 function getFinanceCategoryOptions(type: FinanceType) {
@@ -2207,10 +2233,28 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     "#2dd4bf",
     "#84cc16"
   ]);
-  const financeLargestExpense = financeExpenseBreakdown[0] ?? null;
-  const financeLargestIncome = financeIncomeBreakdown[0] ?? null;
   const financeNetMonthBalance = financeMonthIncome - financeMonthExpenses;
-  const financeSelectedMonthTransactionCount = financeSelectedMonthTransactions.length;
+  const financePreviousMonthFilter = shiftMonthInputValue(financeMonthFilter, -1);
+  const financePreviousMonthTransactions = financeVisibleTransactions.filter((transaction) =>
+    isFinanceInMonth(transaction, financePreviousMonthFilter)
+  );
+  const financePreviousMonthSettledTransactions = financePreviousMonthTransactions.filter(
+    isFinanceSettled
+  );
+  const financePreviousMonthIncome = financePreviousMonthSettledTransactions
+    .filter((transaction) => transaction.type === "income")
+    .reduce((total, transaction) => total + transaction.amount, 0);
+  const financePreviousMonthExpenses = financePreviousMonthSettledTransactions
+    .filter((transaction) => transaction.type === "expense")
+    .reduce((total, transaction) => total + transaction.amount, 0);
+  const financePreviousNetMonthBalance = financePreviousMonthIncome - financePreviousMonthExpenses;
+  const financeBalanceChange = getFinancePercentChange(
+    financeNetMonthBalance,
+    financePreviousNetMonthBalance
+  );
+  const financeHasTrendData = financeTrendData.some(
+    (month) => month.income > 0 || month.expenses > 0 || month.pending > 0
+  );
   const financeWorkspaceGroup =
     financeGroupCards.find((group) => group.slug === financeSelectedGroupSlug) ??
     financeGroupCards[0] ??
@@ -2247,8 +2291,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
         year: "numeric"
       }) ?? "de gekozen maand"
     : "alle maanden";
-  const financeActiveView =
-    financeViewTabs.find((tab) => tab.id === financeView) ?? financeViewTabs[0];
   const financeFilteredPendingCount = filteredFinanceTransactions.filter(
     (transaction) => transaction.status === "pending"
   ).length;
@@ -2284,6 +2326,14 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const financeAttentionGroups = financeGroupSummaries
     .filter((group) => group.pending > 0 || group.balance < 0)
     .slice(0, 4);
+  const financeExpenseBreakdownRows = financeExpenseBreakdown.map((item) => ({
+    ...item,
+    share: financeExpenseBreakdownTotal ? (item.amount / financeExpenseBreakdownTotal) * 100 : 0
+  }));
+  const financeIncomeBreakdownRows = financeIncomeBreakdown.map((item) => ({
+    ...item,
+    share: financeIncomeBreakdownTotal ? (item.amount / financeIncomeBreakdownTotal) * 100 : 0
+  }));
 
   useEffect(() => {
     if (!canAccessFinance(profile)) {
@@ -2734,9 +2784,9 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     setFinanceView("transactions");
   }
 
-  function saveFinanceDraftToList() {
+  function prepareFinanceDraftTransactionState() {
     if (!financeDraft || !session || !profile) {
-      return;
+      return null;
     }
 
     const normalizedDraft = normalizeFinanceTransaction(financeDraft, groups, session.user.id);
@@ -2745,31 +2795,52 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
         type: "error",
         message: "Je kunt alleen transacties opslaan voor je eigen groep(en)."
       });
-      return;
+      return null;
     }
 
     const validationError = validateFinanceTransaction(normalizedDraft);
 
     if (validationError) {
       setNotice({ type: "error", message: validationError });
-      return;
+      return null;
     }
 
-    setFinanceTransactions((current) => {
-      const withoutCurrent = financeEditingId
-        ? current.filter((item) => item.id !== financeEditingId)
-        : current.filter((item) => item.id !== normalizedDraft.id);
+    const withoutCurrent = financeEditingId
+      ? financeTransactions.filter((item) => item.id !== financeEditingId)
+      : financeTransactions.filter((item) => item.id !== normalizedDraft.id);
 
-      return sortFinanceTransactions([normalizedDraft, ...withoutCurrent]);
-    });
+    return {
+      nextTransactions: sortFinanceTransactions([normalizedDraft, ...withoutCurrent]),
+      successMessage: financeEditingId
+        ? "Finance-item bijgewerkt in de lijst."
+        : "Finance-item toegevoegd aan de lijst."
+    };
+  }
+
+  function saveFinanceDraftToList(options?: {
+    navigateTo?: FinanceViewId;
+    successMessage?: string | null;
+  }) {
+    const preparedState = prepareFinanceDraftTransactionState();
+    if (!preparedState) {
+      return null;
+    }
+
+    setFinanceTransactions(preparedState.nextTransactions);
     setFinanceDirty(true);
     setFinanceDraft(null);
     setFinanceEditingId(null);
-    setFinanceView("transactions");
-    setNotice({
-      type: "success",
-      message: financeEditingId ? "Finance-item bijgewerkt in de lijst." : "Finance-item toegevoegd aan de lijst."
-    });
+    if (options?.navigateTo) {
+      setFinanceView(options.navigateTo);
+    }
+    if (options?.successMessage !== null) {
+      setNotice({
+        type: "success",
+        message: options?.successMessage ?? preparedState.successMessage
+      });
+    }
+
+    return preparedState.nextTransactions;
   }
 
   function duplicateFinanceTransaction(transaction: FinanceTransaction) {
@@ -2785,15 +2856,14 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   }
 
   function updateFinanceTransactionStatus(id: string, status: FinanceStatus) {
-    setFinanceTransactions((current) =>
-      sortFinanceTransactions(
-        current.map((item) => (item.id === id ? { ...item, status } : item))
-      )
+    const nextTransactions = sortFinanceTransactions(
+      financeTransactions.map((item) => (item.id === id ? { ...item, status } : item))
     );
+    setFinanceTransactions(nextTransactions);
     setFinanceDirty(true);
-    setNotice({
-      type: "success",
-      message:
+    void saveFinanceTransactions({
+      transactionsOverride: nextTransactions,
+      successMessage:
         status === "paid"
           ? "Transactie gemarkeerd als betaald."
           : status === "reimbursed"
@@ -2821,9 +2891,13 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     }
 
     if (transaction.id.startsWith("temp-")) {
-      setFinanceTransactions((current) => current.filter((item) => item.id !== transaction.id));
+      const nextTransactions = financeTransactions.filter((item) => item.id !== transaction.id);
+      setFinanceTransactions(nextTransactions);
       setFinanceDirty(true);
-      setNotice({ type: "success", message: "Niet-opgeslagen transactie verwijderd uit de lijst." });
+      void saveFinanceTransactions({
+        transactionsOverride: nextTransactions,
+        successMessage: "Niet-opgeslagen transactie verwijderd uit de lijst."
+      });
       return;
     }
 
@@ -2831,18 +2905,24 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       return;
     }
 
-    setFinanceTransactions((current) =>
-      sortFinanceTransactions(
-        current.map((item) =>
-          item.id === transaction.id ? { ...item, status: "archived" as FinanceStatus } : item
-        )
+    const nextTransactions = sortFinanceTransactions(
+      financeTransactions.map((item) =>
+        item.id === transaction.id ? { ...item, status: "archived" as FinanceStatus } : item
       )
     );
+    setFinanceTransactions(nextTransactions);
     setFinanceDirty(true);
-    setNotice({ type: "success", message: "Transactie gearchiveerd. Vergeet niet op te slaan." });
+    void saveFinanceTransactions({
+      transactionsOverride: nextTransactions,
+      successMessage: "Transactie gearchiveerd."
+    });
   }
 
-  async function saveFinanceTransactions() {
+  async function saveFinanceTransactions(options?: {
+    transactionsOverride?: FinanceTransaction[];
+    allowOpenDraft?: boolean;
+    successMessage?: string;
+  }) {
     if (!supabase || !session || !canAccessFinance(profile) || financeSaving) {
       return;
     }
@@ -2855,7 +2935,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       return;
     }
 
-    if (financeDraft) {
+    if (financeDraft && !options?.allowOpenDraft) {
       setNotice({
         type: "error",
         message: "Werk eerst de openstaande finance-fiche af of klik op annuleren."
@@ -2863,12 +2943,14 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       return;
     }
 
-    if (!financeDirty) {
+    const transactionsToPersist = options?.transactionsOverride ?? financeTransactions;
+
+    if (!financeDirty && !options?.transactionsOverride) {
       setNotice({ type: "success", message: "Er zijn geen finance-wijzigingen om op te slaan." });
       return;
     }
 
-    const normalizedTransactions = financeTransactions.map((transaction) =>
+    const normalizedTransactions = transactionsToPersist.map((transaction) =>
       normalizeFinanceTransaction(transaction, groups, session.user.id)
     );
     const restrictedTransaction = normalizedTransactions.find(
@@ -2915,7 +2997,9 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       if (refreshed) {
         setNotice({
           type: "success",
-          message: "Financiën opgeslagen. Je overzicht en transacties zijn bijgewerkt."
+          message:
+            options?.successMessage ??
+            "Financiën opgeslagen. Je overzicht en transacties zijn bijgewerkt."
         });
       }
     } catch (error) {
@@ -2926,6 +3010,23 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     } finally {
       setFinanceSaving(false);
     }
+  }
+
+  async function submitFinanceDraft() {
+    const nextTransactions = saveFinanceDraftToList({
+      navigateTo: "transactions",
+      successMessage: null
+    });
+
+    if (!nextTransactions) {
+      return;
+    }
+
+    await saveFinanceTransactions({
+      transactionsOverride: nextTransactions,
+      allowOpenDraft: true,
+      successMessage: "Transactie opgeslagen. De lijst en databank zijn bijgewerkt."
+    });
   }
 
   async function deleteMessage(id: string) {
@@ -3349,26 +3450,14 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
 
         {activeTab === "finance" && canAccessFinance(profile) && (
           <section class="admin-panel admin-finance-panel">
-            <div class="admin-panel-head">
-              <div>
-                <p class="admin-kicker">
-                  {profile?.role === "admin" ? "Admin overzicht" : "Jouw groepsruimte"}
-                </p>
+            <div class="admin-panel-head admin-finance-header">
+              <div class="admin-finance-header-copy">
                 <h2>Financiën</h2>
-                <p>
-                  {profile?.role === "admin"
-                    ? "Beheer geldstromen, groepen en openstaande items in een rustigere finance-workspace."
-                    : "Werk alleen in je eigen groepsruimte, met duidelijkere schermen en minder afleiding."}
-                </p>
+                <p>Beheer inkomsten, uitgaven en groepsbudgetten.</p>
               </div>
-              <div class="admin-sidebar-actions">
-                <button class="btn btn-light" type="button" onClick={() => startFinanceDraft()}>
-                  Nieuwe transactie
-                </button>
-                <button class="btn" type="button" onClick={() => void saveFinanceTransactions()}>
-                  {financeSaving ? "Opslaan..." : "Financiën opslaan"}
-                </button>
-              </div>
+              <button class="btn" type="button" onClick={() => startFinanceDraft()}>
+                Nieuwe transactie
+              </button>
             </div>
 
             {financeSchemaError && (
@@ -3378,47 +3467,42 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
               </div>
             )}
 
+            <nav class="admin-finance-subtabs" aria-label="Finance onderdelen">
+              {financeViewTabs.map((tab) => (
+                <button
+                  class={`admin-finance-subtab ${financeView === tab.id ? "is-active" : ""}`}
+                  type="button"
+                  key={tab.id}
+                  onClick={() => setFinanceView(tab.id)}
+                >
+                  <strong>{tab.label}</strong>
+                </button>
+              ))}
+            </nav>
+
             <div class="admin-finance-commandbar">
-              <div class="admin-finance-command-copy">
-                <span class="admin-finance-command-label">Werkruimte</span>
-                <strong>{financeActiveView.label}</strong>
-                <p>
-                  {financeActiveView.hint} • {financeMonthLabel} • {financeSelectedFilterGroupLabel}
-                </p>
-              </div>
               <div class="admin-finance-command-controls">
-                <label class="admin-field admin-finance-compact-field">
-                  <span>Maand</span>
+                <label class="admin-finance-toolbar-field">
                   <input
                     type="month"
+                    aria-label="Maand"
                     value={financeMonthFilter}
                     onInput={(event) =>
                       setFinanceMonthFilter((event.currentTarget as HTMLInputElement).value)
                     }
                   />
                 </label>
-                <label class="admin-field admin-finance-compact-field">
-                  <span>Werkgroep</span>
+                <label class="admin-finance-toolbar-field">
                   <select
-                    value={financeWorkspaceGroup?.slug ?? ""}
-                    onInput={(event) =>
-                      setFinanceSelectedGroupSlug((event.currentTarget as HTMLSelectElement).value)
-                    }
-                  >
-                    {financeGroupCards.map((group) => (
-                      <option value={group.slug} key={group.slug || "general"}>
-                        {group.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label class="admin-field admin-finance-compact-field">
-                  <span>Filtergroep</span>
-                  <select
+                    aria-label="Groep"
                     value={financeGroupFilter}
-                    onInput={(event) =>
-                      setFinanceGroupFilter((event.currentTarget as HTMLSelectElement).value)
-                    }
+                    onInput={(event) => {
+                      const value = (event.currentTarget as HTMLSelectElement).value;
+                      setFinanceGroupFilter(value);
+                      if (value !== "all") {
+                        setFinanceSelectedGroupSlug(value);
+                      }
+                    }}
                   >
                     <option value="all">Alle groepen</option>
                     {profile?.role === "admin" && <option value="">Algemeen</option>}
@@ -3429,371 +3513,214 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                     ))}
                   </select>
                 </label>
-              </div>
-              <div class="admin-finance-command-actions">
-                <button class="btn btn-light" type="button" onClick={resetFinanceFilters}>
-                  Filters wissen
-                </button>
-                <button class="btn btn-light" type="button" onClick={() => setFinanceView("transactions")}>
-                  Snelle lijst
-                </button>
-                <button class="btn" type="button" onClick={() => startFinanceDraft()}>
-                  Nieuwe transactie
-                </button>
-              </div>
-              <div class="admin-finance-chipbar">
-                <span class="admin-finance-chip">{financeMonthLabel}</span>
-                {financeGroupFilter !== "all" && (
-                  <button
-                    class="admin-finance-chip"
-                    type="button"
-                    onClick={() => setFinanceGroupFilter(profile?.role === "admin" ? "all" : financeAccessibleGroups[0]?.slug ?? "all")}
+                <label class="admin-finance-toolbar-field is-narrow">
+                  <select
+                    aria-label="Type"
+                    value={financeTypeFilter}
+                    onInput={(event) =>
+                      setFinanceTypeFilter(
+                        (event.currentTarget as HTMLSelectElement).value as "all" | FinanceType
+                      )
+                    }
                   >
-                    {financeSelectedFilterGroupLabel} ×
-                  </button>
-                )}
-                {financeTypeFilter !== "all" && (
-                  <button class="admin-finance-chip" type="button" onClick={() => setFinanceTypeFilter("all")}>
-                    {getFinanceTypeLabel(financeTypeFilter)} ×
-                  </button>
-                )}
-                {financeStatusFilter !== "active" && (
-                  <button
-                    class="admin-finance-chip"
-                    type="button"
-                    onClick={() => setFinanceStatusFilter("active")}
+                    <option value="all">Alle types</option>
+                    {financeTypeOptions.map((option) => (
+                      <option value={option.value} key={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label class="admin-finance-toolbar-field is-narrow">
+                  <select
+                    aria-label="Status"
+                    value={financeStatusFilter}
+                    onInput={(event) =>
+                      setFinanceStatusFilter(
+                        (event.currentTarget as HTMLSelectElement).value as FinanceStatusFilter
+                      )
+                    }
                   >
-                    {financeStatusFilter === "all"
-                      ? "Alle statussen"
-                      : getFinanceStatusLabel(financeStatusFilter)}{" "}
-                    ×
-                  </button>
-                )}
-                {financeCategoryFilter !== "all" && (
-                  <button
-                    class="admin-finance-chip"
-                    type="button"
-                    onClick={() => setFinanceCategoryFilter("all")}
+                    <option value="active">Actieve items</option>
+                    <option value="all">Alles</option>
+                    {financeStatusOptions.map((option) => (
+                      <option value={option.value} key={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label class="admin-finance-toolbar-field is-narrow">
+                  <select
+                    aria-label="Categorie"
+                    value={financeCategoryFilter}
+                    onInput={(event) =>
+                      setFinanceCategoryFilter((event.currentTarget as HTMLSelectElement).value)
+                    }
                   >
-                    {getFinanceCategoryLabel(financeCategoryFilter)} ×
-                  </button>
-                )}
-                {financeSearch.trim() && (
-                  <button class="admin-finance-chip" type="button" onClick={() => setFinanceSearch("")}>
-                    Zoek: {financeSearch.trim()} ×
-                  </button>
-                )}
-                {!financeCanResetFilters && (
-                  <span class="admin-finance-chip is-passive">Geen extra filters actief</span>
-                )}
+                    <option value="all">Alle categorieën</option>
+                    {financeCategoryOptions.map((option) => (
+                      <option value={option.key} key={option.key}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label class="admin-finance-toolbar-field admin-finance-toolbar-search">
+                  <input
+                    type="search"
+                    aria-label="Zoeken"
+                    placeholder="Zoeken..."
+                    value={financeSearch}
+                    onInput={(event) =>
+                      setFinanceSearch((event.currentTarget as HTMLInputElement).value)
+                    }
+                  />
+                </label>
               </div>
+              {financeCanResetFilters && (
+                <div class="admin-finance-chipbar">
+                  <span class="admin-finance-chip">{financeMonthLabel}</span>
+                  {financeGroupFilter !== "all" && (
+                    <button
+                      class="admin-finance-chip"
+                      type="button"
+                      onClick={() =>
+                        setFinanceGroupFilter(
+                          profile?.role === "admin" ? "all" : financeAccessibleGroups[0]?.slug ?? "all"
+                        )
+                      }
+                    >
+                      {financeSelectedFilterGroupLabel} ×
+                    </button>
+                  )}
+                  {financeTypeFilter !== "all" && (
+                    <button
+                      class="admin-finance-chip"
+                      type="button"
+                      onClick={() => setFinanceTypeFilter("all")}
+                    >
+                      {getFinanceTypeLabel(financeTypeFilter)} ×
+                    </button>
+                  )}
+                  {financeStatusFilter !== "active" && (
+                    <button
+                      class="admin-finance-chip"
+                      type="button"
+                      onClick={() => setFinanceStatusFilter("active")}
+                    >
+                      {financeStatusFilter === "all"
+                        ? "Alle statussen"
+                        : getFinanceStatusLabel(financeStatusFilter)}{" "}
+                      ×
+                    </button>
+                  )}
+                  {financeCategoryFilter !== "all" && (
+                    <button
+                      class="admin-finance-chip"
+                      type="button"
+                      onClick={() => setFinanceCategoryFilter("all")}
+                    >
+                      {getFinanceCategoryLabel(financeCategoryFilter)} ×
+                    </button>
+                  )}
+                  {financeSearch.trim() && (
+                    <button class="admin-finance-chip" type="button" onClick={() => setFinanceSearch("")}>
+                      Zoek: {financeSearch.trim()} ×
+                    </button>
+                  )}
+                  <button class="admin-finance-chip is-action" type="button" onClick={resetFinanceFilters}>
+                    Filters wissen
+                  </button>
+                </div>
+              )}
             </div>
-
-            <nav class="admin-finance-subtabs">
-              {financeViewTabs.map((tab) => (
-                <button
-                  class={`admin-finance-subtab ${financeView === tab.id ? "is-active" : ""}`}
-                  type="button"
-                  key={tab.id}
-                  onClick={() => setFinanceView(tab.id)}
-                >
-                  <strong>{tab.label}</strong>
-                  <span>{tab.hint}</span>
-                </button>
-              ))}
-            </nav>
 
             {financeView === "dashboard" && (
               <>
-                <div class="admin-finance-hero">
-                  <div class="admin-finance-hero-main">
-                    <div class="admin-finance-hero-copy">
-                      <span class="admin-finance-pill">Werkmaand: {financeMonthLabel}</span>
-                      <h3>Een finance-dashboard dat sneller leest dan een spreadsheet.</h3>
-                      <p>
-                        Zie meteen hoe de maand draait, welke groepen aandacht vragen en waar geld
-                        binnenkomt of buiten gaat.
-                      </p>
-                    </div>
-                    <div class="admin-finance-hero-badges">
-                      <span class="admin-finance-hero-badge is-positive">
-                        {financeMonthIncome >= financeMonthExpenses ? "Gezonde maand" : "Uitgaven hoger"}
-                      </span>
-                      <span class="admin-finance-hero-badge is-neutral">
-                        {financeSelectedMonthTransactionCount} beweging(en) deze maand
-                      </span>
-                      <span class="admin-finance-hero-badge is-warning">
-                        {financePendingTransactions.length} openstaand
-                      </span>
-                    </div>
-                  </div>
-
-                  <div class="admin-finance-trend-card">
-                    <div class="admin-finance-trend-head">
-                      <div>
-                        <span class="admin-finance-pill">Trend</span>
-                        <h4>Laatste 6 maanden</h4>
-                      </div>
-                      <div class="admin-finance-hero-status">
-                        <strong>
-                          {financeDirty ? "Nog niet opgeslagen" : "Alles gesynchroniseerd"}
-                        </strong>
-                        <p>
-                          {financeDirty
-                            ? "Je hebt lokale wijzigingen. Sla op om alles definitief te maken."
-                            : "Je finance-overzicht loopt gelijk met Supabase."}
-                        </p>
-                      </div>
-                    </div>
-                    <div class="admin-finance-trend-chart" aria-hidden="true">
-                      {financeTrendData.map((month) => (
-                        <div class="admin-finance-trend-column" key={month.key}>
-                          <span class="admin-finance-trend-value">
-                            {month.balance >= 0 ? "+" : "-"}
-                            {formatCurrency(Math.abs(month.balance))}
-                          </span>
-                          <div class="admin-finance-trend-bars">
-                            <span
-                              class="admin-finance-trend-bar is-income"
-                              style={{
-                                height: `${Math.max(12, (month.income / financeTrendPeak) * 100)}%`
-                              }}
-                            />
-                            <span
-                              class="admin-finance-trend-bar is-expense"
-                              style={{
-                                height: `${Math.max(12, (month.expenses / financeTrendPeak) * 100)}%`
-                              }}
-                            />
-                          </div>
-                          <strong>{month.label}</strong>
-                          <small>{month.pending ? `${month.pending} open` : "afgerond"}</small>
-                        </div>
-                      ))}
-                    </div>
-                    <p class="admin-finance-trend-note">
-                      Groen toont inkomsten, oranje toont uitgaven. Zo zie je snel welke maanden
-                      het zwaarst of sterkst waren.
-                    </p>
-                  </div>
-                </div>
-
                 <div class="admin-finance-metrics">
                   <article class="admin-finance-metric-card is-balance">
                     <span>Huidig saldo</span>
                     <strong>{formatCurrency(financeCurrentBalance)}</strong>
-                    <p>Alle bevestigde inkomsten en uitgaven samen, zonder geannuleerde of gearchiveerde items.</p>
+                    <p>
+                      {financeBalanceChange === null
+                        ? "Nog geen vergelijking met vorige maand"
+                        : `${financeBalanceChange >= 0 ? "+" : ""}${formatFinancePercentage(
+                            financeBalanceChange
+                          )}% vs vorige maand`}
+                    </p>
                   </article>
                   <article class="admin-finance-metric-card is-income">
-                    <span>Inkomsten deze maand</span>
+                    <span>Inkomsten</span>
                     <strong>{formatCurrency(financeMonthIncome)}</strong>
-                    <p>Bevestigde inkomsten in {financeMonthLabel}.</p>
+                    <p>{financeMonthLabel}</p>
                   </article>
                   <article class="admin-finance-metric-card is-expense">
-                    <span>Uitgaven deze maand</span>
+                    <span>Uitgaven</span>
                     <strong>{formatCurrency(financeMonthExpenses)}</strong>
-                    <p>Bevestigde uitgaven in {financeMonthLabel}.</p>
+                    <p>{financeMonthLabel}</p>
                   </article>
                   <article class="admin-finance-metric-card is-pending">
                     <span>Openstaand</span>
                     <strong>{formatCurrency(financePendingExpenseTotal + financePendingIncomeTotal)}</strong>
-                    <p>
-                      {financePendingTransactions.length} openstaande transactie(s), waarvan{" "}
-                      {formatCurrency(financePendingExpenseTotal)} uitgaven en{" "}
-                      {formatCurrency(financePendingIncomeTotal)} inkomsten.
-                    </p>
+                    <p>{financePendingTransactions.length} transacties</p>
                   </article>
                 </div>
 
-                <div class="admin-finance-storyboard">
-                  <section class="admin-subpanel admin-finance-chart-card">
-                    <div class="admin-subpanel-head">
-                      <div>
-                        <h4>Uitgavenmix</h4>
-                        <p class="muted-small">Waar het geld naartoe ging in {financeMonthLabel}.</p>
-                      </div>
-                      <span class="admin-finance-count">{formatCurrency(financeExpenseBreakdownTotal)}</span>
-                    </div>
-                    <div class="admin-finance-donut-layout">
-                      <div
-                        class="admin-finance-donut"
-                        style={{ background: financeExpenseDonutStyle }}
-                        aria-hidden="true"
-                      >
-                        <div class="admin-finance-donut-center">
-                          <strong>{financeExpenseBreakdown.length || 0}</strong>
-                          <span>categorieën</span>
-                        </div>
-                      </div>
-                      <div class="admin-finance-breakdown-list">
-                        {financeExpenseBreakdown.length ? (
-                          financeExpenseBreakdown.map((item, index) => (
-                            <div class="admin-finance-breakdown-item" key={item.key}>
-                              <span
-                                class="admin-finance-breakdown-dot"
-                                style={{
-                                  background: ["#f97316", "#fb7185", "#f59e0b", "#ef4444", "#fbbf24"][index]
-                                }}
-                              />
-                              <div>
-                                <strong>{item.label}</strong>
-                                <p>{formatCurrency(item.amount)}</p>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div class="admin-finance-empty">
-                            <strong>Nog geen uitgaven in deze maand.</strong>
-                            <p>De verdeling verschijnt zodra je bevestigde uitgaven hebt.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {financeLargestExpense && (
-                      <p class="admin-finance-insight">
-                        Grootste uitgavencategorie: <strong>{financeLargestExpense.label}</strong> met{" "}
-                        {formatCurrency(financeLargestExpense.amount)}.
-                      </p>
-                    )}
-                  </section>
-
-                  <section class="admin-subpanel admin-finance-chart-card">
-                    <div class="admin-subpanel-head">
-                      <div>
-                        <h4>Inkomstenmix</h4>
-                        <p class="muted-small">Waar het geld vandaan kwam in {financeMonthLabel}.</p>
-                      </div>
-                      <span class="admin-finance-count">{formatCurrency(financeIncomeBreakdownTotal)}</span>
-                    </div>
-                    <div class="admin-finance-donut-layout">
-                      <div
-                        class="admin-finance-donut is-income"
-                        style={{ background: financeIncomeDonutStyle }}
-                        aria-hidden="true"
-                      >
-                        <div class="admin-finance-donut-center">
-                          <strong>{financeIncomeBreakdown.length || 0}</strong>
-                          <span>bronnen</span>
-                        </div>
-                      </div>
-                      <div class="admin-finance-breakdown-list">
-                        {financeIncomeBreakdown.length ? (
-                          financeIncomeBreakdown.map((item, index) => (
-                            <div class="admin-finance-breakdown-item" key={item.key}>
-                              <span
-                                class="admin-finance-breakdown-dot"
-                                style={{
-                                  background: ["#10b981", "#22c55e", "#14b8a6", "#2dd4bf", "#84cc16"][index]
-                                }}
-                              />
-                              <div>
-                                <strong>{item.label}</strong>
-                                <p>{formatCurrency(item.amount)}</p>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div class="admin-finance-empty">
-                            <strong>Nog geen inkomsten in deze maand.</strong>
-                            <p>De verdeling verschijnt zodra je bevestigde inkomsten hebt.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <p class="admin-finance-insight">
-                      Netto resultaat in {financeMonthLabel}:{" "}
-                      <strong
-                        class={
-                          financeNetMonthBalance >= 0
-                            ? "admin-finance-inline-positive"
-                            : "admin-finance-inline-negative"
-                        }
-                      >
-                        {formatCurrency(financeNetMonthBalance)}
-                      </strong>
-                      .
-                      {financeLargestIncome
-                        ? ` Sterkste bron: ${financeLargestIncome.label}.`
-                        : " Voeg inkomsten toe om trends te zien."}
-                    </p>
-                  </section>
-                </div>
-
-                <div class="admin-finance-layout is-dashboard">
+                <div class="admin-finance-layout is-dashboard-overview">
                   <div class="admin-finance-main">
-                    <section class="admin-subpanel">
+                    <section class="admin-subpanel admin-finance-chart-card admin-finance-trend-card">
                       <div class="admin-subpanel-head">
                         <div>
-                          <h4>Recente transacties</h4>
-                          <p class="muted-small">De laatste bewegingen in {financeMonthLabel}.</p>
+                          <h4>Inkomsten & uitgaven</h4>
+                          <p class="muted-small">Laatste 6 maanden</p>
                         </div>
-                        <button
-                          class="btn btn-light"
-                          type="button"
-                          onClick={() => setFinanceView("transactions")}
-                        >
-                          Naar transacties
-                        </button>
+                        <span class="admin-finance-count">{financeMonthLabel}</span>
                       </div>
-                      {financeRecentTableTransactions.length ? (
-                        <div class="admin-finance-table-shell is-compact">
-                          <div class="admin-finance-table admin-finance-table-head">
-                            <span>Datum</span>
-                            <span>Omschrijving</span>
-                            <span>Groep</span>
-                            <span>Status</span>
-                            <span>Bedrag</span>
-                          </div>
-                          {financeRecentTableTransactions.map((transaction) => (
-                            <button
-                              class="admin-finance-table admin-finance-table-row"
-                              type="button"
-                              key={transaction.id ?? `${transaction.title}-${transaction.date}`}
-                              onClick={() => {
-                                openFinanceTransactionDetail(transaction);
-                                setFinanceView("transactions");
-                              }}
-                            >
-                              <span>
-                                {formatAdminDate(transaction.date, {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: undefined,
-                                  hour: undefined,
-                                  minute: undefined
-                                })}
-                              </span>
-                              <span>{transaction.title}</span>
-                              <span>{transaction.groupLabel || getFinanceGroupLabel(transaction.groupSlug, groups)}</span>
-                              <span>{getFinanceStatusLabel(transaction.status)}</span>
-                              <strong
-                                class={
-                                  transaction.type === "income"
-                                    ? "admin-finance-inline-positive"
-                                    : "admin-finance-inline-negative"
-                                }
-                              >
-                                {transaction.type === "income" ? "+" : "-"}
-                                {formatCurrency(transaction.amount)}
-                              </strong>
-                            </button>
+                      {financeHasTrendData ? (
+                        <div class="admin-finance-trend-chart" aria-hidden="true">
+                          {financeTrendData.map((month) => (
+                            <div class="admin-finance-trend-column" key={month.key}>
+                              <div class="admin-finance-trend-bars">
+                                <span
+                                  class="admin-finance-trend-bar is-income"
+                                  style={{
+                                    height: `${Math.max(12, (month.income / financeTrendPeak) * 100)}%`
+                                  }}
+                                />
+                                <span
+                                  class="admin-finance-trend-bar is-expense"
+                                  style={{
+                                    height: `${Math.max(12, (month.expenses / financeTrendPeak) * 100)}%`
+                                  }}
+                                />
+                              </div>
+                              <div class="admin-finance-trend-meta">
+                                <strong>{month.label}</strong>
+                                <small>
+                                  {month.pending
+                                    ? `${month.pending} open • ${formatCurrency(month.balance)}`
+                                    : formatCurrency(month.balance)}
+                                </small>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       ) : (
-                        <div class="admin-finance-empty">
-                          <strong>Nog geen transacties in deze maand.</strong>
-                          <p>Voeg een eerste transactie toe om activiteit te zien in het dashboard.</p>
+                        <div class="admin-finance-empty admin-finance-empty-chart">
+                          <strong>Nog geen trenddata voor deze periode.</strong>
+                          <p>Voeg een transactie toe om inkomsten en uitgaven hier te vergelijken.</p>
                         </div>
                       )}
                     </section>
                   </div>
 
                   <div class="admin-finance-side">
-                    <section class="admin-subpanel">
+                    <section class="admin-subpanel admin-finance-focus-card">
                       <div class="admin-subpanel-head">
                         <div>
-                          <h4>Openstaande items</h4>
-                          <p class="muted-small">Wat nog opvolging vraagt in {financeMonthLabel}.</p>
+                          <h4>Aandacht</h4>
+                          <p class="muted-small">Openstaande items en groepen die opvolging vragen.</p>
                         </div>
                         <button
                           class="btn btn-light"
@@ -3803,84 +3730,259 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                             setFinanceView("transactions");
                           }}
                         >
-                          Naar openstaand
+                          Bekijk openstaand
                         </button>
                       </div>
-                      <div class="admin-finance-focus-list">
-                        {financePendingTransactions.length ? (
-                          financePendingTransactions.slice(0, 4).map((transaction) => (
-                            <button
-                              class="admin-finance-focus-item"
-                              type="button"
-                              key={transaction.id ?? `${transaction.title}-${transaction.date}`}
-                              onClick={() => {
-                                openFinanceTransactionDetail(transaction);
-                                setFinanceView("transactions");
-                              }}
-                            >
-                              <div>
-                                <strong>{transaction.title}</strong>
-                                <p>
-                                  {transaction.groupLabel || getFinanceGroupLabel(transaction.groupSlug, groups)} •{" "}
-                                  {getFinanceCategoryLabel(transaction.categoryKey)}
-                                </p>
-                              </div>
-                              <span>{formatCurrency(transaction.amount)}</span>
-                            </button>
-                          ))
-                        ) : (
-                          <div class="admin-finance-empty">
-                            <strong>Geen openstaande items.</strong>
-                            <p>Alles lijkt netjes verwerkt voor deze maand.</p>
+                      <div class="admin-finance-attention-stack">
+                        <div class="admin-finance-attention-section">
+                          <div class="admin-finance-attention-head">
+                            <strong>Openstaande items</strong>
+                            <span>{financePendingTransactions.length}</span>
                           </div>
-                        )}
-                      </div>
-                    </section>
-
-                    <section class="admin-subpanel">
-                      <div class="admin-subpanel-head">
-                        <div>
-                          <h4>Groepen die aandacht vragen</h4>
-                          <p class="muted-small">Subtiele signalen, zonder onnodige alerts.</p>
+                          <div class="admin-finance-focus-list">
+                            {financePendingTransactions.length ? (
+                              financePendingTransactions.slice(0, 4).map((transaction) => (
+                                <button
+                                  class="admin-finance-focus-item"
+                                  type="button"
+                                  key={transaction.id ?? `${transaction.title}-${transaction.date}`}
+                                  onClick={() => {
+                                    openFinanceTransactionDetail(transaction);
+                                    setFinanceView("transactions");
+                                  }}
+                                >
+                                  <div>
+                                    <strong>{transaction.title}</strong>
+                                    <p>
+                                      {transaction.groupLabel ||
+                                        getFinanceGroupLabel(transaction.groupSlug, groups)}{" "}
+                                      • {getFinanceCategoryLabel(transaction.categoryKey)}
+                                    </p>
+                                  </div>
+                                  <span>{formatCurrency(transaction.amount)}</span>
+                                </button>
+                              ))
+                            ) : (
+                              <div class="admin-finance-empty">
+                                <strong>Geen openstaande items.</strong>
+                                <p>Alles lijkt verwerkt voor {financeMonthLabel}.</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <button class="btn btn-light" type="button" onClick={() => setFinanceView("groups")}>
-                          Naar groepen
-                        </button>
-                      </div>
-                      <div class="admin-finance-group-list">
-                        {financeAttentionGroups.length ? (
-                          financeAttentionGroups.map((group) => (
-                            <button
-                              class="admin-finance-group-card admin-finance-group-card-action"
-                              type="button"
-                              key={group.slug || "general"}
-                              onClick={() => {
-                                setFinanceSelectedGroupSlug(group.slug);
-                                setFinanceView("groups");
-                              }}
-                            >
-                              <div class="admin-finance-group-head">
-                                <strong>{group.name}</strong>
-                                <span>{group.count} item(s)</span>
-                              </div>
-                              <p>Saldo: {formatCurrency(group.balance)}</p>
-                              <div class="admin-finance-group-stats">
-                                <span>In: {formatCurrency(group.income)}</span>
-                                <span>Uit: {formatCurrency(group.expenses)}</span>
-                                <span>Open: {formatCurrency(group.pending)}</span>
-                              </div>
-                            </button>
-                          ))
-                        ) : (
-                          <div class="admin-finance-empty">
-                            <strong>Geen groepen met dringende signalen.</strong>
-                            <p>Alle zichtbare groepen lijken financieel stabiel in deze periode.</p>
+
+                        <div class="admin-finance-attention-section">
+                          <div class="admin-finance-attention-head">
+                            <strong>Groepen met aandacht</strong>
+                            <span>{financeAttentionGroups.length}</span>
                           </div>
-                        )}
+                          <div class="admin-finance-group-list">
+                            {financeAttentionGroups.length ? (
+                              financeAttentionGroups.map((group) => (
+                                <button
+                                  class="admin-finance-group-card admin-finance-group-card-action"
+                                  type="button"
+                                  key={group.slug || "general"}
+                                  onClick={() => {
+                                    setFinanceSelectedGroupSlug(group.slug);
+                                    setFinanceView("groups");
+                                  }}
+                                >
+                                  <div class="admin-finance-group-head">
+                                    <strong>{group.name}</strong>
+                                    <span>{group.count} items</span>
+                                  </div>
+                                  <strong class="admin-finance-group-balance">
+                                    {formatCurrency(group.balance)}
+                                  </strong>
+                                  <div class="admin-finance-group-stats">
+                                    <span>In {formatCurrency(group.income)}</span>
+                                    <span>Uit {formatCurrency(group.expenses)}</span>
+                                    <span>Open {formatCurrency(group.pending)}</span>
+                                  </div>
+                                </button>
+                              ))
+                            ) : (
+                              <div class="admin-finance-empty">
+                                <strong>Geen groepen met dringende signalen.</strong>
+                                <p>De zichtbare groepen staan momenteel stabiel.</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </section>
                   </div>
                 </div>
+
+                <div class="admin-finance-storyboard">
+                  <section class="admin-subpanel admin-finance-chart-card">
+                    <div class="admin-subpanel-head">
+                      <div>
+                        <h4>Uitgavenmix</h4>
+                        <p class="muted-small">{financeMonthLabel}</p>
+                      </div>
+                      <span class="admin-finance-count">{formatCurrency(financeExpenseBreakdownTotal)}</span>
+                    </div>
+                    {financeExpenseBreakdownRows.length ? (
+                      <div class="admin-finance-donut-layout">
+                        <div
+                          class="admin-finance-donut"
+                          style={{ background: financeExpenseDonutStyle }}
+                          aria-hidden="true"
+                        >
+                          <div class="admin-finance-donut-center">
+                            <strong>{financeExpenseBreakdownRows.length}</strong>
+                            <span>categorieën</span>
+                          </div>
+                        </div>
+                        <div class="admin-finance-breakdown-list">
+                          {financeExpenseBreakdownRows.map((item, index) => (
+                            <div class="admin-finance-breakdown-item" key={item.key}>
+                              <span
+                                class="admin-finance-breakdown-dot"
+                                style={{
+                                  background: ["#f97316", "#fb7185", "#f59e0b", "#ef4444", "#fbbf24"][index]
+                                }}
+                              />
+                              <div class="admin-finance-breakdown-copy">
+                                <strong>{item.label}</strong>
+                                <p>{formatFinancePercentage(item.share)}%</p>
+                              </div>
+                              <span class="admin-finance-breakdown-amount">
+                                {formatCurrency(item.amount)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div class="admin-finance-empty admin-finance-empty-chart">
+                        <strong>Nog geen uitgaven deze maand.</strong>
+                        <p>De verdeling verschijnt zodra er bevestigde uitgaven zijn.</p>
+                      </div>
+                    )}
+                  </section>
+
+                  <section class="admin-subpanel admin-finance-chart-card">
+                    <div class="admin-subpanel-head">
+                      <div>
+                        <h4>Inkomstenmix</h4>
+                        <p class="muted-small">{financeMonthLabel}</p>
+                      </div>
+                      <span class="admin-finance-count">{formatCurrency(financeIncomeBreakdownTotal)}</span>
+                    </div>
+                    {financeIncomeBreakdownRows.length ? (
+                      <div class="admin-finance-donut-layout">
+                        <div
+                          class="admin-finance-donut is-income"
+                          style={{ background: financeIncomeDonutStyle }}
+                          aria-hidden="true"
+                        >
+                          <div class="admin-finance-donut-center">
+                            <strong>{financeIncomeBreakdownRows.length}</strong>
+                            <span>bronnen</span>
+                          </div>
+                        </div>
+                        <div class="admin-finance-breakdown-list">
+                          {financeIncomeBreakdownRows.map((item, index) => (
+                            <div class="admin-finance-breakdown-item" key={item.key}>
+                              <span
+                                class="admin-finance-breakdown-dot"
+                                style={{
+                                  background: ["#10b981", "#22c55e", "#14b8a6", "#2dd4bf", "#84cc16"][index]
+                                }}
+                              />
+                              <div class="admin-finance-breakdown-copy">
+                                <strong>{item.label}</strong>
+                                <p>{formatFinancePercentage(item.share)}%</p>
+                              </div>
+                              <span class="admin-finance-breakdown-amount">
+                                {formatCurrency(item.amount)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div class="admin-finance-empty admin-finance-empty-chart">
+                        <strong>Nog geen inkomsten deze maand.</strong>
+                        <p>De verdeling verschijnt zodra er bevestigde inkomsten zijn.</p>
+                      </div>
+                    )}
+                  </section>
+                </div>
+
+                <section class="admin-subpanel admin-finance-table-card">
+                  <div class="admin-subpanel-head">
+                    <div>
+                      <h4>Recente transacties</h4>
+                      <p class="muted-small">{financeMonthLabel}</p>
+                    </div>
+                    <button
+                      class="btn btn-light"
+                      type="button"
+                      onClick={() => setFinanceView("transactions")}
+                    >
+                      Bekijk alles
+                    </button>
+                  </div>
+                  {financeRecentTableTransactions.length ? (
+                    <div class="admin-finance-table-shell">
+                      <div class="admin-finance-table admin-finance-table-head is-wide">
+                        <span>Datum</span>
+                        <span>Omschrijving</span>
+                        <span>Groep</span>
+                        <span>Categorie</span>
+                        <span>Status</span>
+                        <span>Bedrag</span>
+                      </div>
+                      {financeRecentTableTransactions.map((transaction) => (
+                        <div
+                          class="admin-finance-table admin-finance-table-row is-wide"
+                          key={transaction.id ?? `${transaction.title}-${transaction.date}`}
+                          onClick={() => {
+                            openFinanceTransactionDetail(transaction);
+                            setFinanceView("transactions");
+                          }}
+                        >
+                          <span>
+                            {formatAdminDate(transaction.date, {
+                              day: "numeric",
+                              month: "short",
+                              year: undefined,
+                              hour: undefined,
+                              minute: undefined
+                            })}
+                          </span>
+                          <strong class="admin-finance-table-title">{transaction.title}</strong>
+                          <span>{transaction.groupLabel || getFinanceGroupLabel(transaction.groupSlug, groups)}</span>
+                          <span>{getFinanceCategoryLabel(transaction.categoryKey)}</span>
+                          <span>
+                            <span class={`admin-finance-tag is-${transaction.status}`}>
+                              {getFinanceStatusLabel(transaction.status)}
+                            </span>
+                          </span>
+                          <strong
+                            class={
+                              transaction.type === "income"
+                                ? "admin-finance-inline-positive"
+                                : "admin-finance-inline-negative"
+                            }
+                          >
+                            {transaction.type === "income" ? "+" : "-"}
+                            {formatCurrency(transaction.amount)}
+                          </strong>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div class="admin-finance-empty">
+                      <strong>Nog geen transacties in deze maand.</strong>
+                      <p>Voeg een eerste transactie toe om activiteit te zien in het dashboard.</p>
+                    </div>
+                  )}
+                </section>
               </>
             )}
 
@@ -3941,13 +4043,31 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                               setFinanceGroupFilter(group.slug);
                             }}
                           >
-                            <strong>{group.name}</strong>
-                            <span>
-                              {group.slug
-                                ? group.ageRange || group.schoolYears || "Eigen groep"
-                                : "Gezamenlijke kosten"}
-                            </span>
-                            <small>{formatCurrency(groupSummary?.balance ?? 0)}</small>
+                            <div class="admin-finance-group-tab-head">
+                              <div>
+                                <strong>{group.name}</strong>
+                                <span>
+                                  {group.slug
+                                    ? group.ageRange || group.schoolYears || "Eigen groep"
+                                    : "Gezamenlijke kosten"}
+                                </span>
+                              </div>
+                              <small>{formatCurrency(groupSummary?.balance ?? 0)}</small>
+                            </div>
+                            <div class="admin-finance-group-tab-metrics">
+                              <div>
+                                <span>Inkomsten</span>
+                                <strong>{formatCurrency(groupSummary?.income ?? 0)}</strong>
+                              </div>
+                              <div>
+                                <span>Uitgaven</span>
+                                <strong>{formatCurrency(groupSummary?.expenses ?? 0)}</strong>
+                              </div>
+                              <div>
+                                <span>Openstaand</span>
+                                <strong>{formatCurrency(groupSummary?.pending ?? 0)}</strong>
+                              </div>
+                            </div>
                           </button>
                         );
                       })}
@@ -4099,74 +4219,11 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                     <div class="admin-subpanel-head">
                       <div>
                         <h4>Transacties</h4>
-                        <p class="muted-small">
-                          Werk met filters, snelle acties en een rustigere lijstweergave.
-                        </p>
+                        <p class="muted-small">Tabelweergave met detail rechts.</p>
                       </div>
                       <span class="admin-finance-count">
                         {filteredFinanceTransactions.length} resultaat/resultaten
                       </span>
-                    </div>
-
-                    <div class="admin-inline-grid admin-inline-grid-wide admin-finance-filter-grid">
-                      <TextField label="Zoeken" value={financeSearch} onInput={setFinanceSearch} />
-                      <label class="admin-field">
-                        <span>Type</span>
-                        <select
-                          value={financeTypeFilter}
-                          onInput={(event) =>
-                            setFinanceTypeFilter(
-                              (event.currentTarget as HTMLSelectElement).value as
-                                | "all"
-                                | FinanceType
-                            )
-                          }
-                        >
-                          <option value="all">Alle types</option>
-                          {financeTypeOptions.map((option) => (
-                            <option value={option.value} key={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label class="admin-field">
-                        <span>Status</span>
-                        <select
-                          value={financeStatusFilter}
-                          onInput={(event) =>
-                            setFinanceStatusFilter(
-                              (event.currentTarget as HTMLSelectElement).value as FinanceStatusFilter
-                            )
-                          }
-                        >
-                          <option value="active">Actieve items</option>
-                          <option value="all">Alles</option>
-                          {financeStatusOptions.map((option) => (
-                            <option value={option.value} key={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label class="admin-field">
-                        <span>Categorie</span>
-                        <select
-                          value={financeCategoryFilter}
-                          onInput={(event) =>
-                            setFinanceCategoryFilter(
-                              (event.currentTarget as HTMLSelectElement).value
-                            )
-                          }
-                        >
-                          <option value="all">Alle categorieën</option>
-                          {financeCategoryOptions.map((option) => (
-                            <option value={option.key} key={option.key}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
                     </div>
 
                     <div class="admin-finance-toolbar-pills">
@@ -4184,112 +4241,70 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                       </span>
                     </div>
 
-                    <div class="admin-finance-toolbar-inline">
-                      <div class="admin-finance-toolbar-note">
-                        <strong>Werk sneller vanuit deze lijst</strong>
-                        <p>
-                          Open een detail rechts, dupliceer vaak gebruikte posten en wis filters als
-                          je opnieuw breed wil kijken.
-                        </p>
-                      </div>
-                      <div class="admin-sidebar-actions">
-                        <button class="btn btn-light" type="button" onClick={resetFinanceFilters}>
-                          Wis filters
-                        </button>
-                        <button class="btn" type="button" onClick={() => startFinanceDraft()}>
-                          Nieuwe transactie
-                        </button>
-                      </div>
-                    </div>
-
-                    <div class="admin-finance-list">
+                    <div class="admin-finance-table-shell">
                       {filteredFinanceTransactions.length ? (
-                        filteredFinanceTransactions.map((transaction) => {
+                        <>
+                          <div class="admin-finance-table admin-finance-table-head is-transactions">
+                            <span>Datum</span>
+                            <span>Omschrijving</span>
+                            <span>Groep</span>
+                            <span>Categorie</span>
+                            <span>Status</span>
+                            <span>Bedrag</span>
+                            <span />
+                          </div>
+                          {filteredFinanceTransactions.map((transaction) => {
                           const profileName =
                             profiles.find((item) => item.user_id === transaction.createdBy)?.full_name ||
                             profiles.find((item) => item.user_id === transaction.createdBy)?.email ||
                             "Onbekende gebruiker";
 
                           return (
-                            <article
-                              class={`admin-finance-row is-${transaction.type} is-${transaction.status} ${
+                            <div
+                              class={`admin-finance-table admin-finance-table-row is-transactions ${
                                 financeSelectedTransactionId === transaction.id ? "is-selected" : ""
                               }`}
                               key={transaction.id ?? `${transaction.title}-${transaction.date}`}
                               onClick={() => openFinanceTransactionDetail(transaction)}
                             >
-                              <div class="admin-finance-row-main">
-                                <div class="admin-finance-row-top">
-                                  <div>
-                                    <h4>{transaction.title}</h4>
-                                    <p>
-                                      {formatAdminDate(transaction.date, {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                        hour: undefined,
-                                        minute: undefined
-                                      })}{" "}
-                                      | {transaction.groupLabel || getFinanceGroupLabel(transaction.groupSlug, groups)} |{" "}
-                                      {getFinanceCategoryLabel(transaction.categoryKey)}
-                                    </p>
-                                  </div>
-                                  <strong
-                                    class={
-                                      transaction.type === "income"
-                                        ? "admin-finance-amount is-positive"
-                                        : "admin-finance-amount is-negative"
-                                    }
-                                  >
-                                    {transaction.type === "income" ? "+" : "-"}
-                                    {formatCurrency(transaction.amount)}
-                                  </strong>
-                                </div>
-
-                                <div class="admin-finance-tags">
-                                  <span class={`admin-finance-tag is-${transaction.type}`}>
-                                    {getFinanceTypeLabel(transaction.type)}
-                                  </span>
-                                  <span class={`admin-finance-tag is-${transaction.status}`}>
-                                    {getFinanceStatusLabel(transaction.status)}
-                                  </span>
-                                  {transaction.paymentMethod && (
-                                    <span class="admin-finance-tag">{transaction.paymentMethod}</span>
-                                  )}
-                                  {transaction.personName && (
-                                    <span class="admin-finance-tag">{transaction.personName}</span>
-                                  )}
-                                </div>
-
-                                {(transaction.description || transaction.receiptUrl) && (
-                                  <div class="admin-finance-meta">
-                                    {transaction.description && <p>{transaction.description}</p>}
-                                    {transaction.receiptUrl && (
-                                      <a href={transaction.receiptUrl} target="_blank" rel="noreferrer">
-                                        {transaction.receiptFileName || "Bewijsstuk openen"}
-                                      </a>
-                                    )}
-                                  </div>
-                                )}
-
-                                <p class="muted-small">
-                                  Aangemaakt door {profileName}
+                              <span>
+                                {formatAdminDate(transaction.date, {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: undefined,
+                                  hour: undefined,
+                                  minute: undefined
+                                })}
+                              </span>
+                              <div class="admin-finance-table-primary">
+                                <strong class="admin-finance-table-title">{transaction.title}</strong>
+                                <small>
+                                  {transaction.personName || profileName}
                                   {transaction.updatedAt
-                                    ? ` • laatst aangepast ${formatRelativeDate(transaction.updatedAt)}`
+                                    ? ` • ${formatRelativeDate(transaction.updatedAt)}`
                                     : ""}
-                                </p>
+                                </small>
                               </div>
-
-                              <div class="admin-finance-row-actions">
-                                <button
-                                  class="btn btn-light"
-                                  type="button"
-                                  onClick={() => openFinanceTransactionDetail(transaction)}
-                                >
-                                  Bekijken
-                                </button>
+                              <span>{transaction.groupLabel || getFinanceGroupLabel(transaction.groupSlug, groups)}</span>
+                              <span>{getFinanceCategoryLabel(transaction.categoryKey)}</span>
+                              <span>
+                                <span class={`admin-finance-tag is-${transaction.status}`}>
+                                  {getFinanceStatusLabel(transaction.status)}
+                                </span>
+                              </span>
+                              <strong
+                                class={
+                                  transaction.type === "income"
+                                    ? "admin-finance-inline-positive"
+                                    : "admin-finance-inline-negative"
+                                }
+                              >
+                                {transaction.type === "income" ? "+" : "-"}
+                                {formatCurrency(transaction.amount)}
+                              </strong>
+                              <div class="admin-finance-table-actions" onClick={(event) => event.stopPropagation()}>
                                 <details class="admin-finance-row-menu">
-                                  <summary>Meer</summary>
+                                  <summary>...</summary>
                                   <div class="admin-finance-row-menu-popover">
                                     <button
                                       class="btn btn-light"
@@ -4337,9 +4352,10 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                                   </div>
                                 </details>
                               </div>
-                            </article>
+                            </div>
                           );
-                        })
+                        })}
+                        </>
                       ) : (
                         <div class="admin-finance-empty">
                           <strong>Geen transacties voor deze filters.</strong>
@@ -4672,7 +4688,11 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                         />
 
                         <div class="admin-post-actions">
-                          <button class="btn" type="button" onClick={saveFinanceDraftToList}>
+                          <button
+                            class="btn btn-light"
+                            type="button"
+                            onClick={() => saveFinanceDraftToList()}
+                          >
                             {financeEditingId ? "Wijziging klaarzetten" : "Aan lijst toevoegen"}
                           </button>
                           <button class="btn btn-light" type="button" onClick={cancelFinanceDraft}>
@@ -4693,11 +4713,89 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                 </div>
 
                 <div class="admin-finance-side">
+                  <section class="admin-subpanel admin-finance-sticky-panel">
+                    <div class="admin-subpanel-head">
+                      <div>
+                        <h4>Samenvatting</h4>
+                        <p class="muted-small">Controleer en sla je transactie op.</p>
+                      </div>
+                    </div>
+                    {financeDraft ? (
+                      <div class="admin-finance-detail-panel admin-finance-summary-panel">
+                        <div class="admin-finance-detail-top">
+                          <div>
+                            <span class={`admin-finance-tag is-${financeDraft.type}`}>
+                              {getFinanceTypeLabel(financeDraft.type)}
+                            </span>
+                            <h4>{financeDraft.title || "Nieuwe transactie"}</h4>
+                            <p>{financeDraft.date ? formatAdminDate(financeDraft.date) : financeMonthLabel}</p>
+                          </div>
+                          <strong
+                            class={
+                              financeDraft.type === "income"
+                                ? "admin-finance-amount is-positive"
+                                : "admin-finance-amount is-negative"
+                            }
+                          >
+                            {financeDraft.type === "income" ? "+" : "-"}
+                            {formatCurrency(financeDraft.amount)}
+                          </strong>
+                        </div>
+                        <div class="admin-finance-detail-grid">
+                          <div>
+                            <span>Type</span>
+                            <strong>{getFinanceTypeLabel(financeDraft.type)}</strong>
+                          </div>
+                          <div>
+                            <span>Bedrag</span>
+                            <strong>{formatCurrency(financeDraft.amount)}</strong>
+                          </div>
+                          <div>
+                            <span>Groep</span>
+                            <strong>{getFinanceGroupLabel(financeDraft.groupSlug, groups)}</strong>
+                          </div>
+                          <div>
+                            <span>Categorie</span>
+                            <strong>{getFinanceCategoryLabel(financeDraft.categoryKey)}</strong>
+                          </div>
+                          <div>
+                            <span>Status</span>
+                            <strong>{getFinanceStatusLabel(financeDraft.status)}</strong>
+                          </div>
+                          <div>
+                            <span>Bewijsstuk</span>
+                            <strong>{financeDraft.receiptFileName || "Nog niets toegevoegd"}</strong>
+                          </div>
+                        </div>
+                        <div class="admin-finance-detail-actions">
+                          <button class="btn" type="button" onClick={() => void submitFinanceDraft()}>
+                            {financeSaving ? "Opslaan..." : "Transactie opslaan"}
+                          </button>
+                          <button
+                            class="btn btn-light"
+                            type="button"
+                            onClick={() => saveFinanceDraftToList()}
+                          >
+                            Alleen klaarzetten
+                          </button>
+                          <button class="admin-remove" type="button" onClick={cancelFinanceDraft}>
+                            Annuleren
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div class="admin-finance-empty">
+                        <strong>Geen open fiche.</strong>
+                        <p>Open of maak een transactie om hier de samenvatting te zien.</p>
+                      </div>
+                    )}
+                  </section>
+
                   <section class="admin-subpanel">
                     <div class="admin-subpanel-head">
                       <div>
-                        <h4>Editor-hulp</h4>
-                        <p class="muted-small">Kleine shortcuts zoals in een financiële backoffice.</p>
+                        <h4>Snelle acties</h4>
+                        <p class="muted-small">Handige presets voor vaak gebruikte bewegingen.</p>
                       </div>
                     </div>
                     <div class="admin-finance-shortcuts">
