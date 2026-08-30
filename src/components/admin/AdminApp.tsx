@@ -27,6 +27,7 @@ const DASHBOARD_STALL_MS = 5000;
 const DASHBOARD_TIMEOUT_MS = 12000;
 type TabId =
   | "overview"
+  | "finance"
   | "site"
   | "home"
   | "groups"
@@ -47,6 +48,31 @@ interface Profile {
   created_at: string;
 }
 
+type FinanceType = "income" | "expense";
+type FinanceStatus = "pending" | "paid" | "reimbursed" | "cancelled" | "archived";
+type FinanceStatusFilter = "active" | "all" | FinanceStatus;
+
+interface FinanceTransaction {
+  id?: string;
+  date: string;
+  amount: number;
+  type: FinanceType;
+  groupSlug: string;
+  groupLabel: string;
+  categoryKey: string;
+  status: FinanceStatus;
+  title: string;
+  description: string;
+  paymentMethod: string;
+  personName: string;
+  receiptUrl: string;
+  receiptFileName: string;
+  createdBy: string;
+  updatedBy: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 type Notice = { type: "success" | "error"; message: string } | null;
 type AdminLoadingStep = {
   label: string;
@@ -58,6 +84,52 @@ const publicSupabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const publicSupabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 const REMEMBER_LOGIN_STORAGE_KEY = "chiro-admin-remember-login";
 const REMEMBERED_EMAIL_STORAGE_KEY = "chiro-admin-remembered-email";
+const financeStatusOptions: Array<{ value: FinanceStatus; label: string }> = [
+  { value: "pending", label: "Openstaand" },
+  { value: "paid", label: "Betaald" },
+  { value: "reimbursed", label: "Terugbetaald" },
+  { value: "cancelled", label: "Geannuleerd" },
+  { value: "archived", label: "Gearchiveerd" }
+];
+const financeTypeOptions: Array<{ value: FinanceType; label: string }> = [
+  { value: "income", label: "Inkomst" },
+  { value: "expense", label: "Uitgave" }
+];
+const financePaymentMethodOptions = [
+  "Bankoverschrijving",
+  "Cash",
+  "Bancontact",
+  "Kaart",
+  "Factuur",
+  "Andere"
+];
+const financeIncomeCategories = [
+  { key: "membership", label: "Lidgeld" },
+  { key: "camp", label: "Kamp" },
+  { key: "event", label: "Activiteit" },
+  { key: "sales", label: "Verkoop" },
+  { key: "donation", label: "Gift" },
+  { key: "subsidy", label: "Subsidie" },
+  { key: "other-income", label: "Andere" }
+];
+const financeExpenseCategories = [
+  { key: "activities", label: "Activiteiten" },
+  { key: "camp-expense", label: "Kamp" },
+  { key: "material", label: "Materiaal" },
+  { key: "food-drinks", label: "Eten en drinken" },
+  { key: "transport", label: "Vervoer" },
+  { key: "reimbursement", label: "Terugbetaling" },
+  { key: "maintenance", label: "Onderhoud" },
+  { key: "administration", label: "Administratie" },
+  { key: "other-expense", label: "Andere" }
+];
+const financeSettledStatuses = new Set<FinanceStatus>(["paid", "reimbursed"]);
+const financeCurrencyFormatter = new Intl.NumberFormat("nl-BE", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+});
 
 function cloneDefaults() {
   if (typeof structuredClone === "function") {
@@ -567,6 +639,196 @@ function toPostRow(post: Post) {
 function getTodayDateInputValue() {
   const now = new Date();
   return formatDateInput(new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString());
+}
+
+function getCurrentMonthInputValue() {
+  return getTodayDateInputValue().slice(0, 7);
+}
+
+function formatCurrency(value: number) {
+  return financeCurrencyFormatter.format(Number.isFinite(value) ? value : 0);
+}
+
+function getFinanceCategoryOptions(type: FinanceType) {
+  return type === "income" ? financeIncomeCategories : financeExpenseCategories;
+}
+
+function getFinanceCategoryLabel(key: string) {
+  return (
+    [...financeIncomeCategories, ...financeExpenseCategories].find((item) => item.key === key)?.label ??
+    "Zonder categorie"
+  );
+}
+
+function getFinanceStatusLabel(status: FinanceStatus) {
+  return financeStatusOptions.find((item) => item.value === status)?.label ?? status;
+}
+
+function getFinanceTypeLabel(type: FinanceType) {
+  return financeTypeOptions.find((item) => item.value === type)?.label ?? type;
+}
+
+function getFinanceGroupLabel(groupSlug: string, groups: Group[]) {
+  if (!groupSlug) {
+    return "Algemeen";
+  }
+
+  return groups.find((group) => group.slug === groupSlug)?.name ?? "Onbekende groep";
+}
+
+function sortFinanceTransactions(transactions: FinanceTransaction[]) {
+  return [...transactions].sort((left, right) => {
+    const leftDate = parseDateValue(left.date)?.getTime() ?? 0;
+    const rightDate = parseDateValue(right.date)?.getTime() ?? 0;
+
+    if (rightDate !== leftDate) {
+      return rightDate - leftDate;
+    }
+
+    const leftUpdated = parseDateValue(left.updatedAt ?? left.createdAt)?.getTime() ?? 0;
+    const rightUpdated = parseDateValue(right.updatedAt ?? right.createdAt)?.getTime() ?? 0;
+
+    return rightUpdated - leftUpdated;
+  });
+}
+
+function createEmptyFinanceTransaction(groups: Group[]): FinanceTransaction {
+  return {
+    id: tempId("finance"),
+    date: getTodayDateInputValue(),
+    amount: 0,
+    type: "expense",
+    groupSlug: "",
+    groupLabel: getFinanceGroupLabel("", groups),
+    categoryKey: financeExpenseCategories[0]?.key ?? "activities",
+    status: "paid",
+    title: "",
+    description: "",
+    paymentMethod: financePaymentMethodOptions[0] ?? "",
+    personName: "",
+    receiptUrl: "",
+    receiptFileName: "",
+    createdBy: "",
+    updatedBy: ""
+  };
+}
+
+function mapFinanceTransaction(row: Record<string, unknown>): FinanceTransaction {
+  return {
+    id: String(row.id ?? ""),
+    date: formatDateInput(String(row.transaction_date ?? "")) || getTodayDateInputValue(),
+    amount: Number(row.amount ?? 0),
+    type: row.type === "income" ? "income" : "expense",
+    groupSlug: String(row.group_slug ?? ""),
+    groupLabel: String(row.group_label ?? "Algemeen"),
+    categoryKey: String(row.category_key ?? ""),
+    status: (row.status as FinanceStatus) ?? "paid",
+    title: String(row.title ?? ""),
+    description: String(row.description ?? ""),
+    paymentMethod: String(row.payment_method ?? ""),
+    personName: String(row.person_name ?? ""),
+    receiptUrl: String(row.receipt_url ?? ""),
+    receiptFileName: String(row.receipt_file_name ?? ""),
+    createdBy: String(row.created_by ?? ""),
+    updatedBy: String(row.updated_by ?? ""),
+    createdAt: String(row.created_at ?? ""),
+    updatedAt: String(row.updated_at ?? "")
+  };
+}
+
+function normalizeFinanceTransaction(
+  transaction: FinanceTransaction,
+  groups: Group[],
+  userId: string
+): FinanceTransaction {
+  const categoryOptions = getFinanceCategoryOptions(transaction.type);
+  const categoryKey = categoryOptions.some((item) => item.key === transaction.categoryKey)
+    ? transaction.categoryKey
+    : (categoryOptions[0]?.key ?? "");
+  const amount = Number.parseFloat(String(transaction.amount));
+  const hasPersistentId = Boolean(transaction.id && !transaction.id.startsWith("temp-"));
+
+  return {
+    ...transaction,
+    id: transaction.id || tempId("finance"),
+    date: formatDateInput(transaction.date) || getTodayDateInputValue(),
+    amount: Number.isFinite(amount) ? Number(amount.toFixed(2)) : 0,
+    groupSlug: transaction.groupSlug,
+    groupLabel: getFinanceGroupLabel(transaction.groupSlug, groups),
+    categoryKey,
+    status: transaction.status,
+    title: transaction.title.trim(),
+    description: transaction.description.trim(),
+    paymentMethod: transaction.paymentMethod.trim(),
+    personName: transaction.personName.trim(),
+    receiptUrl: transaction.receiptUrl.trim(),
+    receiptFileName: transaction.receiptFileName.trim(),
+    createdBy: hasPersistentId ? transaction.createdBy : userId,
+    updatedBy: userId
+  };
+}
+
+function toFinanceTransactionRow(transaction: FinanceTransaction, userId: string) {
+  const hasPersistentId = Boolean(transaction.id && !transaction.id.startsWith("temp-"));
+  const row: Record<string, unknown> = {
+    transaction_date: transaction.date,
+    amount: transaction.amount,
+    type: transaction.type,
+    group_slug: transaction.groupSlug,
+    group_label: transaction.groupLabel || "Algemeen",
+    category_key: transaction.categoryKey,
+    status: transaction.status,
+    title: transaction.title,
+    description: transaction.description,
+    payment_method: transaction.paymentMethod,
+    person_name: transaction.personName,
+    receipt_url: transaction.receiptUrl,
+    receipt_file_name: transaction.receiptFileName,
+    created_by: transaction.createdBy || userId,
+    updated_by: userId
+  };
+
+  if (hasPersistentId) {
+    row.id = transaction.id;
+  }
+
+  return row;
+}
+
+function validateFinanceTransaction(transaction: FinanceTransaction) {
+  if (!transaction.title.trim()) {
+    return "Geef deze transactie een duidelijke titel.";
+  }
+
+  if (!transaction.date) {
+    return "Kies een datum voor deze transactie.";
+  }
+
+  if (!transaction.categoryKey) {
+    return "Kies een categorie.";
+  }
+
+  if (!Number.isFinite(transaction.amount) || transaction.amount <= 0) {
+    return "Vul een bedrag groter dan 0 in.";
+  }
+
+  return null;
+}
+
+function isFinanceVisibleForSummary(transaction: FinanceTransaction) {
+  return transaction.status !== "archived" && transaction.status !== "cancelled";
+}
+
+function isFinanceSettled(transaction: FinanceTransaction) {
+  return financeSettledStatuses.has(transaction.status);
+}
+
+function isFinanceInMonth(transaction: FinanceTransaction, monthValue: string) {
+  if (!monthValue) {
+    return true;
+  }
+
+  return transaction.date.startsWith(monthValue);
 }
 
 function createEmptyPost(): Post {
@@ -1301,6 +1563,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const [songs, setSongs] = useState<Song[]>(cloneDefaults().songs);
   const [posts, setPosts] = useState<Post[]>(cloneDefaults().posts);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [financeTransactions, setFinanceTransactions] = useState<FinanceTransaction[]>([]);
   const [deletedGroupIds, setDeletedGroupIds] = useState<string[]>([]);
   const [deletedContactSectionIds, setDeletedContactSectionIds] = useState<string[]>([]);
   const [deletedSongIds, setDeletedSongIds] = useState<string[]>([]);
@@ -1317,6 +1580,17 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("editor");
   const [removingProfileId, setRemovingProfileId] = useState<string | null>(null);
+  const [financeDraft, setFinanceDraft] = useState<FinanceTransaction | null>(null);
+  const [financeEditingId, setFinanceEditingId] = useState<string | null>(null);
+  const [financeSaving, setFinanceSaving] = useState(false);
+  const [financeDirty, setFinanceDirty] = useState(false);
+  const [financeSchemaError, setFinanceSchemaError] = useState<string | null>(null);
+  const [financeMonthFilter, setFinanceMonthFilter] = useState(() => getCurrentMonthInputValue());
+  const [financeGroupFilter, setFinanceGroupFilter] = useState("all");
+  const [financeTypeFilter, setFinanceTypeFilter] = useState<"all" | FinanceType>("all");
+  const [financeStatusFilter, setFinanceStatusFilter] = useState<FinanceStatusFilter>("active");
+  const [financeCategoryFilter, setFinanceCategoryFilter] = useState("all");
+  const [financeSearch, setFinanceSearch] = useState("");
 
   useEffect(() => {
     syncRememberedLogin(rememberLogin, loginEmail);
@@ -1451,6 +1725,38 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       setDeletedSongIds([]);
       setDeletedPostIds([]);
       setPostFeedback(null);
+
+      if (currentProfile.role === "admin") {
+        const financeResult = await supabase
+          .from("finance_transactions")
+          .select("*")
+          .order("transaction_date", { ascending: false })
+          .order("created_at", { ascending: false });
+
+        if (financeResult.error) {
+          console.error("Finance-data kon niet worden geladen.", financeResult.error);
+          setFinanceTransactions([]);
+          setFinanceSchemaError(
+            "De finance-module is nog niet klaar in Supabase. Voer eerst de nieuwste `supabase/schema.sql` uit."
+          );
+        } else {
+          setFinanceTransactions(
+            sortFinanceTransactions(
+              (financeResult.data ?? []).map((row) =>
+                mapFinanceTransaction(row as Record<string, unknown>)
+              )
+            )
+          );
+          setFinanceSchemaError(null);
+        }
+      } else {
+        setFinanceTransactions([]);
+        setFinanceSchemaError(null);
+      }
+
+      setFinanceDraft(null);
+      setFinanceEditingId(null);
+      setFinanceDirty(false);
       return true;
     } catch (error) {
       console.error(error);
@@ -1540,6 +1846,11 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       setProfile(null);
       setProfiles([]);
       setMessages([]);
+      setFinanceTransactions([]);
+      setFinanceDraft(null);
+      setFinanceEditingId(null);
+      setFinanceDirty(false);
+      setFinanceSchemaError(null);
       setDataLoading(false);
       setDataStalled(false);
     }
@@ -1561,6 +1872,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const orderedContactGroups = orderGroupsForContact(groups, pages.contact.groupCards);
 
   if (profile?.role === "admin") {
+    availableTabs.splice(1, 0, { id: "finance", label: "Financiën" });
     availableTabs.push({ id: "team", label: "Team" });
   }
 
@@ -1571,6 +1883,130 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       return rightTime - leftTime;
     })
     .slice(0, 8);
+  const financeCategoryOptions = [...financeIncomeCategories, ...financeExpenseCategories];
+  const financeVisibleTransactions = financeTransactions.filter(isFinanceVisibleForSummary);
+  const financeSettledTransactions = financeVisibleTransactions.filter(isFinanceSettled);
+  const financeSelectedMonthTransactions = financeVisibleTransactions.filter((transaction) =>
+    isFinanceInMonth(transaction, financeMonthFilter)
+  );
+  const financeSelectedMonthSettledTransactions = financeSelectedMonthTransactions.filter(
+    isFinanceSettled
+  );
+  const financePendingTransactions = financeVisibleTransactions.filter(
+    (transaction) => transaction.status === "pending"
+  );
+  const financeCurrentBalance = financeSettledTransactions.reduce(
+    (total, transaction) =>
+      total + (transaction.type === "income" ? transaction.amount : -transaction.amount),
+    0
+  );
+  const financeMonthIncome = financeSelectedMonthSettledTransactions
+    .filter((transaction) => transaction.type === "income")
+    .reduce((total, transaction) => total + transaction.amount, 0);
+  const financeMonthExpenses = financeSelectedMonthSettledTransactions
+    .filter((transaction) => transaction.type === "expense")
+    .reduce((total, transaction) => total + transaction.amount, 0);
+  const financePendingExpenseTotal = financePendingTransactions
+    .filter((transaction) => transaction.type === "expense")
+    .reduce((total, transaction) => total + transaction.amount, 0);
+  const financePendingIncomeTotal = financePendingTransactions
+    .filter((transaction) => transaction.type === "income")
+    .reduce((total, transaction) => total + transaction.amount, 0);
+  const financeSearchNeedle = financeSearch.trim().toLowerCase();
+  const filteredFinanceTransactions = sortFinanceTransactions(
+    financeTransactions.filter((transaction) => {
+      if (financeMonthFilter && !isFinanceInMonth(transaction, financeMonthFilter)) {
+        return false;
+      }
+
+      if (financeGroupFilter !== "all" && transaction.groupSlug !== financeGroupFilter) {
+        return false;
+      }
+
+      if (financeTypeFilter !== "all" && transaction.type !== financeTypeFilter) {
+        return false;
+      }
+
+      if (
+        financeStatusFilter === "active" &&
+        (transaction.status === "archived" || transaction.status === "cancelled")
+      ) {
+        return false;
+      }
+
+      if (financeStatusFilter !== "all" && financeStatusFilter !== "active") {
+        if (transaction.status !== financeStatusFilter) {
+          return false;
+        }
+      }
+
+      if (financeCategoryFilter !== "all" && transaction.categoryKey !== financeCategoryFilter) {
+        return false;
+      }
+
+      if (!financeSearchNeedle) {
+        return true;
+      }
+
+      const haystack = [
+        transaction.title,
+        transaction.description,
+        transaction.personName,
+        transaction.groupLabel,
+        getFinanceCategoryLabel(transaction.categoryKey)
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(financeSearchNeedle);
+    })
+  );
+  const financeGroupSummaries = [
+    { slug: "", name: "Algemeen" },
+    ...groups.map((group) => ({ slug: group.slug, name: group.name }))
+  ]
+    .map((group) => {
+      const groupTransactions = financeSelectedMonthTransactions.filter(
+        (transaction) => transaction.groupSlug === group.slug
+      );
+      const settledGroupTransactions = groupTransactions.filter(isFinanceSettled);
+      const income = settledGroupTransactions
+        .filter((transaction) => transaction.type === "income")
+        .reduce((total, transaction) => total + transaction.amount, 0);
+      const expenses = settledGroupTransactions
+        .filter((transaction) => transaction.type === "expense")
+        .reduce((total, transaction) => total + transaction.amount, 0);
+      const pending = groupTransactions
+        .filter((transaction) => transaction.status === "pending")
+        .reduce((total, transaction) => total + transaction.amount, 0);
+
+      return {
+        slug: group.slug,
+        name: group.name,
+        income,
+        expenses,
+        pending,
+        balance: income - expenses,
+        count: groupTransactions.length
+      };
+    })
+    .filter((group) => group.count > 0)
+    .sort((left, right) => {
+      if (right.pending !== left.pending) {
+        return right.pending - left.pending;
+      }
+
+      return Math.abs(right.balance) - Math.abs(left.balance);
+    });
+  const financeDraftCategoryOptions = financeDraft
+    ? getFinanceCategoryOptions(financeDraft.type)
+    : financeExpenseCategories;
+  const financeMonthLabel = financeMonthFilter
+    ? parseDateValue(`${financeMonthFilter}-01`)?.toLocaleDateString("nl-BE", {
+        month: "long",
+        year: "numeric"
+      }) ?? "de gekozen maand"
+    : "alle maanden";
 
   async function signIn() {
     if (!supabase) {
@@ -1628,6 +2064,11 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     setConfirmPassword("");
     setLoginPassword("");
     setActiveTab("overview");
+    setFinanceTransactions([]);
+    setFinanceDraft(null);
+    setFinanceEditingId(null);
+    setFinanceDirty(false);
+    setFinanceSchemaError(null);
   }
 
   async function updatePassword() {
@@ -1944,6 +2385,185 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     } finally {
       setPostsSaving(false);
       setActivePostActionId(null);
+    }
+  }
+
+  function startFinanceDraft(source?: FinanceTransaction) {
+    const nextDraft = source
+      ? { ...source }
+      : createEmptyFinanceTransaction(groups);
+
+    setFinanceEditingId(source?.id ?? null);
+    setFinanceDraft(nextDraft);
+    setNotice(null);
+  }
+
+  function updateFinanceDraft(updater: (draft: FinanceTransaction) => FinanceTransaction) {
+    setFinanceDraft((current) => (current ? updater(current) : current));
+  }
+
+  function cancelFinanceDraft() {
+    setFinanceDraft(null);
+    setFinanceEditingId(null);
+  }
+
+  function saveFinanceDraftToList() {
+    if (!financeDraft || !session) {
+      return;
+    }
+
+    const normalizedDraft = normalizeFinanceTransaction(financeDraft, groups, session.user.id);
+    const validationError = validateFinanceTransaction(normalizedDraft);
+
+    if (validationError) {
+      setNotice({ type: "error", message: validationError });
+      return;
+    }
+
+    setFinanceTransactions((current) => {
+      const withoutCurrent = financeEditingId
+        ? current.filter((item) => item.id !== financeEditingId)
+        : current.filter((item) => item.id !== normalizedDraft.id);
+
+      return sortFinanceTransactions([normalizedDraft, ...withoutCurrent]);
+    });
+    setFinanceDirty(true);
+    setFinanceDraft(null);
+    setFinanceEditingId(null);
+    setNotice({
+      type: "success",
+      message: financeEditingId ? "Finance-item bijgewerkt in de lijst." : "Finance-item toegevoegd aan de lijst."
+    });
+  }
+
+  function duplicateFinanceTransaction(transaction: FinanceTransaction) {
+    startFinanceDraft({
+      ...transaction,
+      id: tempId("finance"),
+      title: transaction.title ? `${transaction.title} (kopie)` : "",
+      createdAt: "",
+      updatedAt: "",
+      createdBy: "",
+      updatedBy: ""
+    });
+  }
+
+  function updateFinanceTransactionStatus(id: string, status: FinanceStatus) {
+    setFinanceTransactions((current) =>
+      sortFinanceTransactions(
+        current.map((item) => (item.id === id ? { ...item, status } : item))
+      )
+    );
+    setFinanceDirty(true);
+    setNotice({
+      type: "success",
+      message:
+        status === "paid"
+          ? "Transactie gemarkeerd als betaald."
+          : status === "reimbursed"
+            ? "Transactie gemarkeerd als terugbetaald."
+            : "Transactie bijgewerkt."
+    });
+  }
+
+  function archiveFinanceTransaction(transaction: FinanceTransaction) {
+    if (!transaction.id) {
+      return;
+    }
+
+    if (transaction.id.startsWith("temp-")) {
+      setFinanceTransactions((current) => current.filter((item) => item.id !== transaction.id));
+      setFinanceDirty(true);
+      setNotice({ type: "success", message: "Niet-opgeslagen transactie verwijderd uit de lijst." });
+      return;
+    }
+
+    if (!confirm(`"${transaction.title}" archiveren?`)) {
+      return;
+    }
+
+    setFinanceTransactions((current) =>
+      sortFinanceTransactions(
+        current.map((item) =>
+          item.id === transaction.id ? { ...item, status: "archived" as FinanceStatus } : item
+        )
+      )
+    );
+    setFinanceDirty(true);
+    setNotice({ type: "success", message: "Transactie gearchiveerd. Vergeet niet op te slaan." });
+  }
+
+  async function saveFinanceTransactions() {
+    if (!supabase || !session || profile?.role !== "admin" || financeSaving) {
+      return;
+    }
+
+    if (financeSchemaError) {
+      setNotice({
+        type: "error",
+        message: "Voer eerst de nieuwste `supabase/schema.sql` uit voor je Financiën opslaat."
+      });
+      return;
+    }
+
+    if (financeDraft) {
+      setNotice({
+        type: "error",
+        message: "Werk eerst de openstaande finance-fiche af of klik op annuleren."
+      });
+      return;
+    }
+
+    if (!financeDirty) {
+      setNotice({ type: "success", message: "Er zijn geen finance-wijzigingen om op te slaan." });
+      return;
+    }
+
+    const normalizedTransactions = financeTransactions.map((transaction) =>
+      normalizeFinanceTransaction(transaction, groups, session.user.id)
+    );
+    const invalidTransaction = normalizedTransactions.find((transaction) =>
+      Boolean(validateFinanceTransaction(transaction))
+    );
+
+    if (invalidTransaction) {
+      setNotice({
+        type: "error",
+        message:
+          validateFinanceTransaction(invalidTransaction) ??
+          "Minstens 1 finance-transactie is nog niet volledig ingevuld."
+      });
+      return;
+    }
+
+    setFinanceSaving(true);
+    setNotice(null);
+
+    try {
+      if (normalizedTransactions.length) {
+        const { error } = await supabase
+          .from("finance_transactions")
+          .upsert(normalizedTransactions.map((transaction) => toFinanceTransactionRow(transaction, session.user.id)));
+
+        if (error) {
+          throw error;
+        }
+      }
+
+      const refreshed = await loadDashboard();
+      if (refreshed) {
+        setNotice({
+          type: "success",
+          message: "Financiën opgeslagen. Je overzicht en transacties zijn bijgewerkt."
+        });
+      }
+    } catch (error) {
+      setNotice({
+        type: "error",
+        message: error instanceof Error ? error.message : "Financiën opslaan lukte niet."
+      });
+    } finally {
+      setFinanceSaving(false);
     }
   }
 
@@ -2361,6 +2981,593 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                   Nog geen berichten ontvangen via het contactformulier.
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+        {activeTab === "finance" && profile?.role === "admin" && (
+          <section class="admin-panel admin-finance-panel">
+            <div class="admin-panel-head">
+              <div>
+                <p class="admin-kicker">Admin only</p>
+                <h2>Financiën</h2>
+                <p>Hou inkomsten, uitgaven en openstaande betalingen eenvoudig bij per groep.</p>
+              </div>
+              <div class="admin-sidebar-actions">
+                <button class="btn btn-light" type="button" onClick={() => startFinanceDraft()}>
+                  Nieuwe transactie
+                </button>
+                <button class="btn" type="button" onClick={() => void saveFinanceTransactions()}>
+                  {financeSaving ? "Opslaan..." : "Financiën opslaan"}
+                </button>
+              </div>
+            </div>
+
+            {financeSchemaError && (
+              <div class="admin-finance-alert admin-finance-alert-error">
+                <strong>Finance-databank nog niet actief</strong>
+                <p>{financeSchemaError}</p>
+              </div>
+            )}
+
+            <div class="admin-finance-hero">
+              <div class="admin-finance-hero-copy">
+                <span class="admin-finance-pill">Werkmaand: {financeMonthLabel}</span>
+                <h3>Een duidelijk penningmeester-overzicht zonder spreadsheetstress.</h3>
+                <p>
+                  Voeg transacties toe, hou openstaande terugbetalingen in de gaten en zie meteen
+                  waar elke groep staat.
+                </p>
+              </div>
+              <div class="admin-finance-hero-status">
+                <strong>{financeDirty ? "Nog niet opgeslagen" : "Alles gesynchroniseerd"}</strong>
+                <p>
+                  {financeDirty
+                    ? "Je hebt lokale wijzigingen in Financiën. Klik bovenaan op opslaan om ze vast te zetten."
+                    : "Je finance-overzicht komt overeen met de laatst geladen data uit Supabase."}
+                </p>
+              </div>
+            </div>
+
+            <div class="admin-finance-metrics">
+              <article class="admin-finance-metric-card">
+                <span>Huidig saldo</span>
+                <strong>{formatCurrency(financeCurrentBalance)}</strong>
+                <p>Alle bevestigde inkomsten en uitgaven samen, zonder geannuleerde of gearchiveerde items.</p>
+              </article>
+              <article class="admin-finance-metric-card">
+                <span>Inkomsten deze maand</span>
+                <strong>{formatCurrency(financeMonthIncome)}</strong>
+                <p>Bevestigde inkomsten in {financeMonthLabel}.</p>
+              </article>
+              <article class="admin-finance-metric-card">
+                <span>Uitgaven deze maand</span>
+                <strong>{formatCurrency(financeMonthExpenses)}</strong>
+                <p>Bevestigde uitgaven in {financeMonthLabel}.</p>
+              </article>
+              <article class="admin-finance-metric-card">
+                <span>Openstaand</span>
+                <strong>{formatCurrency(financePendingExpenseTotal + financePendingIncomeTotal)}</strong>
+                <p>
+                  {financePendingTransactions.length} openstaande transactie(s), waarvan{" "}
+                  {formatCurrency(financePendingExpenseTotal)} uitgaven en{" "}
+                  {formatCurrency(financePendingIncomeTotal)} inkomsten.
+                </p>
+              </article>
+            </div>
+
+            <div class="admin-finance-layout">
+              <div class="admin-finance-main">
+                <section class="admin-subpanel">
+                  <div class="admin-subpanel-head">
+                    <div>
+                      <h4>{financeEditingId ? "Transactie bewerken" : "Nieuwe transactie"}</h4>
+                      <p class="muted-small">
+                        Werk in 1 fiche, voeg toe aan de lijst, en sla daarna alles samen op.
+                      </p>
+                    </div>
+                    {financeDraft && (
+                      <button class="admin-remove" type="button" onClick={cancelFinanceDraft}>
+                        Annuleren
+                      </button>
+                    )}
+                  </div>
+
+                  {financeDraft ? (
+                    <>
+                      <div class="admin-inline-grid admin-inline-grid-wide">
+                        <TextField
+                          label="Titel"
+                          value={financeDraft.title}
+                          onInput={(value) =>
+                            updateFinanceDraft((current) => ({ ...current, title: value }))
+                          }
+                        />
+                        <label class="admin-field">
+                          <span>Type</span>
+                          <select
+                            value={financeDraft.type}
+                            onInput={(event) => {
+                              const nextType = (event.currentTarget as HTMLSelectElement)
+                                .value as FinanceType;
+                              const nextOptions = getFinanceCategoryOptions(nextType);
+                              updateFinanceDraft((current) => ({
+                                ...current,
+                                type: nextType,
+                                categoryKey: nextOptions.some(
+                                  (option) => option.key === current.categoryKey
+                                )
+                                  ? current.categoryKey
+                                  : (nextOptions[0]?.key ?? "")
+                              }));
+                            }}
+                          >
+                            {financeTypeOptions.map((option) => (
+                              <option value={option.value} key={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label class="admin-field">
+                          <span>Bedrag</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={financeDraft.amount || ""}
+                            onInput={(event) =>
+                              updateFinanceDraft((current) => ({
+                                ...current,
+                                amount: Number.parseFloat(
+                                  (event.currentTarget as HTMLInputElement).value
+                                )
+                              }))
+                            }
+                          />
+                        </label>
+                        <TextField
+                          label="Datum"
+                          type="date"
+                          value={financeDraft.date}
+                          onInput={(value) =>
+                            updateFinanceDraft((current) => ({ ...current, date: value }))
+                          }
+                        />
+                        <label class="admin-field">
+                          <span>Groep</span>
+                          <select
+                            value={financeDraft.groupSlug}
+                            onInput={(event) =>
+                              updateFinanceDraft((current) => ({
+                                ...current,
+                                groupSlug: (event.currentTarget as HTMLSelectElement).value
+                              }))
+                            }
+                          >
+                            <option value="">Algemeen</option>
+                            {groups.map((group) => (
+                              <option value={group.slug} key={group.slug}>
+                                {group.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label class="admin-field">
+                          <span>Categorie</span>
+                          <select
+                            value={financeDraft.categoryKey}
+                            onInput={(event) =>
+                              updateFinanceDraft((current) => ({
+                                ...current,
+                                categoryKey: (event.currentTarget as HTMLSelectElement).value
+                              }))
+                            }
+                          >
+                            {financeDraftCategoryOptions.map((option) => (
+                              <option value={option.key} key={option.key}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label class="admin-field">
+                          <span>Status</span>
+                          <select
+                            value={financeDraft.status}
+                            onInput={(event) =>
+                              updateFinanceDraft((current) => ({
+                                ...current,
+                                status: (event.currentTarget as HTMLSelectElement)
+                                  .value as FinanceStatus
+                              }))
+                            }
+                          >
+                            {financeStatusOptions.map((option) => (
+                              <option value={option.value} key={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label class="admin-field">
+                          <span>Betaalmethode</span>
+                          <select
+                            value={financeDraft.paymentMethod}
+                            onInput={(event) =>
+                              updateFinanceDraft((current) => ({
+                                ...current,
+                                paymentMethod: (event.currentTarget as HTMLSelectElement).value
+                              }))
+                            }
+                          >
+                            {financePaymentMethodOptions.map((option) => (
+                              <option value={option} key={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <div class="admin-grid">
+                        <TextField
+                          label={financeDraft.type === "income" ? "Ontvangen van" : "Betaald door"}
+                          value={financeDraft.personName}
+                          onInput={(value) =>
+                            updateFinanceDraft((current) => ({ ...current, personName: value }))
+                          }
+                        />
+                        <TextAreaField
+                          label="Beschrijving"
+                          value={financeDraft.description}
+                          rows={4}
+                          onInput={(value) =>
+                            updateFinanceDraft((current) => ({ ...current, description: value }))
+                          }
+                        />
+                      </div>
+
+                      <FileField
+                        label="Bewijsstuk URL"
+                        value={financeDraft.receiptUrl}
+                        onInput={(value) =>
+                          updateFinanceDraft((current) => ({ ...current, receiptUrl: value }))
+                        }
+                        fileName={financeDraft.receiptFileName}
+                        onFileNameInput={(value) =>
+                          updateFinanceDraft((current) => ({
+                            ...current,
+                            receiptFileName: value
+                          }))
+                        }
+                        client={supabase}
+                        folder="finance"
+                        accept=".pdf,image/*"
+                      />
+
+                      <div class="admin-post-actions">
+                        <button class="btn" type="button" onClick={saveFinanceDraftToList}>
+                          {financeEditingId ? "Wijziging klaarzetten" : "Aan lijst toevoegen"}
+                        </button>
+                        <button class="btn btn-light" type="button" onClick={cancelFinanceDraft}>
+                          Annuleren
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div class="admin-finance-empty">
+                      <strong>Klaar om een nieuwe transactie toe te voegen.</strong>
+                      <p>
+                        Start met 1 duidelijke titel, een bedrag en een groep. De rest kun je later
+                        nog verfijnen.
+                      </p>
+                      <button class="btn" type="button" onClick={() => startFinanceDraft()}>
+                        Nieuwe transactie starten
+                      </button>
+                    </div>
+                  )}
+                </section>
+
+                <section class="admin-subpanel">
+                  <div class="admin-subpanel-head">
+                    <div>
+                      <h4>Transacties</h4>
+                      <p class="muted-small">
+                        Filter op maand, groep of status om snel te vinden wat je zoekt.
+                      </p>
+                    </div>
+                    <span class="admin-finance-count">
+                      {filteredFinanceTransactions.length} resultaat/resultaten
+                    </span>
+                  </div>
+
+                  <div class="admin-inline-grid admin-inline-grid-wide">
+                    <TextField
+                      label="Zoeken"
+                      value={financeSearch}
+                      onInput={setFinanceSearch}
+                    />
+                    <label class="admin-field">
+                      <span>Maand</span>
+                      <input
+                        type="month"
+                        value={financeMonthFilter}
+                        onInput={(event) =>
+                          setFinanceMonthFilter((event.currentTarget as HTMLInputElement).value)
+                        }
+                      />
+                    </label>
+                    <label class="admin-field">
+                      <span>Groep</span>
+                      <select
+                        value={financeGroupFilter}
+                        onInput={(event) =>
+                          setFinanceGroupFilter((event.currentTarget as HTMLSelectElement).value)
+                        }
+                      >
+                        <option value="all">Alle groepen</option>
+                        <option value="">Algemeen</option>
+                        {groups.map((group) => (
+                          <option value={group.slug} key={group.slug}>
+                            {group.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label class="admin-field">
+                      <span>Type</span>
+                      <select
+                        value={financeTypeFilter}
+                        onInput={(event) =>
+                          setFinanceTypeFilter(
+                            (event.currentTarget as HTMLSelectElement).value as
+                              | "all"
+                              | FinanceType
+                          )
+                        }
+                      >
+                        <option value="all">Alle types</option>
+                        {financeTypeOptions.map((option) => (
+                          <option value={option.value} key={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label class="admin-field">
+                      <span>Status</span>
+                      <select
+                        value={financeStatusFilter}
+                        onInput={(event) =>
+                          setFinanceStatusFilter(
+                            (event.currentTarget as HTMLSelectElement).value as FinanceStatusFilter
+                          )
+                        }
+                      >
+                        <option value="active">Actieve items</option>
+                        <option value="all">Alles</option>
+                        {financeStatusOptions.map((option) => (
+                          <option value={option.value} key={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label class="admin-field">
+                      <span>Categorie</span>
+                      <select
+                        value={financeCategoryFilter}
+                        onInput={(event) =>
+                          setFinanceCategoryFilter(
+                            (event.currentTarget as HTMLSelectElement).value
+                          )
+                        }
+                      >
+                        <option value="all">Alle categorieën</option>
+                        {financeCategoryOptions.map((option) => (
+                          <option value={option.key} key={option.key}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div class="admin-finance-list">
+                    {filteredFinanceTransactions.length ? (
+                      filteredFinanceTransactions.map((transaction) => {
+                        const profileName =
+                          profiles.find((item) => item.user_id === transaction.createdBy)?.full_name ||
+                          profiles.find((item) => item.user_id === transaction.createdBy)?.email ||
+                          "Onbekende gebruiker";
+
+                        return (
+                          <article
+                            class={`admin-finance-row is-${transaction.type} is-${transaction.status}`}
+                            key={transaction.id ?? `${transaction.title}-${transaction.date}`}
+                          >
+                            <div class="admin-finance-row-main">
+                              <div class="admin-finance-row-top">
+                                <div>
+                                  <h4>{transaction.title}</h4>
+                                  <p>
+                                    {formatAdminDate(transaction.date, {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                      hour: undefined,
+                                      minute: undefined
+                                    })}{" "}
+                                    | {transaction.groupLabel || getFinanceGroupLabel(transaction.groupSlug, groups)} |{" "}
+                                    {getFinanceCategoryLabel(transaction.categoryKey)}
+                                  </p>
+                                </div>
+                                <strong
+                                  class={
+                                    transaction.type === "income"
+                                      ? "admin-finance-amount is-positive"
+                                      : "admin-finance-amount is-negative"
+                                  }
+                                >
+                                  {transaction.type === "income" ? "+" : "-"}
+                                  {formatCurrency(transaction.amount)}
+                                </strong>
+                              </div>
+
+                              <div class="admin-finance-tags">
+                                <span class={`admin-finance-tag is-${transaction.type}`}>
+                                  {getFinanceTypeLabel(transaction.type)}
+                                </span>
+                                <span class={`admin-finance-tag is-${transaction.status}`}>
+                                  {getFinanceStatusLabel(transaction.status)}
+                                </span>
+                                {transaction.paymentMethod && (
+                                  <span class="admin-finance-tag">{transaction.paymentMethod}</span>
+                                )}
+                                {transaction.personName && (
+                                  <span class="admin-finance-tag">{transaction.personName}</span>
+                                )}
+                              </div>
+
+                              {(transaction.description || transaction.receiptUrl) && (
+                                <div class="admin-finance-meta">
+                                  {transaction.description && <p>{transaction.description}</p>}
+                                  {transaction.receiptUrl && (
+                                    <a href={transaction.receiptUrl} target="_blank" rel="noreferrer">
+                                      {transaction.receiptFileName || "Bewijsstuk openen"}
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+
+                              <p class="muted-small">
+                                Aangemaakt door {profileName}
+                                {transaction.updatedAt
+                                  ? ` • laatst aangepast ${formatRelativeDate(transaction.updatedAt)}`
+                                  : ""}
+                              </p>
+                            </div>
+
+                            <div class="admin-finance-row-actions">
+                              <button
+                                class="btn btn-light"
+                                type="button"
+                                onClick={() => startFinanceDraft(transaction)}
+                              >
+                                Bewerken
+                              </button>
+                              <button
+                                class="btn btn-light"
+                                type="button"
+                                onClick={() => duplicateFinanceTransaction(transaction)}
+                              >
+                                Dupliceren
+                              </button>
+                              {transaction.status === "pending" && (
+                                <button
+                                  class="btn btn-light"
+                                  type="button"
+                                  onClick={() =>
+                                    updateFinanceTransactionStatus(
+                                      transaction.id ?? "",
+                                      transaction.categoryKey === "reimbursement"
+                                        ? "reimbursed"
+                                        : "paid"
+                                    )
+                                  }
+                                >
+                                  {transaction.categoryKey === "reimbursement"
+                                    ? "Markeer terugbetaald"
+                                    : transaction.type === "income"
+                                      ? "Markeer ontvangen"
+                                      : "Markeer betaald"}
+                                </button>
+                              )}
+                              <button
+                                class="admin-remove"
+                                type="button"
+                                onClick={() => archiveFinanceTransaction(transaction)}
+                              >
+                                {transaction.id?.startsWith("temp-")
+                                  ? "Verwijderen"
+                                  : "Archiveren"}
+                              </button>
+                            </div>
+                          </article>
+                        );
+                      })
+                    ) : (
+                      <div class="admin-finance-empty">
+                        <strong>Geen transacties voor deze filters.</strong>
+                        <p>
+                          Pas je filters aan of voeg hierboven een eerste transactie toe.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+
+              <div class="admin-finance-side">
+                <section class="admin-subpanel">
+                  <div class="admin-subpanel-head">
+                    <div>
+                      <h4>Aandachtspunten</h4>
+                      <p class="muted-small">Snelle acties voor wat nog opvolging vraagt.</p>
+                    </div>
+                  </div>
+                  <div class="admin-finance-focus-list">
+                    <article class="admin-finance-focus-card">
+                      <span>Openstaand bedrag</span>
+                      <strong>{formatCurrency(financePendingExpenseTotal)}</strong>
+                      <p>Nog niet bevestigde uitgaven of terugbetalingen.</p>
+                    </article>
+                    <article class="admin-finance-focus-card">
+                      <span>Openstaande inkomsten</span>
+                      <strong>{formatCurrency(financePendingIncomeTotal)}</strong>
+                      <p>Bedragen die nog moeten binnenkomen.</p>
+                    </article>
+                    <article class="admin-finance-focus-card">
+                      <span>Openstaande transacties</span>
+                      <strong>{financePendingTransactions.length}</strong>
+                      <p>Handig om op het einde van de maand eerst af te werken.</p>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="admin-subpanel">
+                  <div class="admin-subpanel-head">
+                    <div>
+                      <h4>Per groep</h4>
+                      <p class="muted-small">Samenvatting op basis van {financeMonthLabel}.</p>
+                    </div>
+                  </div>
+                  <div class="admin-finance-group-list">
+                    {financeGroupSummaries.length ? (
+                      financeGroupSummaries.map((group) => (
+                        <article class="admin-finance-group-card" key={group.slug || "general"}>
+                          <div class="admin-finance-group-head">
+                            <strong>{group.name}</strong>
+                            <span>{group.count} item(s)</span>
+                          </div>
+                          <p>Saldo: {formatCurrency(group.balance)}</p>
+                          <div class="admin-finance-group-stats">
+                            <span>In: {formatCurrency(group.income)}</span>
+                            <span>Uit: {formatCurrency(group.expenses)}</span>
+                            <span>Open: {formatCurrency(group.pending)}</span>
+                          </div>
+                        </article>
+                      ))
+                    ) : (
+                      <div class="admin-finance-empty">
+                        <strong>Nog geen bewegingen in {financeMonthLabel}.</strong>
+                        <p>Wanneer je transacties toevoegt, verschijnen de groepssamenvattingen hier.</p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
             </div>
           </section>
         )}

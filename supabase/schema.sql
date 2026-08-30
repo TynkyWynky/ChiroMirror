@@ -90,6 +90,28 @@ create table if not exists public.contact_messages (
   created_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.finance_transactions (
+  id uuid primary key default gen_random_uuid(),
+  transaction_date date not null default current_date,
+  amount numeric(12, 2) not null check (amount > 0),
+  type text not null check (type in ('income', 'expense')),
+  group_slug text not null default '',
+  group_label text not null default 'Algemeen',
+  category_key text not null,
+  status text not null default 'paid'
+    check (status in ('pending', 'paid', 'reimbursed', 'cancelled', 'archived')),
+  title text not null default '',
+  description text not null default '',
+  payment_method text not null default '',
+  person_name text not null default '',
+  receipt_url text not null default '',
+  receipt_file_name text not null default '',
+  created_by uuid references public.profiles(user_id) on delete set null,
+  updated_by uuid references public.profiles(user_id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 do $$
 begin
   if not exists (
@@ -159,6 +181,11 @@ for each row execute procedure public.set_updated_at();
 drop trigger if exists posts_set_updated_at on public.posts;
 create trigger posts_set_updated_at
 before update on public.posts
+for each row execute procedure public.set_updated_at();
+
+drop trigger if exists finance_transactions_set_updated_at on public.finance_transactions;
+create trigger finance_transactions_set_updated_at
+before update on public.finance_transactions
 for each row execute procedure public.set_updated_at();
 
 create or replace function public.handle_new_profile()
@@ -231,6 +258,7 @@ alter table public.contact_sections enable row level security;
 alter table public.songs enable row level security;
 alter table public.posts enable row level security;
 alter table public.contact_messages enable row level security;
+alter table public.finance_transactions enable row level security;
 
 drop policy if exists "Profiles self read" on public.profiles;
 create policy "Profiles self read"
@@ -365,6 +393,21 @@ on public.contact_messages
 for delete
 to authenticated
 using (public.is_site_editor());
+
+drop policy if exists "Admins read finance transactions" on public.finance_transactions;
+create policy "Admins read finance transactions"
+on public.finance_transactions
+for select
+to authenticated
+using (public.is_site_admin());
+
+drop policy if exists "Admins manage finance transactions" on public.finance_transactions;
+create policy "Admins manage finance transactions"
+on public.finance_transactions
+for all
+to authenticated
+using (public.is_site_admin())
+with check (public.is_site_admin());
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
