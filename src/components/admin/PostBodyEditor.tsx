@@ -1,5 +1,5 @@
-import { useRef, useState } from "preact/hooks";
-import { imageToMarkdown, renderPostMarkdown } from "@/lib/post-markdown";
+import { useMemo, useRef, useState } from "preact/hooks";
+import { getPostImages, imageToMarkdown, renderPostMarkdown } from "@/lib/post-markdown";
 
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const maxImageSize = 15 * 1024 * 1024;
@@ -22,6 +22,7 @@ export default function PostBodyEditor(props: Props) {
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
   const locked = props.disabled || uploading;
+  const images = useMemo(() => getPostImages(props.value), [props.value]);
 
   function insertText(text: string, start?: number, end?: number) {
     const field = textarea.current;
@@ -78,7 +79,23 @@ export default function PostBodyEditor(props: Props) {
   }
 
   return (
-    <div class="admin-post-composer">
+    <div
+      class={`admin-post-composer ${dragging ? "is-dragging" : ""}`}
+      onDragOver={(event) => {
+        if (!Array.from(event.dataTransfer?.types ?? []).includes("Files")) return;
+        event.preventDefault();
+        if (!locked) setDragging(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+      }}
+      onDrop={(event) => {
+        if (!event.dataTransfer?.files.length) return;
+        event.preventDefault();
+        setDragging(false);
+        void uploadImages(Array.from(event.dataTransfer.files));
+      }}
+    >
       <div class="admin-post-composer-head">
         <strong>Bericht</strong>
         <div class="admin-post-editor-modes" role="group" aria-label="Weergave van het bericht">
@@ -91,39 +108,8 @@ export default function PostBodyEditor(props: Props) {
         <button type="button" disabled={locked || preview} onClick={() => format("*", "*")}><em>Cursief</em></button>
         <button type="button" disabled={locked || preview} onClick={() => format("\n\n- ", "\n", "Eerste punt")}>Lijst</button>
         <button type="button" disabled={locked || preview} onClick={() => format("[", "](https://)", "Linktekst")}>Link</button>
-        <button type="button" disabled={locked} onClick={() => fileInput.current?.click()}>＋ Afbeeldingen toevoegen</button>
-        <input
-          ref={fileInput}
-          class="admin-post-file-input"
-          type="file"
-          multiple
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          aria-label="Afbeeldingen kiezen"
-          disabled={locked}
-          onChange={(event) => {
-            const input = event.currentTarget;
-            void uploadImages(Array.from(input.files ?? []));
-            input.value = "";
-          }}
-        />
       </div>
-      <div
-        class={`admin-post-writing-area ${dragging ? "is-dragging" : ""}`}
-        onDragOver={(event) => {
-          if (!Array.from(event.dataTransfer?.types ?? []).includes("Files")) return;
-          event.preventDefault();
-          if (!locked) setDragging(true);
-        }}
-        onDragLeave={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
-        }}
-        onDrop={(event) => {
-          if (!event.dataTransfer?.files.length) return;
-          event.preventDefault();
-          setDragging(false);
-          void uploadImages(Array.from(event.dataTransfer.files));
-        }}
-      >
+      <div class="admin-post-writing-area">
         {preview ? (
           <div class="admin-post-preview">
             {props.value.trim()
@@ -151,7 +137,55 @@ export default function PostBodyEditor(props: Props) {
           </label>
         )}
       </div>
-      <p class="muted-small admin-post-composer-help">Tekst, foto's of allebei. Je kunt meerdere foto's tegelijk toevoegen en tekst tussen de foto's schrijven. JPG, PNG, WebP of GIF · maximaal 15 MB per foto.</p>
+      <section class="admin-post-media" aria-label="Foto's bij je bericht" aria-busy={uploading}>
+        <div class="admin-post-media-upload">
+          <span class="admin-post-media-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 5.5 9.5 3h5L16 5.5h3A2 2 0 0 1 21 7.5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Z" />
+              <circle cx="12" cy="12.5" r="4" />
+              <path d="M17.5 8.5h.01" />
+            </svg>
+          </span>
+          <div class="admin-post-media-copy">
+            <strong>{dragging ? "Laat je foto's hier los" : "Foto's bij je bericht"}</strong>
+            <p>Selecteer één of meerdere foto's, of sleep ze hierheen.</p>
+          </div>
+          <button class="btn admin-post-photo-button" type="button" disabled={locked} onClick={() => fileInput.current?.click()}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            {uploading ? "Foto's uploaden…" : "Foto toevoegen"}
+          </button>
+          <input
+            ref={fileInput}
+            class="admin-post-file-input"
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            aria-label="Afbeeldingen kiezen"
+            disabled={locked}
+            onChange={(event) => {
+              const input = event.currentTarget;
+              void uploadImages(Array.from(input.files ?? []));
+              input.value = "";
+            }}
+          />
+        </div>
+        {images.length > 0 && (
+          <div class="admin-post-media-attached">
+            <p>{images.length} foto{images.length === 1 ? "" : "'s"} in je bericht</p>
+            <div class="admin-post-photo-grid">
+              {images.map((image, index) => (
+                <figure key={`${index}-${image.url}`}>
+                  <img src={image.url} alt={image.alt} loading="lazy" />
+                  <figcaption>Foto {index + 1}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        )}
+        <p class="admin-post-media-hint">JPG, PNG, WebP of GIF · maximaal 15 MB per foto</p>
+      </section>
       {progress && <p class="muted-small" role="status">{progress}</p>}
       {error && <p class="admin-post-upload-error" role="alert">{error}</p>}
     </div>

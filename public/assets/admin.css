@@ -589,7 +589,7 @@
   resize: vertical;
 }
 
-.admin-post-writing-area.is-dragging {
+.admin-post-composer.is-dragging .admin-post-writing-area {
   outline: 3px dashed #b91c1c;
   outline-offset: -4px;
 }
@@ -602,8 +602,115 @@
   border-radius: 0 0 12px 12px;
 }
 
-.admin-post-composer-help {
-  margin: 8px 0;
+.admin-post-media {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px dashed #d8b8b8;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.admin-post-composer.is-dragging .admin-post-media {
+  border-color: #b91c1c;
+  background: #fff1f2;
+  outline: 2px solid #b91c1c;
+  outline-offset: 2px;
+}
+
+.admin-post-media-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-post-media-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.admin-post-media-icon svg {
+  width: 27px;
+  height: 27px;
+}
+
+.admin-post-media-copy {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.admin-post-media-copy p,
+.admin-post-media-hint {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-app .admin-post-photo-button {
+  min-height: 46px;
+  flex: 0 0 auto;
+  font-size: 14px;
+}
+
+.admin-post-photo-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-post-photo-button:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 4px;
+}
+
+.admin-post-media-hint {
+  margin-top: 14px;
+}
+
+.admin-post-media-attached > p {
+  margin: 18px 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-post-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 120px), 1fr));
+  gap: 10px;
+}
+
+.admin-post-photo-grid figure {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.admin-post-photo-grid img {
+  width: 100%;
+  height: 112px;
+  object-fit: contain;
+}
+
+.admin-post-photo-grid figcaption {
+  padding: 7px 10px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .admin-app .admin-post-photo-button {
+    flex-basis: 100%;
+  }
 }
 
 .admin-post-upload-error {

@@ -43,6 +43,16 @@ export function renderPostMarkdown(value: string) {
   return postMarkdown.parse(value ?? "", { async: false });
 }
 
+export function getPostImages(body: string) {
+  const images: Array<{ url: string; alt: string }> = [];
+  postMarkdown.walkTokens(postMarkdown.lexer(body), (token) => {
+    if (token.type !== "image") return;
+    const url = safeUrl(token.href, true);
+    if (url) images.push({ url, alt: token.text });
+  });
+  return images;
+}
+
 export function getPostPreview(body: string) {
   let image: { url: string; alt: string } | undefined;
   const words: string[] = [];

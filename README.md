@@ -20,7 +20,7 @@ Nieuwe Astro/Supabase-versie van de site met:
 
 - Open **Posts** in de admin en klik op **Nieuwe post maken**.
 - Voeg een titel en tekst, afbeeldingen of allebei toe. De samenvatting is optioneel.
-- Voeg meerdere foto's toe met **Afbeeldingen toevoegen**, door ze naar het tekstvak te slepen of door een afbeelding te plakken. Ondersteund: JPG, PNG, WebP en GIF, maximaal 15 MB per foto.
+- Klik op **Foto toevoegen** in het fotoblok onder je bericht om één of meerdere foto's te kiezen. Je ziet de toegevoegde foto's meteen als miniaturen. Slepen en plakken kan ook. Ondersteund: JPG, PNG, WebP en GIF, maximaal 15 MB per foto.
 - Gebruik de opmaakknoppen en **Voorbeeld** om het resultaat te bekijken. Tekst en afbeeldingen kunnen elkaar afwisselen.
 - Vink **Uitlichten op de homepage** aan om het gepubliceerde bericht ook onder **In de kijker** op de homepage te tonen. De volledige berichten staan op de activiteitenpagina.
 - **Post nu** publiceert; **Concept opslaan** bewaart een privéconcept. **Terug naar concept** haalt een gepubliceerd bericht van beide publieke pagina's.
