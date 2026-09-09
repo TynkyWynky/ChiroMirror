@@ -186,7 +186,7 @@ export async function loadSiteContent(): Promise<SiteContent> {
       groups,
       contactSections,
       songs,
-      posts: posts.length ? posts : defaultContent.posts,
+      posts,
       contactMessages: defaultContent.contactMessages
     };
   } catch (error) {

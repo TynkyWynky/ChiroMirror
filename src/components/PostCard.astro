@@ -1,0 +1,43 @@
+---
+import type { Post } from "@/types/content";
+import { getPostPreview, renderPostMarkdown } from "@/lib/post-markdown";
+import { withDevFresh } from "@/lib/href";
+
+interface Props {
+  post: Post;
+  compact?: boolean;
+}
+
+const { post, compact = false } = Astro.props;
+const preview = compact ? getPostPreview(post.body) : undefined;
+const date = new Date(post.eventDate || post.createdAt || "");
+const formattedDate = Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("nl-BE", {
+  day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Brussels"
+}).format(date);
+const postAnchor = post.id ? `post-${post.id}` : undefined;
+const href = withDevFresh(`/activiteiten.html${postAnchor ? `#${postAnchor}` : ""}`);
+---
+
+<article class:list={["card post-card", compact && "span-6 post-card-compact"]} id={compact ? undefined : postAnchor}>
+  {preview?.image && (
+    <a class="post-cover" href={href} aria-label={post.title}>
+      <img src={preview.image.url} alt={preview.image.alt} loading="lazy" decoding="async" />
+    </a>
+  )}
+  <div class="post-meta-row">
+    {post.featured && <span class="badge">Uitgelicht</span>}
+    {formattedDate && <time class="post-date" datetime={post.eventDate || post.createdAt}>{formattedDate}</time>}
+  </div>
+  <h3>{compact ? <a href={href}>{post.title}</a> : post.title}</h3>
+  {compact ? (
+    <>
+      {(post.summary || preview?.excerpt) && <p class="lead-small">{post.summary || preview?.excerpt}</p>}
+      <a class="post-read-more" href={href}>Lees het bericht <span aria-hidden="true">→</span></a>
+    </>
+  ) : (
+    <>
+      {post.summary && <p class="lead-small">{post.summary}</p>}
+      <div class="markdown post-body" set:html={renderPostMarkdown(post.body)} />
+    </>
+  )}
+</article>

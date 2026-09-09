@@ -16,6 +16,17 @@ Nieuwe Astro/Supabase-versie van de site met:
 - `Supabase Storage` voor afbeeldingen
 - `Preact` voor de admin-interface
 
+## Posts publiceren
+
+- Open **Posts** in de admin en klik op **Nieuwe post maken**.
+- Voeg een titel en tekst, afbeeldingen of allebei toe. De samenvatting is optioneel.
+- Voeg meerdere foto's toe met **Afbeeldingen toevoegen**, door ze naar het tekstvak te slepen of door een afbeelding te plakken. Ondersteund: JPG, PNG, WebP en GIF, maximaal 15 MB per foto.
+- Gebruik de opmaakknoppen en **Voorbeeld** om het resultaat te bekijken. Tekst en afbeeldingen kunnen elkaar afwisselen.
+- Vink **Uitlichten op de homepage** aan om het gepubliceerde bericht ook onder **In de kijker** op de homepage te tonen. De volledige berichten staan op de activiteitenpagina.
+- **Post nu** publiceert; **Concept opslaan** bewaart een privéconcept. **Terug naar concept** haalt een gepubliceerd bericht van beide publieke pagina's.
+
+Dit gebruikt de bestaande `posts.body`, `posts.featured` en `site-media`-opslag; er is geen extra databasemigratie nodig.
+
 ## Lokale start
 
 1. Installeer dependencies:

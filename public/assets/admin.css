@@ -519,6 +519,113 @@
   margin-top: 16px;
 }
 
+.admin-post-editor {
+  min-width: 0;
+  margin-inline: 0;
+}
+
+.admin-post-composer {
+  margin-bottom: 16px;
+}
+
+.admin-post-composer-head,
+.admin-post-formatting,
+.admin-post-editor-modes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-post-composer-head {
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.admin-post-formatting {
+  padding: 10px;
+  border: 1px solid rgba(15, 23, 42, .12);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: #fff;
+}
+
+.admin-post-formatting button,
+.admin-post-editor-modes button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid rgba(15, 23, 42, .12);
+  border-radius: 9px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.admin-post-editor-modes button[aria-pressed="true"] {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fca5a5;
+  font-weight: 700;
+}
+
+.admin-post-editor button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.admin-post-writing-area .admin-field {
+  margin: 0;
+  gap: 0;
+}
+
+.admin-post-writing-area textarea {
+  display: block;
+  border-radius: 0 0 12px 12px;
+  background: #fff;
+  font: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.admin-post-writing-area.is-dragging {
+  outline: 3px dashed #b91c1c;
+  outline-offset: -4px;
+}
+
+.admin-post-preview {
+  min-height: 250px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, .12);
+  border-radius: 0 0 12px 12px;
+}
+
+.admin-post-composer-help {
+  margin: 8px 0;
+}
+
+.admin-post-upload-error {
+  padding: 12px;
+  border-radius: 10px;
+  color: #991b1b;
+  background: #fef2f2;
+}
+
+.admin-post-file-input,
+.admin-post-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .admin-team-actions {
   display: flex;
   flex-wrap: wrap;

@@ -1,7 +1,9 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import RichText from "@/components/RichText.astro";
+import PostCard from "@/components/PostCard.astro";
 import { loadSiteContent } from "@/lib/content";
+import { getPublishedPosts } from "@/lib/posts";
 
 const content = await loadSiteContent();
 const { siteSettings, pages, posts } = content;
@@ -24,30 +26,7 @@ function renderActivityCardBody(title: string, body: string) {
   return `${body}\n\n[boekje](${bookletDownloadHref})`;
 }
 
-const formatter = new Intl.DateTimeFormat("nl-BE", {
-  day: "numeric",
-  month: "long",
-  year: "numeric"
-});
-
-function getPostSortValue(eventDate: string, createdAt?: string) {
-  if (eventDate) {
-    return new Date(eventDate).getTime();
-  }
-
-  if (createdAt) {
-    return new Date(createdAt).getTime();
-  }
-
-  return 0;
-}
-
-const orderedPosts = [...posts].sort(
-  (left, right) =>
-    Number(right.featured) - Number(left.featured) ||
-    getPostSortValue(right.eventDate, right.createdAt) -
-      getPostSortValue(left.eventDate, left.createdAt)
-);
+const orderedPosts = getPublishedPosts(posts);
 ---
 
 <PublicLayout
@@ -78,20 +57,8 @@ const orderedPosts = [...posts].sort(
 
       {
         orderedPosts.length ? (
-          <div class="grid posts-grid">
-            {orderedPosts.map((post) => (
-              <article class="card span-6 post-card">
-                <div class="post-meta-row">
-                  {post.featured && <span class="badge">Uitgelicht</span>}
-                  <p class="post-date">
-                    {post.eventDate ? formatter.format(new Date(post.eventDate)) : "Zonder datum"}
-                  </p>
-                </div>
-                <h3>{post.title}</h3>
-                {post.summary && <p class="lead-small">{post.summary}</p>}
-                <RichText content={post.body} />
-              </article>
-            ))}
+          <div class="posts-feed">
+            {orderedPosts.map((post) => <PostCard post={post} />)}
           </div>
         ) : (
           <div class="card empty-state">

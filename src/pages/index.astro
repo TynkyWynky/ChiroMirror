@@ -1,12 +1,15 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import RichText from "@/components/RichText.astro";
+import PostCard from "@/components/PostCard.astro";
 import { loadSiteContent } from "@/lib/content";
+import { getPublishedPosts } from "@/lib/posts";
 import { withDevFresh } from "@/lib/href";
 
 const content = await loadSiteContent();
 const { siteSettings, pages } = content;
 const home = pages.home;
+const featuredPosts = getPublishedPosts(content.posts, true);
 const primaryCtaHref = withDevFresh(`/${home.banner.primaryCtaHref.replace(/^\//, "")}`);
 const secondaryCtaHref = withDevFresh(`/${home.banner.secondaryCtaHref.replace(/^\//, "")}`);
 const aboutCtaHref = withDevFresh(`/${home.about.ctaHref.replace(/^\//, "")}`);
@@ -37,6 +40,19 @@ const aboutCtaHref = withDevFresh(`/${home.about.ctaHref.replace(/^\//, "")}`);
       </div>
     </div>
   </section>
+
+  {featuredPosts.length > 0 && (
+    <section class="posts-section home-featured-posts" aria-labelledby="featured-posts-title">
+      <div class="section-title">
+        <h2 id="featured-posts-title">In de kijker</h2>
+        <div class="line"></div>
+        <a href={withDevFresh("/activiteiten.html")}>Alle berichten <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="grid posts-grid">
+        {featuredPosts.map((post) => <PostCard post={post} compact />)}
+      </div>
+    </section>
+  )}
 
   <section class="hero">
     <span class="badge">{home.hero.badge}</span>

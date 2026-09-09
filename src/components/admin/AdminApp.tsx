@@ -2,6 +2,8 @@ import { useEffect, useState } from "preact/hooks";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { adminDefaultContent } from "@/lib/admin-default-content";
 import { toPublicSiteUrl } from "@/lib/site-url";
+import { getPostPublishError } from "@/lib/posts";
+import PostBodyEditor from "./PostBodyEditor";
 import type {
   CampChecklistSection,
   CampOverviewItem,
@@ -1181,18 +1183,6 @@ function normalizePost(post: Post, overrides: Partial<Post> = {}): Post {
   };
 }
 
-function getPostPublishError(post: Post) {
-  if (!post.title) {
-    return "Geef je post eerst een titel voor je hem publiceert.";
-  }
-
-  if (!post.body) {
-    return "Schrijf eerst inhoud voor je deze post publiceert.";
-  }
-
-  return null;
-}
-
 function orderGroupsForContact(groups: Group[], groupCards: GroupCardLink[]) {
   const orderLookup = new Map(groupCards.map((item, index) => [item.groupSlug, index]));
 
@@ -1898,6 +1888,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const [loginPassword, setLoginPassword] = useState("");
   const [rememberLogin, setRememberLogin] = useState(() => getRememberLoginPreference());
   const [postsSaving, setPostsSaving] = useState(false);
+  const [postUploading, setPostUploading] = useState(false);
   const [activePostActionId, setActivePostActionId] = useState<string | null>(null);
   const [postFeedback, setPostFeedback] = useState<{ id: string; message: string } | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -2505,8 +2496,9 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   }));
   const publishedPostsCount = posts.filter((post) => post.published).length;
   const draftPostsCount = posts.length - publishedPostsCount;
+  const postsBusy = postsSaving || postUploading;
   const postValidationIssuesCount = posts.filter(
-    (post) => countMissingTextValues([post.title, post.summary, post.body]) > 0
+    (post) => Boolean(getPostPublishError(post))
   ).length;
   const groupsWithoutLeadersCount = groups.filter((group) => group.leaders.length === 0).length;
   const groupsMissingProfileCount = groups.filter(
@@ -2751,7 +2743,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       id: "posts",
       label: "Posts",
       detail: postValidationIssuesCount
-        ? `${postValidationIssuesCount} conceptpost${postValidationIssuesCount === 1 ? "" : "s"} mist nog titel, samenvatting of inhoud.`
+        ? `${postValidationIssuesCount} post${postValidationIssuesCount === 1 ? "" : "s"} mist nog een titel, tekst of afbeelding.`
         : draftPostsCount
           ? `${draftPostsCount} conceptpost${draftPostsCount === 1 ? "" : "s"} wacht${draftPostsCount === 1 ? "" : "en"} nog op publicatie.`
           : publishedPostsCount
@@ -3284,7 +3276,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   }
 
   async function saveSinglePost(index: number, publish: boolean) {
-    if (!supabase || postsSaving) {
+    if (!supabase || postsBusy) {
       return;
     }
 
@@ -3294,7 +3286,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     }
 
     const sourceId = currentPost.id || `post-${index}`;
-    const nextPost = normalizePost(currentPost, publish ? { published: true } : {});
+    const nextPost = normalizePost(currentPost, { published: publish });
     const publishError = publish ? getPostPublishError(nextPost) : null;
 
     if (publishError) {
@@ -3307,41 +3299,45 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     setActivePostActionId(sourceId);
     setPostFeedback(null);
 
-    const { data, error } = await supabase.from("posts").upsert(toPostRow(nextPost)).select().single();
+    try {
+      const { data, error } = await supabase.from("posts").upsert(toPostRow(nextPost)).select().single();
+      if (error) throw error;
 
-    if (error) {
+      const savedPost = mapPost(data as Record<string, unknown>);
+      const successMessage = savedPost.published
+        ? `Post "${savedPost.title}" staat nu live op ${savedPost.featured ? "de homepage en de activiteitenpagina" : "de activiteitenpagina"}.`
+        : savedPost.title
+          ? `Concept "${savedPost.title}" is opgeslagen.`
+          : "Concept opgeslagen.";
+
+      setPosts((current) =>
+        current.map((item, itemIndex) =>
+          (item.id || `post-${itemIndex}`) === sourceId ? savedPost : item
+        )
+      );
+      setDeletedPostIds((current) => current.filter((id) => id !== savedPost.id));
+      setPostFeedback({
+        id: savedPost.id || sourceId,
+        message: savedPost.published
+          ? "Gelukt: deze post staat nu live."
+          : "Gelukt: dit concept is opgeslagen."
+      });
+      setNotice({ type: "success", message: successMessage });
+    } catch (error) {
+      setNotice({
+        type: "error",
+        message: error && typeof error === "object" && "message" in error
+          ? String(error.message)
+          : "Post opslaan lukte niet. Probeer het opnieuw."
+      });
+    } finally {
       setPostsSaving(false);
       setActivePostActionId(null);
-      setNotice({ type: "error", message: error.message });
-      return;
     }
-
-    const savedPost = mapPost(data as Record<string, unknown>);
-    const successMessage = savedPost.published
-      ? `Post "${savedPost.title}" staat nu live op de activiteitenpagina.`
-      : savedPost.title
-        ? `Concept "${savedPost.title}" is opgeslagen.`
-        : "Concept opgeslagen.";
-
-    setPosts((current) =>
-      current.map((item, itemIndex) =>
-        (item.id || `post-${itemIndex}`) === sourceId ? savedPost : item
-      )
-    );
-    setDeletedPostIds((current) => current.filter((id) => id !== savedPost.id));
-    setPostFeedback({
-      id: savedPost.id || sourceId,
-      message: savedPost.published
-        ? "Gelukt: deze post staat nu live."
-        : "Gelukt: dit concept is opgeslagen."
-    });
-    setNotice({ type: "success", message: successMessage });
-    setPostsSaving(false);
-    setActivePostActionId(null);
   }
 
   async function savePosts() {
-    if (!supabase || postsSaving) {
+    if (!supabase || postsBusy) {
       return;
     }
 
@@ -6208,9 +6204,9 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
             <div class="admin-panel-head">
               <div>
                 <h2>Posts & activiteiten</h2>
-                <p>Nieuwe berichten verschijnen onder de activiteitenpagina zodra je ze publiceert.</p>
+                <p>Deel nieuws, foto's en activiteiten. Licht een bericht uit om het ook op de homepage te tonen.</p>
               </div>
-              <button class="btn" type="button" onClick={savePosts} disabled={postsSaving}>
+              <button class="btn" type="button" onClick={savePosts} disabled={postsBusy}>
                 {activePostActionId === "bulk" ? "Posts opslaan..." : "Alles opslaan"}
               </button>
             </div>
@@ -6220,7 +6216,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                 <div>
                   <h4>Sneller posten</h4>
                   <p class="muted">
-                    `Post nu` slaat op en zet je bericht meteen live. `Concept opslaan` bewaart het alleen in de admin.
+                    Post nu zet je bericht live. Met Uitlichten op de homepage verschijnt het ook in In de kijker. Een concept is alleen zichtbaar in de admin.
                   </p>
                 </div>
                 <a class="btn btn-light" href="/activiteiten.html" target="_blank" rel="noreferrer">
@@ -6235,7 +6231,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                 <button
                   class="btn btn-light"
                   type="button"
-                  disabled={postsSaving}
+                  disabled={postsBusy}
                   onClick={() => setPosts((current) => [createEmptyPost(), ...current])}
                 >
                   Nieuwe post maken
@@ -6250,17 +6246,17 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
               )}
 
               {posts.map((post, index) => (
-                <div class="admin-card-editor" key={post.id ?? index}>
+                <fieldset class="admin-card-editor admin-post-editor" key={post.id ?? index} disabled={postsBusy}>
                   <div class="admin-post-head">
                     <div>
                       <h4>{post.title.trim() || `Nieuwe post ${posts.length - index}`}</h4>
                       <p class="admin-post-status">
                         {post.published
-                          ? "Live op de activiteitenpagina"
+                          ? post.featured ? "Publiceren op de homepage en activiteitenpagina" : "Publiceren op de activiteitenpagina"
                           : "Concept in admin, nog niet publiek zichtbaar"}
                       </p>
                     </div>
-                    {post.featured && <span class="admin-post-badge">Uitgelicht</span>}
+                    {post.featured && <span class="admin-post-badge">In de kijker · Home</span>}
                   </div>
 
                   <TextField
@@ -6275,16 +6271,20 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                     onInput={(value) => updatePostAt(index, (item) => ({ ...item, eventDate: value }))}
                   />
                   <TextAreaField
-                    label="Korte samenvatting"
+                    label="Korte samenvatting (optioneel)"
                     value={post.summary}
                     rows={3}
                     onInput={(value) => updatePostAt(index, (item) => ({ ...item, summary: value }))}
                   />
-                  <TextAreaField
-                    label="Inhoud (Markdown)"
+                  <PostBodyEditor
                     value={post.body}
-                    rows={8}
+                    disabled={postsBusy}
                     onInput={(value) => updatePostAt(index, (item) => ({ ...item, body: value }))}
+                    uploadImage={async (file) => {
+                      if (!supabase) throw new Error("Log opnieuw in om afbeeldingen toe te voegen.");
+                      return uploadAsset(supabase, file, `posts/${crypto.randomUUID()}`);
+                    }}
+                    onUploadingChange={setPostUploading}
                   />
                   <div class="admin-inline-grid">
                     <CheckboxField
@@ -6293,11 +6293,12 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                       onChange={(checked) => updatePostAt(index, (item) => ({ ...item, published: checked }))}
                     />
                     <CheckboxField
-                      label="Uitgelicht"
+                      label="Uitlichten op de homepage"
                       checked={post.featured}
                       onChange={(checked) => updatePostAt(index, (item) => ({ ...item, featured: checked }))}
                     />
                   </div>
+                  <p class="muted-small">Na publicatie verschijnt een uitgelicht bericht in In de kijker op de homepage. Concepten blijven privé, ook als deze optie aanstaat.</p>
                   {postFeedback?.id === (post.id || `post-${index}`) && (
                     <p class="admin-post-feedback">{postFeedback.message}</p>
                   )}
@@ -6305,17 +6306,17 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                     <button
                       class="btn btn-light"
                       type="button"
-                      disabled={postsSaving}
+                      disabled={postsBusy}
                       onClick={() => void saveSinglePost(index, false)}
                     >
                       {activePostActionId === (post.id || `post-${index}`)
                         ? "Opslaan..."
-                        : "Concept opslaan"}
+                        : post.published ? "Terug naar concept" : "Concept opslaan"}
                     </button>
                     <button
                       class="btn"
                       type="button"
-                      disabled={postsSaving}
+                      disabled={postsBusy}
                       onClick={() => void saveSinglePost(index, true)}
                     >
                       {activePostActionId === (post.id || `post-${index}`)
@@ -6328,7 +6329,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                   <button
                     class="admin-remove"
                     type="button"
-                    disabled={postsSaving}
+                    disabled={postsBusy}
                     onClick={() => {
                       if (post.id && !post.id.startsWith("temp-")) {
                         setDeletedPostIds((current) => [...current, post.id!]);
@@ -6338,7 +6339,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                   >
                     Post verwijderen
                   </button>
-                </div>
+                </fieldset>
               ))}
             </div>
           </section>
