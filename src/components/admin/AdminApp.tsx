@@ -4,6 +4,9 @@ import { adminDefaultContent } from "@/lib/admin-default-content";
 import { toPublicSiteUrl } from "@/lib/site-url";
 import { getPostPublishError } from "@/lib/posts";
 import PostBodyEditor from "./PostBodyEditor";
+import AdminNavigation from "./AdminNavigation";
+import AdminOverview from "./AdminOverview";
+import AdminIcon from "./AdminIcon";
 import type {
   CampChecklistSection,
   CampOverviewItem,
@@ -158,92 +161,22 @@ const financeCurrencyFormatter = new Intl.NumberFormat("nl-BE", {
   maximumFractionDigits: 2
 });
 const adminTabDefinitions: AdminTabMeta[] = [
-  {
-    id: "overview",
-    label: "Overzicht",
-    description: "Start hier voor prioriteiten, publicatiestatus en recente activiteit.",
-    group: "cockpit"
-  },
-  {
-    id: "finance",
-    label: "Financiën",
-    description: "Beheer inkomsten, uitgaven en groepsbudgetten vanuit een aparte workspace.",
-    group: "cockpit",
-    requiresFinance: true
-  },
-  {
-    id: "site",
-    label: "Site",
-    description: "Globale instellingen zoals naam, links, footer en basisinformatie.",
-    group: "website"
-  },
-  {
-    id: "home",
-    label: "Home",
-    description: "Beheer de homepage, banner, intro, praktische info en galerij.",
-    group: "website"
-  },
-  {
-    id: "groups",
-    label: "Groepen",
-    description: "Werk groepskaarten, leeftijden, beschrijvingen en leiding bij.",
-    group: "website"
-  },
-  {
-    id: "contact",
-    label: "Contact",
-    description: "Pas de contactpagina, formulierteksten en extra blokken aan.",
-    group: "website"
-  },
-  {
-    id: "registration",
-    label: "Inschrijven",
-    description: "Beheer het inschrijftraject, stappen, kledij en merchinfo.",
-    group: "website"
-  },
-  {
-    id: "camp",
-    label: "Kamp",
-    description: "Werk alle kampinformatie, checklisten en inschrijvingsblokken bij.",
-    group: "website"
-  },
-  {
-    id: "pages",
-    label: "Overige pagina's",
-    description: "Activiteiten, verhuur, verzekering en privacy op één plek.",
-    group: "website"
-  },
-  {
-    id: "posts",
-    label: "Posts",
-    description: "Schrijf, bewaar en publiceer nieuws en activiteitenberichten.",
-    group: "content"
-  },
-  {
-    id: "songs",
-    label: "Liedjes",
-    description: "Beheer de liedjespagina en de volledige liedbundel.",
-    group: "content"
-  },
-  {
-    id: "messages",
-    label: "Berichten",
-    description: "Bekijk wat binnenkomt via het contactformulier en ruim je inbox op.",
-    group: "organisatie"
-  },
-  {
-    id: "team",
-    label: "Team",
-    description: "Nodig leiding uit, beheer rollen en koppel groepen aan editors.",
-    group: "organisatie",
-    requiresAdmin: true
-  }
+  { id: "overview", label: "Overzicht", description: "Recente activiteit en aandachtspunten", group: "cockpit" },
+  { id: "posts", label: "Posts", description: "Nieuws, foto's en activiteiten publiceren", group: "cockpit" },
+  { id: "messages", label: "Inbox", description: "Contactberichten van ouders en bezoekers", group: "cockpit" },
+  { id: "finance", label: "Financiën", description: "Transacties en groepsbudgetten", group: "cockpit", requiresFinance: true },
+  { id: "home", label: "Homepage", description: "Banner, introductie en foto's", group: "website" },
+  { id: "groups", label: "Groepen", description: "Groepsinformatie en leiding", group: "website" },
+  { id: "registration", label: "Inschrijven", description: "Inschrijving, kledij en prijzen", group: "website" },
+  { id: "camp", label: "Kamp", description: "Kampinformatie en inschrijvingen", group: "website" },
+  { id: "contact", label: "Contactpagina", description: "Contactpersonen en formulierteksten", group: "website" },
+  { id: "songs", label: "Liedjes", description: "Liedteksten en liedbundel", group: "website" },
+  { id: "pages", label: "Overige pagina's", description: "Activiteiten, verhuur, verzekering en privacy", group: "website" },
+  { id: "site", label: "Instellingen", description: "Naam, contactgegevens en website-instellingen", group: "organisatie" },
+  { id: "team", label: "Team & toegang", description: "Teamleden, rollen en rechten", group: "organisatie", requiresAdmin: true }
 ];
 const adminTabGroupLabels: Record<AdminTabGroupId, string> = {
-  cockpit: "Cockpit",
-  website: "Website",
-  content: "Content",
-  organisatie: "Organisatie"
+  cockpit: "Werkruimte", website: "Website", content: "Content", organisatie: "Beheer"
 };
 
 function cloneDefaults() {
@@ -781,48 +714,6 @@ function hasText(value: string | null | undefined) {
 
 function countMissingTextValues(values: Array<string | null | undefined>) {
   return values.reduce((total, value) => total + (hasText(value) ? 0 : 1), 0);
-}
-
-function getDateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-    date.getDate()
-  ).padStart(2, "0")}`;
-}
-
-function getRecentDayBuckets(values: Array<string | null | undefined>, days: number) {
-  const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1));
-  const buckets = Array.from({ length: days }, (_, index) => {
-    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
-    return {
-      key: getDateKey(date),
-      label: date.toLocaleDateString("nl-BE", { weekday: "short" }),
-      count: 0
-    };
-  });
-  const bucketMap = new Map(buckets.map((bucket) => [bucket.key, bucket]));
-
-  values.forEach((value) => {
-    const date = parseDateValue(value);
-    if (!date) {
-      return;
-    }
-
-    const bucket = bucketMap.get(getDateKey(date));
-    if (bucket) {
-      bucket.count += 1;
-    }
-  });
-
-  return buckets;
-}
-
-function getReadinessPercent(completed: number, total: number) {
-  if (!total) {
-    return 100;
-  }
-
-  return Math.max(0, Math.min(100, Math.round((completed / total) * 100)));
 }
 
 function formatFinancePercentage(value: number) {
@@ -1864,6 +1755,9 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [postQuery, setPostQuery] = useState("");
+  const [postFilter, setPostFilter] = useState("all");
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [authLoading, setAuthLoading] = useState(true);
   const [authStalled, setAuthStalled] = useState(false);
@@ -2214,12 +2108,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     month: "long",
     year: "numeric"
   });
-  const adminScopeLabel =
-    profile?.role === "admin"
-      ? `Toegang tot alle ${groups.length || 0} groepen`
-      : `${profile?.managedGroupSlugs.length || 0} gekoppelde groep${
-          profile?.managedGroupSlugs.length === 1 ? "" : "en"
-        }`;
   const adminUserLabel =
     profile?.full_name?.trim() || profile?.email?.trim() || session?.user.email || "Leiding";
 
@@ -2228,8 +2116,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       const leftTime = parseDateValue(left.createdAt)?.getTime() ?? 0;
       const rightTime = parseDateValue(right.createdAt)?.getTime() ?? 0;
       return rightTime - leftTime;
-    })
-    .slice(0, 8);
+    });
   const financeAccessibleGroups =
     profile?.role === "admin"
       ? groups
@@ -2521,10 +2408,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     siteSettings.footerAdminLabel
   ];
   const siteMissingCount = countMissingTextValues(siteReadinessFields);
-  const siteReadinessPercent = getReadinessPercent(
-    siteReadinessFields.length - siteMissingCount,
-    siteReadinessFields.length
-  );
   const homeReadinessFields = [
     pages.home.banner.title,
     pages.home.banner.subtitle,
@@ -2541,13 +2424,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     countMissingTextValues(homeReadinessFields) +
     (pages.home.gallery.length ? 0 : 1) +
     (pages.home.practical.items.length ? 0 : 1);
-  const homeReadinessPercent = getReadinessPercent(
-    homeReadinessFields.length +
-      (pages.home.gallery.length ? 1 : 0) +
-      (pages.home.practical.items.length ? 1 : 0) -
-      countMissingTextValues(homeReadinessFields),
-    homeReadinessFields.length + 2
-  );
   const contactReadinessFields = [
     pages.contact.title,
     pages.contact.generalTitle,
@@ -2561,13 +2437,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     countMissingTextValues(contactReadinessFields) +
     (pages.contact.formCategories.length ? 0 : 1) +
     (contactSections.length ? 0 : 1);
-  const contactReadinessPercent = getReadinessPercent(
-    contactReadinessFields.length +
-      (pages.contact.formCategories.length ? 1 : 0) +
-      (contactSections.length ? 1 : 0) -
-      countMissingTextValues(contactReadinessFields),
-    contactReadinessFields.length + 2
-  );
   const songsMissingCount =
     countMissingTextValues([pages.songs.title, pages.songs.lead]) + (songs.length ? 0 : 1);
   const registrationReadinessFields = [
@@ -2589,14 +2458,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     (pages.registration.steps.length ? 0 : 1) +
     (pages.registration.merch.prices.length ? 0 : 1) +
     (pages.registration.merch.actions.length ? 0 : 1);
-  const registrationReadinessPercent = getReadinessPercent(
-    registrationReadinessFields.length +
-      (pages.registration.steps.length ? 1 : 0) +
-      (pages.registration.merch.prices.length ? 1 : 0) +
-      (pages.registration.merch.actions.length ? 1 : 0) -
-      countMissingTextValues(registrationReadinessFields),
-    registrationReadinessFields.length + 3
-  );
   const campReadinessFields = [
     pages.camp.kicker,
     pages.camp.title,
@@ -2626,19 +2487,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     (pages.camp.supportBoxes.length ? 0 : 1) +
     (pages.camp.signupSteps.length ? 0 : 1) +
     (pages.camp.checklistSections.length ? 0 : 1);
-  const campReadinessPercent = getReadinessPercent(
-    campReadinessFields.length +
-      (pages.camp.ctas.length ? 1 : 0) +
-      (pages.camp.jumpLinks.length ? 1 : 0) +
-      (pages.camp.overviewItems.length ? 1 : 0) +
-      (pages.camp.importantItems.length ? 1 : 0) +
-      (pages.camp.priceItems.length ? 1 : 0) +
-      (pages.camp.supportBoxes.length ? 1 : 0) +
-      (pages.camp.signupSteps.length ? 1 : 0) +
-      (pages.camp.checklistSections.length ? 1 : 0) -
-      countMissingTextValues(campReadinessFields),
-    campReadinessFields.length + 8
-  );
   const otherPagesReadinessFields = [
     pages.activities.slug,
     pages.activities.title,
@@ -2667,27 +2515,10 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     pages.privacy.cards.length;
   const otherPagesMissingCount =
     countMissingTextValues(otherPagesReadinessFields) + (otherPagesCardsCount ? 0 : 1);
-  const otherPagesReadinessPercent = getReadinessPercent(
-    otherPagesReadinessFields.length + (otherPagesCardsCount ? 1 : 0) -
-      countMissingTextValues(otherPagesReadinessFields),
-    otherPagesReadinessFields.length + 1
-  );
   const teamEditorsWithoutGroupsCount = profiles.filter(
     (currentProfile) =>
       currentProfile.role === "editor" && currentProfile.managedGroupSlugs.length === 0
   ).length;
-  const overviewMessageTrendData = getRecentDayBuckets(
-    messages.map((message) => message.createdAt),
-    7
-  );
-  const overviewMessageTrendPeak = Math.max(
-    1,
-    ...overviewMessageTrendData.map((item) => item.count)
-  );
-  const overviewMessagesThisWeek = overviewMessageTrendData.reduce(
-    (total, item) => total + item.count,
-    0
-  );
   const adminReadinessItems: AdminReadinessItem[] = [
     {
       id: "site-settings",
@@ -2817,145 +2648,27 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
         ]
       : [])
   ];
-  const overviewReadyCount = adminReadinessItems.filter((item) => item.status === "ok").length;
-  const overviewWarningItems = adminReadinessItems.filter((item) => item.status === "warning");
-  const overviewReadinessPercent = getReadinessPercent(
-    overviewReadyCount,
-    adminReadinessItems.length
-  );
-  const overviewSpotlightItem = overviewWarningItems[0] ?? adminReadinessItems[0] ?? null;
-  const overviewPriorityItems = (overviewWarningItems.length
-    ? overviewWarningItems
-    : adminReadinessItems
-  ).slice(0, 5);
-  const overviewQuickActions = [
-    {
-      tabId: "posts" as TabId,
-      badge: draftPostsCount ? `${draftPostsCount} concepten` : "Nieuws",
-      title: "Werk posts en activiteiten bij",
-      detail: "Publiceer nieuws of werk bestaande activiteiten verder uit.",
-      primary: true
-    },
-    {
-      tabId: "groups" as TabId,
-      badge: `${groups.length} groepen`,
-      title: "Controleer groepen en leiding",
-      detail: "Zorg dat elke groep een kaart, afbeelding en leiding heeft."
-    },
-    {
-      tabId: "messages" as TabId,
-      badge: `${messages.length} berichten`,
-      title: "Verwerk je inbox",
-      detail: "Bekijk de recentste contactvragen en ruim oude berichten op."
-    },
-    {
-      tabId: canUseFinance ? ("finance" as TabId) : ("site" as TabId),
-      badge: canUseFinance
-        ? financeSchemaError
-          ? "Setup nodig"
-          : `${financePendingTransactions.length} open`
-        : "Sitebasis",
-      title: canUseFinance ? "Open de finance-workspace" : "Werk site-instellingen bij",
-      detail: canUseFinance
-        ? "Ga rechtstreeks naar budgetten, transacties en groepssaldo's."
-        : "Vul sitenaam, contactinfo en footer aan voor een nette publicatie."
-    }
-  ].filter((item) => availableTabs.some((tab) => tab.id === item.tabId));
-  const overviewHealthCards = [
-    {
-      tabId: "site" as TabId,
-      label: "Site-instellingen",
-      statusLabel: siteMissingCount ? `${siteMissingCount} open` : "Volledig",
-      detail: "Logo, contact, kaart en footer",
-      progress: siteReadinessPercent
-    },
-    {
-      tabId: "home" as TabId,
-      label: "Homepage",
-      statusLabel: homeMissingCount ? `${homeMissingCount} open` : "Klaar",
-      detail: "Banner, intro, galerij en praktische blokken",
-      progress: homeReadinessPercent
-    },
-    {
-      tabId: "contact" as TabId,
-      label: "Contact",
-      statusLabel: contactMissingCount ? `${contactMissingCount} open` : "Klaar",
-      detail: "Formulier, categorieen en extra contactblokken",
-      progress: contactReadinessPercent
-    },
-    {
-      tabId: "registration" as TabId,
-      label: "Inschrijven",
-      statusLabel: registrationMissingCount ? `${registrationMissingCount} open` : "Klaar",
-      detail: "Stappen, groepen, kledij en merch",
-      progress: registrationReadinessPercent
-    },
-    {
-      tabId: "camp" as TabId,
-      label: "Kamp",
-      statusLabel: campMissingCount ? `${campMissingCount} open` : "Klaar",
-      detail: "Hero, prijzen, stappen en checklist",
-      progress: campReadinessPercent
-    },
-    {
-      tabId: "pages" as TabId,
-      label: "Overige pagina's",
-      statusLabel: otherPagesMissingCount ? `${otherPagesMissingCount} open` : "Klaar",
-      detail: "Activiteiten, verhuur, verzekering en privacy",
-      progress: otherPagesReadinessPercent
-    }
-  ];
-  const overviewCommandCards = [
-    {
-      tabId: "site" as TabId,
-      badge: "Basis",
-      title: "Werk de globale site-identiteit bij",
-      detail: "Pas sitenaam, footer, socials en kaartlinks aan."
-    },
-    {
-      tabId: "contact" as TabId,
-      badge: "Contact",
-      title: "Maak contact duidelijker",
-      detail: "Houd formulierteksten, categorieen en contactblokken overzichtelijk."
-    },
-    {
-      tabId: "pages" as TabId,
-      badge: "Pagina's",
-      title: "Controleer ondersteunende pagina's",
-      detail: "Activiteiten, verhuur, verzekering en privacy zitten op een plek."
-    },
-    {
-      tabId: profile?.role === "admin" ? ("team" as TabId) : ("messages" as TabId),
-      badge: profile?.role === "admin" ? "Team" : "Inbox",
-      title:
-        profile?.role === "admin" ? "Beheer rollen en toegang" : "Bekijk recente berichten",
-      detail:
-        profile?.role === "admin"
-          ? "Koppel editors aan hun groepen en houd adminrechten helder."
-          : "Zie wie contact opnam en wanneer er opvolging nodig is.",
-      primary: profile?.role === "admin"
-    }
-  ].filter((item) => availableTabs.some((tab) => tab.id === item.tabId));
+  const overviewWarningItems = adminReadinessItems.filter(item => item.status === "warning");
   const adminTabBadges: Partial<Record<TabId, string>> = {
-    overview: overviewWarningItems.length ? `${overviewWarningItems.length} open` : "Klaar",
-    groups: groupsWithoutLeadersCount
-      ? `${groupsWithoutLeadersCount} zonder leiding`
-      : `${groups.length} groepen`,
-    posts: draftPostsCount ? `${draftPostsCount} concepten` : `${publishedPostsCount} live`,
-    messages: messages.length ? `${messages.length} berichten` : "Leeg"
+    posts: draftPostsCount ? String(draftPostsCount) : undefined,
+    messages: messages.length ? String(messages.length) : undefined,
+    finance: canUseFinance && financePendingTransactions.length ? String(financePendingTransactions.length) : undefined
   };
+  const filteredPosts = posts.filter(post => {
+    const matchesSearch = (post.title + " " + post.summary).toLocaleLowerCase().includes(postQuery.trim().toLocaleLowerCase());
+    return matchesSearch && (postFilter === "all" || (postFilter === "published" && post.published) || (postFilter === "draft" && !post.published) || (postFilter === "featured" && post.featured));
+  });
 
-  if (canUseFinance) {
-    adminTabBadges.finance = financeSchemaError
-      ? "Setup"
-      : financePendingTransactions.length
-        ? `${financePendingTransactions.length} open`
-        : "Actueel";
+  function newPost() {
+    if (postsBusy) return;
+    const post = createEmptyPost();
+    setPostFeedback(null);
+    setNotice(null);
+    setPosts(current => [post, ...current]);
+    setSelectedPostId(post.id!);
+    setActiveTab("posts");
   }
 
-  if (profile?.role === "admin") {
-    adminTabBadges.team = `${profiles.length} leden`;
-  }
 
   useEffect(() => {
     const nextAvailableTabs = adminTabDefinitions.filter((tab) => {
@@ -3315,6 +3028,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
           (item.id || `post-${itemIndex}`) === sourceId ? savedPost : item
         )
       );
+      setSelectedPostId(current => current === sourceId ? savedPost.id ?? null : current);
       setDeletedPostIds((current) => current.filter((id) => id !== savedPost.id));
       setPostFeedback({
         id: savedPost.id || sourceId,
@@ -4017,475 +3731,19 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
 
   return (
     <div class="admin-app">
-      <aside class="admin-sidebar">
-        <div class="admin-sidebar-brand">
-          <p class="admin-kicker">Beheer</p>
-          <h1>Chiro Negenmanneke</h1>
-          <p class="muted">Een duidelijke werkplek om je site, team en financiën veilig te beheren.</p>
-        </div>
-
-        <div class="admin-sidebar-status-card">
-          <span>{profile.role === "admin" ? "Admin" : "Editor"}</span>
-          <strong>{adminUserLabel}</strong>
-          <p>{adminScopeLabel}</p>
-        </div>
-
-        <nav class="admin-sidebar-nav" aria-label="Admin onderdelen">
-          {adminSidebarGroups.map((group) => (
-            <section class="admin-sidebar-section" key={group.groupId}>
-              <p class="admin-sidebar-section-label">{group.label}</p>
-              <div class="admin-sidebar-section-stack">
-                {group.tabs.map((tab) => (
-                  <button
-                    type="button"
-                    key={tab.id}
-                    class={`admin-sidebar-tab ${activeTab === tab.id ? "is-active" : ""}`}
-                    onClick={() => setActiveTab(tab.id)}
-                  >
-                    <div class="admin-sidebar-tab-copy">
-                      <strong>{tab.label}</strong>
-                      <span>{tab.description}</span>
-                    </div>
-                    {adminTabBadges[tab.id] && <small>{adminTabBadges[tab.id]}</small>}
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </nav>
-
-        <div class="admin-sidebar-foot">
-          <p class="muted-small">
-            Ingelogd als <strong>{profile.email ?? session.user.email}</strong>
-          </p>
-          <div class="admin-sidebar-actions">
-            <a class="btn btn-light" href="/">
-              Terug naar site
-            </a>
-            <button class="btn btn-light" type="button" onClick={signOut}>
-              Uitloggen
-            </button>
+      <AdminNavigation groups={adminSidebarGroups} activeTab={activeTab} badges={adminTabBadges} userName={adminUserLabel} role={profile.role} onNavigate={tab => setActiveTab(tab as TabId)} onSignOut={() => void signOut()} />
+      <main class="admin-main" id="admin-content">
+        <header class="admin-topbar">
+          <div class="admin-breadcrumb"><span>Werkruimte</span><AdminIcon name="chevron" /><strong>{activeAdminTab?.label}</strong></div>
+          <div class="admin-topbar-actions">
+            <button class="admin-icon-button" type="button" aria-label="Gegevens verversen" title="Gegevens verversen" disabled={dataLoading || postsBusy} onClick={() => void loadDashboard()}><AdminIcon name="refresh" /></button>
+            <a class="admin-text-button" href="/" target="_blank" rel="noreferrer">Bekijk site<AdminIcon name="external" /></a>
           </div>
-        </div>
-      </aside>
-
-      <main class="admin-main">
-        <div class={`admin-main-shell ${activeTab === "finance" ? "is-finance" : ""}`}>
-          {notice && <div class={`admin-notice admin-notice-${notice.type}`}>{notice.message}</div>}
-          {dataLoading && <div class="admin-loading-inline">Data verversen...</div>}
-
-          {activeTab !== "finance" && activeAdminTab && (
-            <header class="admin-shell-bar">
-              <div class="admin-shell-copy">
-                <p class="admin-kicker">{adminTabGroupLabels[activeAdminTab.group]}</p>
-                <h2>{activeAdminTab.label}</h2>
-                <p>{activeAdminTab.description}</p>
-              </div>
-              <div class="admin-shell-actions">
-                <div class="admin-shell-chips">
-                  <span class="admin-shell-chip">{profile.role === "admin" ? "Admin" : "Editor"}</span>
-                  <span class="admin-shell-chip is-soft">{adminScopeLabel}</span>
-                  <span class="admin-shell-chip is-soft">{adminDateLabel}</span>
-                </div>
-                <div class="admin-shell-button-row">
-                  <button class="btn btn-light" type="button" onClick={() => void loadDashboard()}>
-                    Ververs gegevens
-                  </button>
-                  <a class="btn" href="/" target="_blank" rel="noreferrer">
-                    Bekijk site
-                  </a>
-                </div>
-              </div>
-            </header>
-          )}
-
-          {activeTab === "overview" && (
-            <>
-              <section class="admin-overview-stage">
-                <div class="admin-overview-stage-main">
-                  <div class="admin-overview-stage-meta">
-                    <span class="admin-overview-stage-date">Admin cockpit</span>
-                    <span class="admin-overview-stage-date">{adminDateLabel}</span>
-                  </div>
-
-                  <div class="admin-overview-stage-copy">
-                    <h2>
-                      {overviewWarningItems.length
-                        ? "Zie meteen wat nog aandacht vraagt."
-                        : "Je admin staat netjes en publicatieklaar."}
-                    </h2>
-                    <p>
-                      Gebruik dit overzicht als cockpit voor content, teamtoegang, inbox en
-                      financiën. Zo ziet iedereen sneller waar iets nog ontbreekt en wat meteen
-                      klaar is om live te zetten.
-                    </p>
-                  </div>
-
-                  <div class="admin-overview-glance">
-                    <article class="admin-overview-glance-card">
-                      <span>Deploy readiness</span>
-                      <strong>{overviewReadinessPercent}%</strong>
-                      <p>
-                        {overviewReadyCount} van {adminReadinessItems.length} checks staan op groen.
-                      </p>
-                    </article>
-                    <article class="admin-overview-glance-card">
-                      <span>Groepsdekking</span>
-                      <strong>{groups.length}</strong>
-                      <p>
-                        {groupsWithoutLeadersCount
-                          ? `${groupsWithoutLeadersCount} groep${
-                              groupsWithoutLeadersCount === 1 ? "" : "en"
-                            } mist nog leiding.`
-                          : "Alle groepen hebben minstens één leiding."}
-                      </p>
-                    </article>
-                    <article class="admin-overview-glance-card">
-                      <span>Posts live</span>
-                      <strong>{publishedPostsCount}</strong>
-                      <p>
-                        {draftPostsCount
-                          ? `${draftPostsCount} conceptpost${
-                              draftPostsCount === 1 ? "" : "s"
-                            } wacht${draftPostsCount === 1 ? "" : "en"} nog op publicatie.`
-                          : "Geen concepten die nog blijven liggen."}
-                      </p>
-                    </article>
-                  </div>
-
-                  <div class="admin-overview-quick-actions">
-                    {overviewQuickActions.map((item) => (
-                      <button
-                        class={`admin-overview-quick-action ${item.primary ? "is-primary" : ""}`}
-                        type="button"
-                        key={item.tabId}
-                        onClick={() => setActiveTab(item.tabId)}
-                      >
-                        <span>{item.badge}</span>
-                        <strong>{item.title}</strong>
-                        <small>{item.detail}</small>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div class="admin-overview-signal-row">
-                    <article class="admin-overview-signal-card is-urgent">
-                      <span>Actiepunten</span>
-                      <strong>{overviewWarningItems.length}</strong>
-                      <p>Modules die nog aandacht vragen voor je volgende update.</p>
-                    </article>
-                    <article class="admin-overview-signal-card is-active">
-                      <span>Inbox 7 dagen</span>
-                      <strong>{overviewMessagesThisWeek}</strong>
-                      <p>Nieuwe contactberichten in de laatste week.</p>
-                    </article>
-                    <article class="admin-overview-signal-card is-calm">
-                      <span>Team</span>
-                      <strong>{profiles.length}</strong>
-                      <p>
-                        {profile.role === "admin"
-                          ? teamEditorsWithoutGroupsCount
-                            ? `${teamEditorsWithoutGroupsCount} editor${
-                                teamEditorsWithoutGroupsCount === 1 ? "" : "s"
-                              } zonder groepstoegang.`
-                            : "Rollen en toegangen zijn gekoppeld."
-                          : "Je ziet alleen de modules die jij mag beheren."}
-                      </p>
-                    </article>
-                  </div>
-
-                  <div class="admin-overview-metric-grid">
-                    <article class="admin-overview-metric-card">
-                      <span>Contactblokken</span>
-                      <strong>{contactSections.length}</strong>
-                      <p>Extra secties op de contactpagina.</p>
-                    </article>
-                    <article class="admin-overview-metric-card">
-                      <span>Liedjes</span>
-                      <strong>{songs.length}</strong>
-                      <p>Items in de liedbundel.</p>
-                    </article>
-                    <article class="admin-overview-metric-card">
-                      <span>Inbox totaal</span>
-                      <strong>{messages.length}</strong>
-                      <p>Alle ontvangen contactberichten.</p>
-                    </article>
-                    <article class="admin-overview-metric-card">
-                      <span>{canUseFinance ? "Transacties" : "Pagina's"}</span>
-                      <strong>
-                        {canUseFinance ? financeVisibleTransactions.length : otherPagesCardsCount}
-                      </strong>
-                      <p>
-                        {canUseFinance
-                          ? "Financiële items in de huidige dataset."
-                          : "Kaarten over activiteiten, verhuur, verzekering en privacy."}
-                      </p>
-                    </article>
-                  </div>
-                </div>
-
-                <div class="admin-overview-stage-side">
-                  {overviewSpotlightItem && (
-                    <article class="admin-overview-stage-spotlight">
-                      <div class="admin-overview-stage-spotlight-head">
-                        <span class="admin-overview-stage-pill">
-                          {overviewSpotlightItem.status === "warning"
-                            ? "Actie nodig"
-                            : "Alles onder controle"}
-                        </span>
-                        <span class="admin-overview-stage-caption">
-                          {overviewReadinessPercent}% gereed
-                        </span>
-                      </div>
-                      <strong>{overviewSpotlightItem.label}</strong>
-                      <p>{overviewSpotlightItem.detail}</p>
-                      <button
-                        class="admin-overview-stage-button"
-                        type="button"
-                        onClick={() => setActiveTab(overviewSpotlightItem.tabId)}
-                      >
-                        Open {availableTabs.find((tab) => tab.id === overviewSpotlightItem.tabId)?.label}
-                      </button>
-                    </article>
-                  )}
-
-                  <article class="admin-overview-stage-chart">
-                    <div class="admin-overview-stage-chart-head">
-                      <div>
-                        <span class="admin-overview-stage-caption">Inbox ritme</span>
-                        <h3>Berichten in de laatste 7 dagen</h3>
-                      </div>
-                      <span class="admin-overview-stage-chart-total">
-                        {overviewMessagesThisWeek} totaal
-                      </span>
-                    </div>
-
-                    {overviewMessagesThisWeek ? (
-                      <div class="admin-overview-bar-chart" aria-hidden="true">
-                        {overviewMessageTrendData.map((item) => (
-                          <div class="admin-overview-bar-column" key={item.key}>
-                            <strong>{item.count}</strong>
-                            <div
-                              class="admin-overview-bar"
-                              style={{ height: `${Math.max(14, (item.count / overviewMessageTrendPeak) * 120)}px` }}
-                            />
-                            <small>{item.label}</small>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div class="admin-overview-empty">
-                        Nog geen recente berichten. Zodra er contactvragen binnenkomen, zie je hier
-                        meteen het ritme.
-                      </div>
-                    )}
-
-                    <p class="admin-overview-stage-chart-note">
-                      Gebruik deze trend om te zien wanneer je inbox piekt en wanneer snelle opvolging
-                      nodig is.
-                    </p>
-                  </article>
-
-                  <div class="admin-overview-stage-summary">
-                    <article class="admin-overview-stage-summary-item">
-                      <span>Financiën</span>
-                      <strong>
-                        {canUseFinance ? financePendingTransactions.length : adminReadinessItems.length}
-                      </strong>
-                      <p>
-                        {canUseFinance
-                          ? financeSchemaError
-                            ? "Setup nodig in Supabase."
-                            : "Openstaande transacties."
-                          : "Belangrijkste adminchecks."}
-                      </p>
-                    </article>
-                    <article class="admin-overview-stage-summary-item">
-                      <span>Contact</span>
-                      <strong>{overviewRecentMessages.length}</strong>
-                      <p>Recentste berichten direct zichtbaar.</p>
-                    </article>
-                    <article class="admin-overview-stage-summary-item">
-                      <span>Team</span>
-                      <strong>{profiles.length}</strong>
-                      <p>Accounts met toegang tot deze admin.</p>
-                    </article>
-                  </div>
-                </div>
-              </section>
-
-              <div class="admin-overview-workspace">
-                <section class="admin-panel admin-overview-cluster">
-                  <div class="admin-overview-cluster-head">
-                    <h2>Prioriteiten voor je volgende update</h2>
-                    <p>
-                      Dit zijn de snelste verbeteringen om de admin en site publicatieklaar te houden.
-                    </p>
-                  </div>
-
-                  <div class="admin-overview-priority-stack">
-                    {overviewPriorityItems.map((item, index) => (
-                      <button
-                        class={`admin-overview-priority-card ${
-                          item.status === "warning" ? "is-urgent" : "is-good"
-                        }`}
-                        type="button"
-                        key={item.id}
-                        onClick={() => setActiveTab(item.tabId)}
-                      >
-                        <span class="admin-overview-priority-index">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <div class="admin-overview-priority-copy">
-                          <span
-                            class={`admin-overview-system-chip ${
-                              item.status === "warning" ? "is-warning" : "is-ok"
-                            }`}
-                          >
-                            {item.status === "warning" ? "Aandacht" : "Klaar"}
-                          </span>
-                          <h3>{item.label}</h3>
-                          <p>{item.detail}</p>
-                        </div>
-                        <span class="admin-overview-priority-cta">Open</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              </div>
-
-              <div class="admin-overview-secondary">
-                <section class="admin-panel admin-overview-cluster">
-                  <div class="admin-overview-cluster-head">
-                    <h2>Snelle routes</h2>
-                    <p>Spring meteen naar de belangrijkste beheertaken.</p>
-                  </div>
-                  <div class="admin-overview-command-deck">
-                    {overviewCommandCards.map((item) => (
-                      <button
-                        class={`admin-overview-command-card ${item.primary ? "is-primary" : ""}`}
-                        type="button"
-                        key={item.tabId}
-                        onClick={() => setActiveTab(item.tabId)}
-                      >
-                        <div class="admin-overview-command-card-top">
-                          <span class="admin-overview-command-badge">{item.badge}</span>
-                          <span class="admin-overview-command-arrow">→</span>
-                        </div>
-                        <strong>{item.title}</strong>
-                        <p>{item.detail}</p>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section class="admin-panel admin-overview-cluster">
-                  <div class="admin-overview-cluster-head">
-                    <h2>Recente inbox</h2>
-                    <p>De laatste berichten uit het contactformulier, zonder eerst naar inbox te gaan.</p>
-                  </div>
-
-                  {overviewRecentMessages.length ? (
-                    <div class="admin-overview-stream is-compact">
-                      {overviewRecentMessages.map((message) => (
-                        <article
-                          class="admin-overview-stream-item"
-                          key={message.id ?? `${message.email}-${message.createdAt ?? message.subject}`}
-                        >
-                          <span class="admin-overview-stream-dot" />
-                          <div class="admin-overview-stream-copy">
-                            <strong>
-                              {message.subject || message.category || "Bericht zonder onderwerp"}
-                            </strong>
-                            <p>
-                              {message.name || "Onbekende afzender"} via {message.email}
-                              {message.category ? ` | ${message.category}` : ""}
-                            </p>
-                          </div>
-                          <div class="admin-overview-stream-meta">
-                            <span>{formatAdminDate(message.createdAt) || "Onbekend"}</span>
-                            <button
-                              class="admin-overview-link"
-                              type="button"
-                              onClick={() => setActiveTab("messages")}
-                            >
-                              Open inbox
-                            </button>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  ) : (
-                    <div class="admin-overview-empty">
-                      Nog geen contactberichten ontvangen via de site.
-                    </div>
-                  )}
-                </section>
-              </div>
-
-              <div class="admin-overview-secondary">
-                <section class="admin-panel admin-overview-cluster">
-                  <div class="admin-overview-cluster-head">
-                    <h2>Contentgezondheid</h2>
-                    <p>Per belangrijke pagina zie je hoe compleet de inhoud al is.</p>
-                  </div>
-                  <div class="admin-overview-health-board">
-                    {overviewHealthCards.map((item) => (
-                      <button
-                        class="admin-overview-health-card"
-                        type="button"
-                        key={item.tabId}
-                        onClick={() => setActiveTab(item.tabId)}
-                      >
-                        <div class="admin-overview-health-card-top">
-                          <div>
-                            <strong>{item.label}</strong>
-                            <p>{item.detail}</p>
-                          </div>
-                          <span>{item.statusLabel}</span>
-                        </div>
-                        <div class="admin-overview-health-track" aria-hidden="true">
-                          <span style={{ width: `${item.progress}%` }} />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section class="admin-panel admin-overview-cluster">
-                  <div class="admin-overview-cluster-head">
-                    <h2>Systeemstatus</h2>
-                    <p>Een compacte check van de modules die vandaag het belangrijkst zijn.</p>
-                  </div>
-                  <div class="admin-overview-system-grid">
-                    {adminReadinessItems.slice(0, 6).map((item) => (
-                      <button
-                        class={`admin-overview-system-card ${
-                          item.status === "warning" ? "is-warning" : "is-ok"
-                        }`}
-                        type="button"
-                        key={item.id}
-                        onClick={() => setActiveTab(item.tabId)}
-                      >
-                        <div class="admin-overview-system-copy">
-                          <span
-                            class={`admin-overview-system-chip ${
-                              item.status === "warning" ? "is-warning" : "is-ok"
-                            }`}
-                          >
-                            {item.status === "warning" ? "Aandacht" : "OK"}
-                          </span>
-                          <strong>{item.label}</strong>
-                          <p>{item.detail}</p>
-                        </div>
-                        <span class="admin-overview-command-arrow">→</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              </div>
-            </>
-          )}
+        </header>
+        <div class={"admin-main-shell " + (activeTab === "finance" ? "is-finance" : "")}>
+          {notice && <div class={"admin-notice admin-notice-" + notice.type} role={notice.type === "error" ? "alert" : "status"}>{notice.message}</div>}
+          {dataLoading && <div class="admin-loading-inline" role="status">Gegevens worden ververst…</div>}
+          {activeTab === "overview" && <AdminOverview userName={adminUserLabel} date={adminDateLabel} posts={posts} messages={overviewRecentMessages} groupCount={groups.length} pendingCount={financePendingTransactions.length} canUseFinance={canUseFinance} warnings={overviewWarningItems} onNavigate={tab => setActiveTab(tab as TabId)} onNewPost={newPost} onEditPost={id => { setSelectedPostId(id); setActiveTab("posts"); }} />}
 
           {activeTab === "finance" && canUseFinance && (
           <section class="admin-panel admin-finance-panel">
@@ -6200,52 +5458,17 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
         )}
 
         {activeTab === "posts" && (
-          <section class="admin-panel">
-            <div class="admin-panel-head">
-              <div>
-                <h2>Posts & activiteiten</h2>
-                <p>Deel nieuws, foto's en activiteiten. Licht een bericht uit om het ook op de homepage te tonen.</p>
-              </div>
-              <button class="btn" type="button" onClick={savePosts} disabled={postsBusy}>
-                {activePostActionId === "bulk" ? "Posts opslaan..." : "Alles opslaan"}
-              </button>
-            </div>
-
-            <div class="admin-subpanel">
-              <div class="admin-post-toolbar">
-                <div>
-                  <h4>Sneller posten</h4>
-                  <p class="muted">
-                    Post nu zet je bericht live. Met Uitlichten op de homepage verschijnt het ook in In de kijker. Een concept is alleen zichtbaar in de admin.
-                  </p>
-                </div>
-                <a class="btn btn-light" href="/activiteiten.html" target="_blank" rel="noreferrer">
-                  Bekijk activiteitenpagina
-                </a>
+          <section class="admin-panel admin-posts-panel">
+            <div class="admin-panel-head"><div><h2>Posts</h2><p>Nieuws, foto's en activiteiten voor je website.</p></div>
+              <div class="admin-toolbar-actions">
+                <a class="btn btn-light" href="/activiteiten.html" target="_blank" rel="noreferrer"><AdminIcon name="external" />Bekijk pagina</a>
+                {!selectedPostId && <button class="btn" type="button" disabled={postsBusy} onClick={newPost}><AdminIcon name="plus" />Nieuwe post maken</button>}
               </div>
             </div>
-
-            <div class="admin-subpanel">
-              <div class="admin-subpanel-head">
-                <h4>Berichten</h4>
-                <button
-                  class="btn btn-light"
-                  type="button"
-                  disabled={postsBusy}
-                  onClick={() => setPosts((current) => [createEmptyPost(), ...current])}
-                >
-                  Nieuwe post maken
-                </button>
-              </div>
-
-              {!posts.length && (
-                <div class="admin-post-empty">
-                  <strong>Nog geen posts.</strong>
-                  <span>Maak hierboven je eerste post aan en publiceer hem meteen van hieruit.</span>
-                </div>
-              )}
-
-              {posts.map((post, index) => (
+            {selectedPostId ? (
+              <div class="admin-post-detail">
+                <button class="admin-text-button admin-back-button" type="button" disabled={postsBusy} onClick={() => setSelectedPostId(null)}><AdminIcon name="back" />Alle posts</button>
+                {posts.map((post, index) => selectedPostId === post.id ? (
                 <fieldset class="admin-card-editor admin-post-editor" key={post.id ?? index} disabled={postsBusy}>
                   <div class="admin-post-head">
                     <div>
@@ -6335,13 +5558,31 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                         setDeletedPostIds((current) => [...current, post.id!]);
                       }
                       setPosts((current) => current.filter((_, itemIndex) => itemIndex !== index));
+                      setSelectedPostId(null);
                     }}
                   >
                     Post verwijderen
                   </button>
                 </fieldset>
-              ))}
-            </div>
+                ) : null)}
+              </div>
+            ) : <>
+              <div class="admin-list-toolbar">
+                <div class="admin-view-tabs" role="group" aria-label="Posts filteren">
+                  {([{ id: "all", label: "Alle posts", count: posts.length }, { id: "published", label: "Gepubliceerd", count: publishedPostsCount }, { id: "draft", label: "Concepten", count: draftPostsCount }, { id: "featured", label: "Uitgelicht", count: posts.filter(post => post.featured).length }]).map(filter => <button type="button" key={filter.id} aria-pressed={postFilter === filter.id} onClick={() => setPostFilter(filter.id)}>{filter.label}<span>{filter.count}</span></button>)}
+                </div>
+                <label class="admin-list-search"><AdminIcon name="search" /><input type="search" aria-label="Zoek posts" placeholder="Zoek op titel…" value={postQuery} onInput={event => setPostQuery(event.currentTarget.value)} /></label>
+              </div>
+              {deletedPostIds.length > 0 && <div class="admin-pending-changes" role="status">{deletedPostIds.length} verwijdering(en) klaar om op te slaan.<button class="btn btn-light" type="button" disabled={postsBusy} onClick={() => void savePosts()}>Wijzigingen opslaan</button></div>}
+              {filteredPosts.length ? <div class="admin-table-wrap"><table class="admin-data-table admin-posts-table"><thead><tr><th>Titel</th><th>Status</th><th>Zichtbaarheid</th><th>Datum</th><th><span class="admin-sr-only">Acties</span></th></tr></thead><tbody>{filteredPosts.map(post => <tr key={post.id}>
+                <td><button type="button" class="admin-table-title" onClick={() => setSelectedPostId(post.id ?? null)}>{post.title.trim() || "Naamloos concept"}</button>{post.summary && <small>{post.summary}</small>}</td>
+                <td><span class={"admin-status " + (post.published ? "is-published" : "is-draft")}>{post.published ? "Gepubliceerd" : "Concept"}</span></td>
+                <td><span class="admin-table-muted">{post.featured ? "Homepage + activiteiten" : "Activiteiten"}</span></td>
+                <td class="admin-table-date">{post.eventDate ? new Date(post.eventDate).toLocaleDateString("nl-BE") : "—"}</td>
+                <td><button class="admin-text-button" type="button" onClick={() => setSelectedPostId(post.id ?? null)}>Bewerken<AdminIcon name="chevron" /></button></td>
+              </tr>)}</tbody></table></div> : <div class="admin-empty"><AdminIcon name="posts" /><strong>{posts.length ? "Geen posts gevonden" : "Nog geen posts"}</strong><p>{posts.length ? "Probeer een andere zoekterm of filter." : "Maak je eerste bericht en deel het met de ouders."}</p>{posts.length ? <button class="btn btn-light" type="button" onClick={() => { setPostQuery(""); setPostFilter("all"); }}>Filters wissen</button> : <button class="btn" type="button" onClick={newPost}>Nieuwe post maken</button>}</div>}
+              <div class="admin-list-footer"><span>{filteredPosts.length} van {posts.length} posts</span><button class="admin-text-button" type="button" onClick={() => void savePosts()} disabled={postsBusy}>Alles opslaan</button></div>
+            </>}
           </section>
         )}
 
