@@ -1383,7 +1383,7 @@ function PeopleEditor(props: {
         </button>
       </div>
       {props.people.map((person, index) => (
-        <div class="admin-inline-grid" key={`${person.name}-${index}`}>
+        <div class="admin-inline-grid" key={index}>
           <TextField
             label="Naam"
             value={person.name}
