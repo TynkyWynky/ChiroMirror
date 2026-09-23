@@ -37,7 +37,7 @@ try{
   window.pushFixture={requests:0,subscription:null};
   class Notifications {static permission='default';static async requestPermission(){window.pushFixture.requests++;return Notifications.permission='granted';}}
   Object.defineProperty(window,'Notification',{value:Notifications,configurable:true});Object.defineProperty(window,'PushManager',{value:class{},configurable:true});
-  const reg={active:{},getNotifications:async()=>[],pushManager:{getSubscription:async()=>window.pushFixture.subscription,subscribe:async()=>{
+  const reg={active:{postMessage:(_data,ports)=>ports[0].postMessage({ok:true})},getNotifications:async()=>[],pushManager:{getSubscription:async()=>window.pushFixture.subscription,subscribe:async()=>{
    const sub={endpoint:'https://fcm.googleapis.com/fcm/send/browser',toJSON:()=>({endpoint:sub.endpoint,keys:{p256dh:'A'.repeat(87),auth:'B'.repeat(22)}}),unsubscribe:async()=>{window.pushFixture.subscription=null;return true;}};window.pushFixture.subscription=sub;return sub;
   }}};Object.defineProperty(navigator,'serviceWorker',{value:{register:async()=>reg,getRegistration:async()=>reg,ready:Promise.resolve(reg)},configurable:true});
  });

@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { appError } from "../data";
+import { requireOnline } from "../pwa/network";
 import type { Member, AppRole, AppRoleKey } from "../types";
 
 export default function InviteAccount({ client, members, roles, onInvited }: { client: SupabaseClient; members: Member[]; roles: AppRole[]; onInvited: () => Promise<void> }) {
@@ -14,6 +15,7 @@ export default function InviteAccount({ client, members, roles, onInvited }: { c
   async function invite() {
     setBusy(true); setMessage(""); setFailed(false);
     try {
+      requireOnline();
       const { data, error } = await client.auth.getSession();
       if (error || !data.session) throw new Error("Reconnectez-vous.");
       const response = await fetch("/api/app/invite", { method: "POST", headers: {

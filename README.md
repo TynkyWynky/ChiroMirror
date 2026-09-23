@@ -29,6 +29,9 @@ Dit gebruikt de bestaande `posts.body`, `posts.featured` en `site-media`-opslag;
 
 ## SITE / APP foundation
 
+Phase 6 : installation APP, liens persistants, navigation mobile, updates contrôlées et écran
+offline générique sans cache privé. Guide et recette physique : [docs/app-pwa.md](docs/app-pwa.md).
+
 Phase 5 : cloche privée, **APP → Paramètres → Notifications**, rappels Agenda/Tâches et
 worker Netlify Web Push. Configuration, migration, garanties et recette HTTPS :
 [docs/app-notifications.md](docs/app-notifications.md). Aucun déploiement ni Push réel validé ici.

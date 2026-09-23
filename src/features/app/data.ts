@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireOnline, networkError } from "./pwa/network.ts";
 import { hasAppPermission } from "./access.ts";
 import type { AppAccess, AppAccount, AppPermission, AppRole, AppRoleKey, AppUserRole, Member, MemberInput } from "./types.ts";
 
@@ -48,6 +49,7 @@ export function validateMember(input: MemberInput): MemberInput {
 }
 
 export async function saveMember(client: SupabaseClient, id: string | null, input: MemberInput): Promise<Member> {
+  requireOnline();
   const values = validateMember(input);
   const query = id ? client.from("members").update(values).eq("id", id) : client.from("members").insert(values);
   const { data, error } = await query.select().single();
@@ -55,14 +57,17 @@ export async function saveMember(client: SupabaseClient, id: string | null, inpu
   return data as Member;
 }
 export async function setMemberActive(client: SupabaseClient, id: string, active: boolean) {
+  requireOnline();
   const { error } = await client.from("members").update({ active }).eq("id", id).select("id").single();
   if (error) throw error;
 }
 export async function saveAccountRoles(client: SupabaseClient, userId: string, roles: AppRoleKey[]) {
+  requireOnline();
   const { error } = await client.rpc("set_app_user_roles", { target_user_id: userId, role_keys: roles });
   if (error) throw error;
 }
 export function appError(error: unknown): string {
+  const network = networkError(error); if(network)return network;
   if (typeof error === "object" && error !== null && "code" in error) {
     if (error.code === "23505") return "Ce compte est déjà lié à un autre membre. Actualisez la liste.";
     if (error.code === "23514") return "Vérifiez les données. Il faut conserver au moins un administrateur APP.";

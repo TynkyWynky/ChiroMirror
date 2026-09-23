@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireOnline, networkError } from "../pwa/network.ts";
 import type { AppAccess, Member } from "../types.ts";
 import { hasAppPermission } from "../access.ts";
 import type { CalendarEvent, EventOverride } from "../events/types.ts";
@@ -29,15 +30,18 @@ export async function loadTaskActivity(client: SupabaseClient, taskId: string) {
   return (data ?? []) as TaskActivity[];
 }
 export async function saveTask(client: SupabaseClient, task: Task | null, details: TaskInput, assignments: TaskAssignment[]) {
+  requireOnline();
   const { reminders, ...fields } = details;
   const { error } = await client.rpc("save_task_with_reminders", { target_id: task?.id ?? null, expected_revision: task?.revision ?? null, details: fields, assignments, reminders: reminders ?? null });
   if (error) throw error;
 }
 export async function setMyWorkStatus(client: SupabaseClient, task: Task, status: WorkStatus) {
+  requireOnline();
   const { error } = await client.rpc("set_my_task_work_status", { target_id: task.id, expected_revision: task.revision, new_status: status });
   if (error) throw error;
 }
 export function taskError(error: unknown): string {
+  const network = networkError(error); if(network)return network;
   if (typeof error === "object" && error !== null && "code" in error) {
     if (error.code === "40001") return "Cette tâche a été modifiée ailleurs. Fermez le formulaire, actualisez puis reprenez votre modification.";
     if (error.code === "42501") return "Vous n’avez pas les droits nécessaires pour cette action. Vérifiez votre lien membre et actualisez vos accès.";

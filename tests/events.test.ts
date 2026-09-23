@@ -92,5 +92,5 @@ test("Agenda navigation requires APP plus events.read, independent of SITE", () 
   assert.equal(getAvailableTabs(profile).some(tab => tab.id === "app-agenda"), false);
   assert.equal(getAvailableTabs(profile, ["events.read"]).some(tab => tab.id === "app-agenda"), false);
   const permissions: AppPermission[] = ["app.access", "events.read", "members.read"];
-  assert.deepEqual(getAvailableTabs({ ...profile, role: "none" }, permissions).map(tab => tab.id), ["app-home", "app-agenda", "app-tasks", "app-members", "app-settings"]);
+  assert.deepEqual(getAvailableTabs({ ...profile, role: "none" }, permissions).map(tab => tab.id), ["app-home", "app-agenda", "app-tasks", "app-members", "app-notifications", "app-settings"]);
 });

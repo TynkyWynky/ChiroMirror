@@ -12,7 +12,7 @@ import TaskDetail from "./components/TaskDetail";
 import TaskCard from "./components/TaskCard";
 import "./tasks.css";
 
-export default function TasksPage({ client, access, userId, openTaskId, onTargetHandled }: { client: SupabaseClient; access: AppAccess; userId: string; openTaskId?: string; onTargetHandled?: () => void }) {
+export default function TasksPage({ client, access, userId, openTaskId, onTargetHandled, onResourceOpen, onResourceClose }: { client: SupabaseClient; access: AppAccess; userId: string; openTaskId?: string; onTargetHandled?: () => void; onResourceOpen?: (id:string)=>void; onResourceClose?: ()=>void }) {
   const [data, setData] = useState<TasksData>(emptyTasks), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
   const [error, setError] = useState(""), [feedback, setFeedback] = useState("");
   const [view, setView] = useState("mine"), [search, setSearch] = useState(""), [priority, setPriority] = useState(""), [status, setStatus] = useState("active"), [deadline, setDeadline] = useState(""), [eventId, setEventId] = useState("");
@@ -29,7 +29,8 @@ export default function TasksPage({ client, access, userId, openTaskId, onTarget
   }
   useEffect(() => { void reload(); return () => { requestId.current++; }; }, [client, access]);
   useEffect(() => {
-    if (loading || !openTaskId) return;
+    if (loading) return;
+    if (!openTaskId) { if(onResourceClose){setSelected(null);setEditing(null);} return; }
     if (data.tasks.some(t => t.id === openTaskId)) setSelected(openTaskId); else setError("Cette tâche n’est plus accessible avec votre compte.");
     onTargetHandled?.();
   }, [loading, openTaskId, data]);
@@ -44,8 +45,8 @@ export default function TasksPage({ client, access, userId, openTaskId, onTarget
     return `${task.title} ${task.description ?? ""}`.toLocaleLowerCase("fr").includes(search.trim().toLocaleLowerCase("fr"));
   })), [data, access, userId, view, readAll, search, priority, status, deadline, eventId]);
   function restoreFocus() { requestAnimationFrame(() => returnFocus.current?.isConnected && returnFocus.current.focus()); }
-  function close() { setSelected(null); setEditing(null); setError(""); restoreFocus(); }
-  function open(task: Task) { returnFocus.current = document.activeElement as HTMLElement; setSelected(task.id); setFeedback(""); setError(""); }
+  function close() { onResourceClose?.(); setSelected(null); setEditing(null); setError(""); restoreFocus(); }
+  function open(task: Task) { onResourceOpen?.(task.id); returnFocus.current = document.activeElement as HTMLElement; setSelected(task.id); setFeedback(""); setError(""); }
   async function mutate(action: () => Promise<void>, message: string, closeEditor = false) {
     if (busy) return;
     setBusy(true); setError(""); setFeedback("");

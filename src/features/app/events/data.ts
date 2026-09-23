@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireOnline, networkError } from "../pwa/network.ts";
 import type { Member } from "../types.ts";
 import type { Reminder } from "../notifications/types.ts";
 import type { CalendarEvent, EventCategory, EventInput, EventOverride, EventParticipant } from "./types.ts";
@@ -26,6 +27,7 @@ export async function loadAgenda(client: SupabaseClient): Promise<AgendaData> {
   return { events, overrides, participants, categories, members, reminders };
 }
 export async function saveEvent(client: SupabaseClient, event: CalendarEvent | null, input: EventInput, occurrenceDate?: string) {
+  requireOnline();
   const { participant_ids, reminders, ...details } = input;
   const { error } = occurrenceDate && event
     ? await client.rpc("save_agenda_occurrence", { target_id: event.id, original_date: occurrenceDate, expected_revision: event.revision, details })
@@ -33,10 +35,12 @@ export async function saveEvent(client: SupabaseClient, event: CalendarEvent | n
   if (error) throw error;
 }
 export async function cancelEvent(client: SupabaseClient, event: CalendarEvent, occurrenceDate: string | null) {
+  requireOnline();
   const { error } = await client.rpc("cancel_agenda_event", { target_id: event.id, original_date: occurrenceDate, expected_revision: event.revision });
   if (error) throw error;
 }
 export function agendaError(error: unknown): string {
+  const network = networkError(error); if(network)return network;
   if (typeof error === "object" && error !== null && "code" in error) {
     if (error.code === "40001") return "Cet événement a été modifié ailleurs. Fermez le formulaire, actualisez l’agenda puis reprenez votre modification.";
     if (error.code === "42501") return "Vous n’avez plus les droits nécessaires. Actualisez vos accès.";

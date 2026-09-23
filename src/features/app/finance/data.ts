@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireOnline, networkError } from "../pwa/network.ts";
 import type { Member } from "../types.ts";
 import type { ExpenseShare, FinancialEntity, FinanceActivity, FinanceTransaction, Obligation, Payment, PaymentAllocation } from "./types.ts";
 import { formatMoney } from "./money.ts";
@@ -18,7 +19,7 @@ export async function loadActivity(client: SupabaseClient, transactionId: string
   if (error) throw error;
   return data ?? [];
 }
-export async function financeRpc(client: SupabaseClient, name: string, args: object) { const { error } = await client.rpc(name, args); if (error) throw error; }
+export async function financeRpc(client: SupabaseClient, name: string, args: object) { requireOnline(); const { error } = await client.rpc(name, args); if (error) throw error; }
 export function entityName(id: string | null, data: FinanceData) {
   const entity = data.entities.find(e => e.id === id);
   if (entity?.type === "CHIRO") return "Chiro Negenmanneke";
@@ -31,6 +32,7 @@ export function actorName(id: string | null, data: FinanceData, userId?: string)
   return member ? `${member.first_name} ${member.last_name}` : "compte authentifié (identité indisponible)";
 }
 export function financeError(cause: unknown): string {
+  const network = networkError(cause); if(network)return network;
   if (typeof cause === "object" && cause !== null && "code" in cause) {
     if (cause.code === "40001") return "Cette opération a changé. Fermez le formulaire, actualisez les comptes puis recommencez.";
     if (cause.code === "42501") return "Vous n’avez pas les droits nécessaires pour cette opération financière.";

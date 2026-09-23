@@ -15,7 +15,7 @@ export default function NotificationSettings({ client, userId, publicKey = impor
       const result = await loadNotificationSettings(client);
       setPreferences(result.preferences); setCategories(result.categories); setChoices(result.choices); setDevices(result.devices);
       setCurrentDevice(await reconcilePush(client, userId));
-    } catch (cause) { setError(notificationError(cause)); } finally { setLoading(false); }
+    } catch (cause) { setError(notificationError(cause)); } finally { setLoading(false); window.dispatchEvent(new Event("chiro:push-state")); }
   }
   useEffect(() => { void load(); }, [client, userId]);
   async function action(run: () => Promise<void>, success: string) {

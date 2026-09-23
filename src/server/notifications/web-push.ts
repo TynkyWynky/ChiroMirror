@@ -1,4 +1,5 @@
 import webpush from "web-push";
+import { createHash } from "node:crypto";
 import type { Delivery } from "./dispatcher.ts";
 export function validPushEndpoint(value: string): boolean {
   try {
@@ -12,7 +13,8 @@ export function createPushSender(env: Record<string, string | undefined>) {
   if (!publicKey || !privateKey || !subject) return null;
   return async (delivery: Delivery) => {
     if (!validPushEndpoint(delivery.subscription.endpoint)) throw { statusCode: 400 };
-    return webpush.sendNotification(delivery.subscription, JSON.stringify(delivery.payload), {
+    const deviceKey = createHash("sha256").update(delivery.subscription.endpoint).digest("hex");
+    return webpush.sendNotification(delivery.subscription, JSON.stringify({ ...delivery.payload, deviceKey }), {
       vapidDetails: { subject, publicKey, privateKey }, TTL: 60, urgency: "normal", timeout: 3000,
       // Same logical delivery replaces a still-queued provider message on retry.
       topic: delivery.id.replaceAll("-", "").slice(0, 32)

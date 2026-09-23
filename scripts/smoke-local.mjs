@@ -54,12 +54,16 @@ try {
   const sw = await fetch(base + "/leiding-login/push-sw.js");
   assert.equal(sw.status, 200); assert.match(sw.headers.get("content-type"), /javascript/);
   assert.equal(sw.headers.get("service-worker-allowed"), "/leiding-login/"); assert.equal(sw.headers.get("cache-control"), "no-store");
-  const swText = await sw.text(); assert.ok(swText.includes('addEventListener("push"')); assert.ok(!/addEventListener\(["']fetch/.test(swText));
+  const swText = await sw.text(); assert.ok(swText.includes('addEventListener("push"')); assert.ok(swText.includes('request.mode !== "navigate"')); assert.ok(swText.includes('const APP_BUILD = "app-'));
   const manifest = await fetch(base + "/leiding-login/manifest.webmanifest"); assert.equal(manifest.status, 200);
-  assert.equal((await manifest.json()).scope, "/leiding-login/");
+  const manifestData=await manifest.json();assert.equal(manifestData.scope, "/leiding-login/");assert.equal(manifestData.start_url,"/leiding-login/?app=home");assert.equal(manifestData.id,"/chiro-negenmanneke-app");
   assert.equal((await fetch(base + "/wrong-admin/push-sw.js")).status, 404);
   assert.equal((await fetch(base + "/wrong-admin/manifest.webmanifest")).status, 404);
-  console.log("18 local HTTP checks passed (fallback content, scoped Push worker/manifest, no Supabase connection).");
+  const offline=await fetch(base+"/leiding-login/offline.html");assert.equal(offline.status,200);assert.equal(offline.headers.get("X-Chiro-Offline"),"1");assert.match(await offline.text(),/Pas de connexion Internet/);
+  assert.equal((await fetch(base+"/wrong-admin/offline.html")).status,404);
+  for(const icon of [...manifestData.icons.map(icon=>icon.src),"/assets/app/apple-touch-icon.png"]){const response=await fetch(base+icon);assert.equal(response.status,200);assert.match(response.headers.get("content-type"),/image\/png/);}
+  const publicHtml=await(await fetch(base+"/")).text();assert.ok(!/rel=["']manifest/.test(publicHtml));
+  console.log("25 local HTTP checks passed (public site, APP manifest/icons, scoped worker and offline fallback, no Supabase connection).");
 } catch (error) {
   console.error(output);
   throw error;

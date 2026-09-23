@@ -24,12 +24,19 @@ const adminAuthActionPath = getAdminAuthActionPath();
 <html lang="nl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{isValidAdminRoute ? "Leiding Admin • Chiro Negenmanneke" : "Pagina niet gevonden"}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{isValidAdminRoute ? "Chiro Negenmanneke — Espace interne" : "Pagina niet gevonden"}</title>
     <meta name="robots" content={isValidAdminRoute ? "noindex, nofollow" : "noindex, nofollow, noarchive"} />
     <link rel="icon" type="image/png" href="/assets/Chirologo_700px.png" />
     {isValidAdminRoute && <link rel="manifest" href={`${getAdminBasePath()}manifest.webmanifest`} />}
     {isValidAdminRoute && <meta name="apple-mobile-web-app-capable" content="yes" />}
+    {isValidAdminRoute && <meta name="theme-color" content="#bd3037" />}
+    {isValidAdminRoute && <meta name="apple-mobile-web-app-title" content="Negenmanneke" />}
+    {isValidAdminRoute && <link rel="apple-touch-icon" sizes="180x180" href="/assets/app/apple-touch-icon.png" />}
+    {isValidAdminRoute && <script>
+      import { captureInstallPrompt } from "@/features/app/pwa/install";
+      captureInstallPrompt();
+    </script>}
     <link rel="stylesheet" href="/assets/styles.css" />
     {isValidAdminRoute && (
       <link rel="stylesheet" href={`/assets/admin.css?v=${adminCssVersion}`} />

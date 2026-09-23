@@ -59,6 +59,10 @@ export default function AdminNavigation(props: Props) {
 
   return <>
     <aside class="admin-sidebar">{navigation()}</aside>
+    {app && <nav class="app-bottom-nav" aria-label="Navigation APP">
+      {props.groups.flatMap(group=>group.tabs).filter(tab=>["app-home","app-agenda","app-tasks","app-finance"].includes(tab.id)).map(tab=><button type="button" key={tab.id} aria-current={props.activeTab===tab.id?"page":undefined} onClick={()=>navigate(tab.id)}><AdminIcon name={tab.id}/><span>{tab.label}</span></button>)}
+      <button type="button" aria-label="Plus de rubriques" aria-haspopup="dialog" aria-current={["app-members","app-settings","app-notifications"].includes(props.activeTab)?"page":undefined} onClick={()=>dialog.current?.showModal()}><AdminIcon name="menu"/><span>Plus</span></button>
+    </nav>}
     <button class="admin-icon-button admin-mobile-nav-trigger" type="button" aria-label={t("Ouvrir la navigation", "Navigatie openen")} onClick={() => dialog.current?.showModal()}><AdminIcon name="menu" /></button>
     <dialog class="admin-nav-dialog" ref={dialog} aria-label={t("Navigation", "Navigatie")} onClick={event => { if (event.target === event.currentTarget) dialog.current?.close(); }}>
       <div class="admin-mobile-sidebar">{navigation(true)}</div>

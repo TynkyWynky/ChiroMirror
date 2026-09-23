@@ -6,7 +6,7 @@ import { notificationError, notificationRpc, notificationsPage, unreadCount } fr
 import { reconcilePush } from "./push";
 import type { AppNotification, NotificationTarget } from "./types";
 import "./notifications.css";
-export default function NotificationBell({ client, userId, onTarget }: { client: SupabaseClient; userId: string; onTarget: (target: NotificationTarget) => void }) {
+export default function NotificationBell({ client, userId, onTarget, centerOpen, onOpenCenter, onCloseCenter, notificationId }: { client: SupabaseClient; userId: string; onTarget: (target: NotificationTarget) => void; centerOpen?: boolean; onOpenCenter?: ()=>void; onCloseCenter?: ()=>void; notificationId?: string }) {
   const [count, setCount] = useState<number | null>(null), [rows, setRows] = useState<AppNotification[]>([]), [page, setPage] = useState(0), [error, setError] = useState(""), [loading, setLoading] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null), trigger = useRef<HTMLButtonElement>(null), deepHandled = useRef("");
   useEffect(() => {
@@ -31,8 +31,9 @@ export default function NotificationBell({ client, userId, onTarget }: { client:
       } else await load();
     } catch (cause) { setError(notificationError(cause)); }
   }
+  useEffect(()=>{ if(centerOpen){dialog.current?.showModal();void load(0);}else if(centerOpen===false)dialog.current?.close(); },[centerOpen]);
   useEffect(() => {
-    const id = new URLSearchParams(location.search).get("notification");
+    const id = notificationId ?? new URLSearchParams(location.search).get("notification");
     if (!id || !/^[0-9a-f-]{36}$/i.test(id) || deepHandled.current === id) return;
     deepHandled.current = id; let active = true;
     void client.from("notifications").select("*").eq("id", id).maybeSingle().then(({ data, error: cause }) => {
@@ -42,13 +43,13 @@ export default function NotificationBell({ client, userId, onTarget }: { client:
       else void openNotification(data as AppNotification);
     });
     return () => { active = false; };
-  }, [client, userId]);
-  const close = () => { dialog.current?.close(); trigger.current?.focus(); };
+  }, [client, userId, notificationId]);
+  const close = () => { dialog.current?.close(); trigger.current?.focus(); onCloseCenter?.(); };
   return <>
-    <button ref={trigger} class="admin-icon-button notification-bell" type="button" aria-label={`Notifications${count === null ? "" : ` : ${count} non lues`}`} onClick={() => { dialog.current?.showModal(); void load(0); }}>
+    <button ref={trigger} class="admin-icon-button notification-bell" type="button" aria-label={`Notifications${count === null ? "" : ` : ${count} non lues`}`} onClick={() => { if(onOpenCenter)onOpenCenter();dialog.current?.showModal(); void load(0); }}>
       <AdminIcon name="notifications" />{Boolean(count) && <span class="notification-badge" aria-hidden="true">{count! > 99 ? "99+" : count}</span>}
     </button>
-    <dialog class="notification-dialog" ref={dialog} aria-labelledby="notification-center-title" lang="fr" onClick={e => { if (e.target === e.currentTarget) close(); }}>
+    <dialog class="notification-dialog" ref={dialog} aria-labelledby="notification-center-title" lang="fr" onCancel={e=>{e.preventDefault();close();}} onClick={e => { if (e.target === e.currentTarget) close(); }}>
       <section class="notification-center"><div class="notification-actions"><h2 id="notification-center-title">Notifications</h2><button class="btn btn-light" type="button" onClick={close}>Fermer</button></div>
         <div class="notification-actions"><button class="btn btn-light" type="button" disabled={loading || !count} onClick={() => { void notificationRpc(client, "mark_notifications_read", { target_id: null }).then(() => load()).catch(cause => setError(notificationError(cause))); }}>Tout marquer comme lu</button><button class="btn btn-light" type="button" disabled={loading} onClick={() => void load()}>Actualiser</button></div>
         {error && <p role="alert">{error}</p>}{loading ? <p role="status">Chargement…</p> : <>

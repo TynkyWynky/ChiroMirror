@@ -1,4 +1,7 @@
 import type { ComponentChildren } from "preact";
+import { useState } from "preact/hooks";
+import { offlineMessage } from "../../features/app/pwa/network";
+import "../../features/app/pwa/pwa.css";
 import type { SiteRole } from "../../lib/auth/access";
 import type { AdminTab, NavigationGroup, TabId } from "./navigation";
 import AdminNavigation from "./AdminNavigation";
@@ -20,12 +23,16 @@ interface Props {
   onRefresh: () => void;
   children: ComponentChildren;
   notificationControl?: ComponentChildren;
+  applicationControl?: ComponentChildren;
 }
 
 export default function AdminShell(props: Props) {
+  const [offlineAttempt,setOfflineAttempt] = useState(false);
   const app = props.activeTab.domain === "app";
   const refreshLabel = app ? "Actualiser les données" : "Gegevens verversen";
-  return <div class="admin-app" lang={app ? "fr" : "nl"}>
+  return <div class={`admin-app ${app ? "is-app" : ""}`} lang={app ? "fr" : "nl"} onSubmitCapture={event=>{
+    if(app && navigator.onLine===false){event.preventDefault();event.stopPropagation();setOfflineAttempt(true);}
+  }}>
     <AdminNavigation groups={props.groups} activeTab={props.activeTab.id} badges={props.badges}
       userName={props.userName} role={props.role} onNavigate={props.onNavigate} onSignOut={props.onSignOut} />
     <main class="admin-main" id="admin-content">
@@ -34,13 +41,15 @@ export default function AdminShell(props: Props) {
         <div class="admin-topbar-actions">
           {app && props.notificationControl}
           <button class="admin-icon-button" type="button" aria-label={refreshLabel} title={refreshLabel} disabled={props.refreshDisabled} onClick={props.onRefresh}><AdminIcon name="refresh" /></button>
-          <a class="admin-text-button" href="/" target="_blank" rel="noreferrer">{app ? "Voir le site" : "Bekijk site"}<AdminIcon name="external" /></a>
+          <a class="admin-text-button" href="/" target="_blank" rel="noopener noreferrer">{app ? "Voir le site" : "Bekijk site"}<AdminIcon name="external" /></a>
         </div>
       </header>
       <div class={"admin-main-shell " + (props.activeTab.id === "finance" ? "is-finance" : "")}>
+        {app && props.applicationControl}
         {props.notice && <div class={"admin-notice admin-notice-" + props.notice.type} role={props.notice.type === "error" ? "alert" : "status"}>{props.notice.message}</div>}
         {props.loading && <div class="admin-loading-inline" role="status">{app ? "Actualisation des données…" : "Gegevens worden ververst…"}</div>}
         {props.children}
+        {offlineAttempt && <p role="alert">{offlineMessage} <button class="btn btn-light" type="button" onClick={()=>setOfflineAttempt(false)}>Fermer</button></p>}
       </div>
     </main>
   </div>;

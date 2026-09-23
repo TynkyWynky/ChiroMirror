@@ -1,0 +1,26 @@
+---
+// A rendering exception must not fall through to [adminSlug] as "/500"
+// and be relabelled as a 404. Keep this page independent of CMS/Markdown.
+Astro.response.status = 500;
+Astro.response.headers.set("Cache-Control", "no-store");
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
+---
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Tijdelijk niet beschikbaar • Chiro Negenmanneke</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <main class="section container">
+      <div class="card">
+        <h1>Deze pagina is tijdelijk niet beschikbaar</h1>
+        <p>Probeer het over enkele ogenblikken opnieuw.</p>
+        <a class="btn" href="/">Naar de homepage</a>
+      </div>
+    </main>
+  </body>
+</html>

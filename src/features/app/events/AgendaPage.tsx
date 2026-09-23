@@ -13,7 +13,7 @@ import { ListView, MonthView } from "./components/CalendarViews";
 import "./agenda.css";
 
 interface Editing { event: CalendarEvent | null; occurrenceDate?: string; draft: EventDraft }
-export default function AgendaPage({ client, access, openTarget, onTargetHandled }: { client: SupabaseClient; access: AppAccess; openTarget?: { id: string; occurrence?: string }; onTargetHandled?: () => void }) {
+export default function AgendaPage({ client, access, openTarget, onTargetHandled, onResourceOpen, onResourceClose }: { client: SupabaseClient; access: AppAccess; openTarget?: { id: string; occurrence?: string }; onTargetHandled?: () => void; onResourceOpen?: (id:string,occurrence:string)=>void; onResourceClose?: ()=>void }) {
   const [data, setData] = useState<AgendaData>(emptyAgenda);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
   const [error, setError] = useState(""), [feedback, setFeedback] = useState("");
@@ -41,7 +41,8 @@ export default function AgendaPage({ client, access, openTarget, onTargetHandled
   useEffect(() => { if (window.matchMedia("(min-width: 900px)").matches) setView("month"); }, []);
   useEffect(() => { void reload(); return () => { requestId.current++; }; }, [client, access]);
   useEffect(() => {
-    if (loading || !openTarget) return;
+    if (loading) return;
+    if (!openTarget) { if(onResourceClose){setSelected(null);setEditing(null);} return; }
     const event = data.events.find(e => e.id === openTarget.id);
     const date = openTarget.occurrence ?? (event ? startDay(event) : today());
     const override = data.overrides.find(o => o.event_id === openTarget.id && o.occurrence_date === date);
@@ -49,12 +50,14 @@ export default function AgendaPage({ client, access, openTarget, onTargetHandled
     const found = event && expandEvents([event], data.overrides.filter(o => o.event_id === event.id), day, day).find(o => o.occurrence_date === date);
     if (found) { setMonth(monthStart(day)); setSelected(found); } else setError("Cet événement ou cette occurrence n’est plus accessible.");
     onTargetHandled?.();
-  }, [loading, openTarget, data]);
+  }, [loading, openTarget?.id, openTarget?.occurrence, data]);
   function close() {
+    onResourceClose?.();
     setEditing(null); setSelected(null); setError("");
     requestAnimationFrame(() => returnFocus.current?.isConnected && returnFocus.current.focus());
   }
   function select(occurrence: EventOccurrence) {
+    onResourceOpen?.(occurrence.event.id,occurrence.occurrence_date);
     returnFocus.current = document.activeElement as HTMLElement;
     setSelected(occurrence); setEditing(null); setError(""); setFeedback("");
   }

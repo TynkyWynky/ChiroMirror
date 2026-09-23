@@ -10,10 +10,10 @@ import type { AppPermission } from "../src/features/app/types.ts";
 test("APP navigation requires explicit permissions and grants no SITE rights", () => {
   const profile: Profile = { user_id: "test", email: "", full_name: "", role: "none", managedGroupSlugs: [], created_at: "" };
   const permissions: AppPermission[] = ["app.access", "members.read", "members.manage", "roles.read", "roles.manage"];
-  assert.deepEqual(getAvailableTabs(profile, permissions).map(tab => tab.id), ["app-home", "app-tasks", "app-members", "app-settings"]);
+  assert.deepEqual(getAvailableTabs(profile, permissions).map(tab => tab.id), ["app-home", "app-tasks", "app-members", "app-notifications", "app-settings"]);
   assert.equal(hasPermission(profile, "site.manage"), false);
   assert.equal(hasAppPermission(["members.read"], "members.read"), false);
-  assert.deepEqual(getAvailableTabs(profile, ["app.access"]).map(tab => tab.id), ["app-home", "app-tasks", "app-settings"]);
+  assert.deepEqual(getAvailableTabs(profile, ["app.access"]).map(tab => tab.id), ["app-home", "app-tasks", "app-notifications", "app-settings"]);
   assert.deepEqual(getAvailableTabs(null, permissions), []);
 });
 

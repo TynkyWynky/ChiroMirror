@@ -1,5 +1,9 @@
 # APP — Notifications et rappels (Phase 5)
 
+> Évolution Phase 6 : [PWA et mobile](app-pwa.md) complète le manifeste, étend le même worker
+> avec un fallback générique uniquement et renforce logout/changement de compte. Les mentions
+> « aucun handler fetch » ci-dessous décrivent le bilan historique de Phase 5.
+
 La DB est la source de vérité. Agenda et Tâches enregistrent leurs définitions de rappel
 avec la modification métier, dans une seule transaction. Les triggers invalident les anciens
 jobs et marquent la source à reconstruire. Aucun minuteur navigateur ne programme de rappel.

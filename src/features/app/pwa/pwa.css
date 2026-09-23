@@ -1,0 +1,19 @@
+.pwa-banner { border: 1px solid #bd3037; border-radius: 8px; padding: 1rem; background: #fff8f8; color: #22252b; margin-bottom: 1rem; }
+.pwa-experience { min-width: 0; }
+.pwa-experience button { min-height: 44px; margin: .3rem .5rem .3rem 0; }
+.pwa-install-card { margin-bottom: 1rem; }
+.pwa-settings { margin-bottom: 1rem; }
+.app-bottom-nav { display: none; }
+.admin-app.is-app .admin-topbar { padding-top: max(12px, env(safe-area-inset-top)); }
+@media (max-width: 900px) {
+  .admin-app.is-app .admin-main { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .admin-app.is-app .admin-mobile-nav-trigger { display: none; }
+  .admin-app.is-app .admin-topbar { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .app-bottom-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 25; padding: 4px max(6px, env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)); background: #fff; border-top: 1px solid #e4e5e7; }
+  .app-bottom-nav button { flex: 1; min-width: 0; min-height: 56px; border: 0; background: transparent; color: #555; display: grid; justify-items: center; align-content: center; gap: 3px; font-size: 12px; }
+  .app-bottom-nav button[aria-current=page] { color: #bd3037; background: #fff1f2; font-weight: 700; border-radius: 6px; }
+  .admin-app.is-app:has(input:focus, textarea:focus, select:focus, [contenteditable=true]:focus) .app-bottom-nav { display: none; }
+  .admin-app.is-app :is(input,textarea,select) { scroll-margin-block: 96px; }
+  .admin-app.is-app :is(button,.btn) { min-height: 44px; }
+  .admin-app.is-app dialog { max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+}
