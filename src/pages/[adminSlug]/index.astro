@@ -1,6 +1,6 @@
 ---
 import AdminApp from "@/components/admin/AdminApp";
-import { getAdminAuthActionPath, isConfiguredAdminPathSlug } from "@/lib/admin-path";
+import { getAdminAuthActionPath, getAdminBasePath, isConfiguredAdminPathSlug } from "@/lib/admin-path";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
@@ -28,6 +28,8 @@ const adminAuthActionPath = getAdminAuthActionPath();
     <title>{isValidAdminRoute ? "Leiding Admin • Chiro Negenmanneke" : "Pagina niet gevonden"}</title>
     <meta name="robots" content={isValidAdminRoute ? "noindex, nofollow" : "noindex, nofollow, noarchive"} />
     <link rel="icon" type="image/png" href="/assets/Chirologo_700px.png" />
+    {isValidAdminRoute && <link rel="manifest" href={`${getAdminBasePath()}manifest.webmanifest`} />}
+    {isValidAdminRoute && <meta name="apple-mobile-web-app-capable" content="yes" />}
     <link rel="stylesheet" href="/assets/styles.css" />
     {isValidAdminRoute && (
       <link rel="stylesheet" href={`/assets/admin.css?v=${adminCssVersion}`} />

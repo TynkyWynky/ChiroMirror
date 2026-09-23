@@ -1,0 +1,14 @@
+.app-members { display: grid; gap: 1rem; }
+.app-members label { display: grid; gap: .4rem; min-width: 0; }
+.app-members input:not([type=checkbox]), .app-members select { width: 100%; min-width: 0; padding: .7rem; border: 1px solid #cbd5e1; border-radius: .5rem; background: #fff; color: #172033; font: inherit; }
+.app-members fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 1rem; min-width: 0; }
+.app-member-fields { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.app-actions, .app-role-options { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.app-members .app-check { display: flex; align-items: center; gap: .5rem; }
+.app-member-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .75rem; }
+.app-member-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
+.app-member-row h2 { margin: 0; font-size: 1.1rem; }
+.app-member-row p { margin: .4rem 0; overflow-wrap: anywhere; }
+.app-badge { display: inline-block; background: #edf2f7; color: #334155; border-radius: 1rem; padding: .2rem .6rem; font-size: .85rem; }
+.app-error { color: #9f1239; background: #fff1f2; padding: .8rem; border-radius: .5rem; }
+.app-members :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }

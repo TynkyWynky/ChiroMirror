@@ -1,0 +1,21 @@
+import webpush from "web-push";
+import type { Delivery } from "./dispatcher.ts";
+export function validPushEndpoint(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && !url.hash && !url.port && value.length <= 2048
+      && /^(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9-]+\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com)$/.test(url.hostname);
+  } catch { return false; }
+}
+export function createPushSender(env: Record<string, string | undefined>) {
+  const publicKey = env.PUBLIC_VAPID_PUBLIC_KEY, privateKey = env.VAPID_PRIVATE_KEY, subject = env.VAPID_SUBJECT;
+  if (!publicKey || !privateKey || !subject) return null;
+  return async (delivery: Delivery) => {
+    if (!validPushEndpoint(delivery.subscription.endpoint)) throw { statusCode: 400 };
+    return webpush.sendNotification(delivery.subscription, JSON.stringify(delivery.payload), {
+      vapidDetails: { subject, publicKey, privateKey }, TTL: 60, urgency: "normal", timeout: 3000,
+      // Same logical delivery replaces a still-queued provider message on retry.
+      topic: delivery.id.replaceAll("-", "").slice(0, 32)
+    });
+  };
+}

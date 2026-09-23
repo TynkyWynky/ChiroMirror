@@ -1,31 +1,11 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@supabase/supabase-js";
+import { createServiceClient } from "@/server/supabase";
 import { getAdminAuthActionPath } from "@/lib/admin-path";
 import { toPublicSiteUrl } from "@/lib/site-url";
 
-type InvitePayload = {
-  email?: string;
-  fullName?: string;
-  role?: "admin" | "editor";
-};
+import { validateInviteInput } from "@/lib/auth/invite";
+import { hasPermission, parseSiteRole } from "@/lib/auth/access";
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function createServiceClient() {
-  const url = import.meta.env.PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceRoleKey) {
-    return null;
-  }
-
-  return createClient(url, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-}
 
 export const POST: APIRoute = async ({ request }) => {
   const supabase = createServiceClient();
@@ -52,28 +32,20 @@ export const POST: APIRoute = async ({ request }) => {
     .eq("user_id", authData.user.id)
     .maybeSingle();
 
-  if (profileError || actorProfile?.role !== "admin") {
+  if (profileError || !hasPermission(actorProfile ? { role: parseSiteRole(actorProfile.role), managedGroupSlugs: [] } : null, "site.team.manage")) {
     return Response.json({ message: "Alleen admins kunnen uitnodigingen versturen." }, { status: 403 });
   }
 
-  let body: InvitePayload;
+  let body: unknown;
   try {
-    body = (await request.json()) as InvitePayload;
+    body = await request.json();
   } catch {
     return Response.json({ message: "De aanvraag kon niet gelezen worden." }, { status: 400 });
   }
 
-  const email = body.email?.trim().toLowerCase();
-  const fullName = body.fullName?.trim() ?? "";
-  const role = body.role === "admin" ? "admin" : "editor";
-
-  if (!email || !EMAIL_PATTERN.test(email)) {
-    return Response.json({ message: "Een geldig e-mailadres is verplicht." }, { status: 400 });
-  }
-
-  if (fullName.length > 120) {
-    return Response.json({ message: "De naam is te lang." }, { status: 400 });
-  }
+  const validated = validateInviteInput(body);
+  if (!validated.success) return Response.json({ message: validated.message }, { status: 400 });
+  const { email, fullName, role } = validated.data;
 
   const redirectTo = toPublicSiteUrl(getAdminAuthActionPath());
   const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {

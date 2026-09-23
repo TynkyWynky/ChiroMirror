@@ -7,24 +7,37 @@
     "dev": "node ./scripts/patch-preact-client.mjs && astro dev",
     "build": "node ./scripts/patch-preact-client.mjs && astro build",
     "check": "node ./scripts/patch-preact-client.mjs && astro check",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:smoke": "node ./scripts/smoke-local.mjs",
+    "test:agenda:browser": "node --experimental-strip-types ./scripts/test-agenda-browser.mjs",
+    "test:tasks:browser": "node --experimental-strip-types ./scripts/test-tasks-browser.mjs",
+    "test:finance:browser": "node --experimental-strip-types ./scripts/test-finance-browser.mjs",
     "test:posts": "node --experimental-strip-types --test tests/posts.test.ts",
     "preview": "astro preview",
     "import:legacy": "node ./scripts/extract-legacy-content.mjs",
     "seed": "node ./scripts/seed-supabase.mjs",
-    "postinstall": "node ./scripts/patch-preact-client.mjs"
+    "postinstall": "node ./scripts/patch-preact-client.mjs",
+    "test:notifications:browser": "node --experimental-strip-types ./scripts/test-notifications-browser.mjs"
   },
   "dependencies": {
     "@astrojs/netlify": "^7.0.6",
     "@astrojs/preact": "^5.1.1",
+    "@js-temporal/polyfill": "^0.5.1",
     "@supabase/supabase-js": "^2.103.0",
     "astro": "^6.1.6",
     "marked": "^18.0.0",
-    "preact": "^10.29.1"
+    "preact": "^10.29.1",
+    "sanitize-html": "^2.17.7",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
+    "@electric-sql/pglite": "^0.5.8",
     "@types/node": "^25.6.0",
+    "@types/sanitize-html": "^2.16.1",
+    "@types/web-push": "^3.6.4",
     "cheerio": "^1.2.0",
+    "playwright-core": "^1.63.0",
     "typescript": "^5.9.3"
   }
 }

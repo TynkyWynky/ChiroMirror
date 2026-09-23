@@ -4,7 +4,25 @@ import { adminDefaultContent } from "@/lib/admin-default-content";
 import { toPublicSiteUrl } from "@/lib/site-url";
 import { getPostPublishError } from "@/lib/posts";
 import PostBodyEditor from "./PostBodyEditor";
-import AdminNavigation from "./AdminNavigation";
+import AdminShell, { type Notice } from "./AdminShell";
+import { getAvailableTabs, getNavigationGroups, resolveTab, type TabId } from "./navigation";
+import { canAccessFinance, canManageFinanceGroup, hasPermission, parseSiteRole, type Profile, type SiteRole as Role } from "@/lib/auth/access";
+import AppHome from "@/features/app/AppHome";
+import MembersPage from "@/features/app/members/MembersPage";
+import { lazy, Suspense } from "preact/compat";
+const AgendaPage = lazy(() => import("@/features/app/events/AgendaPage"));
+const NotificationBell = lazy(() => import("@/features/app/notifications/NotificationBell"));
+const NotificationSettings = lazy(() => import("@/features/app/notifications/NotificationSettings"));
+import type { NotificationTarget } from "@/features/app/notifications/types";
+const TasksPage = lazy(() => import("@/features/app/tasks/TasksPage"));
+const TaskSummary = lazy(() => import("@/features/app/tasks/TaskSummary"));
+const FinancePage = lazy(() => import("@/features/app/finance/FinancePage"));
+const FinanceSummary = lazy(() => import("@/features/app/finance/FinanceSummary"));
+const AgendaSummary = lazy(() => import("@/features/app/events/AgendaSummary"));
+import { emptyAppAccess } from "@/features/app/access";
+import { loadAppAccess } from "@/features/app/data";
+import type { AppAccess } from "@/features/app/types";
+import InboxPanel from "@/features/site/InboxPanel";
 import AdminOverview from "./AdminOverview";
 import AdminIcon from "./AdminIcon";
 import type {
@@ -25,35 +43,10 @@ import type {
   Song
 } from "@/types/content";
 
-type Role = "admin" | "editor";
 type AuthMode = "login" | "recovery";
 const AUTH_TIMEOUT_MS = 4000;
 const DASHBOARD_STALL_MS = 5000;
 const DASHBOARD_TIMEOUT_MS = 12000;
-type TabId =
-  | "overview"
-  | "finance"
-  | "site"
-  | "home"
-  | "groups"
-  | "contact"
-  | "songs"
-  | "posts"
-  | "registration"
-  | "camp"
-  | "pages"
-  | "messages"
-  | "team";
-
-interface Profile {
-  user_id: string;
-  email: string;
-  full_name: string;
-  role: Role;
-  managedGroupSlugs: string[];
-  created_at: string;
-}
-
 type FinanceType = "income" | "expense";
 type FinanceStatus = "pending" | "paid" | "reimbursed" | "cancelled" | "archived";
 type FinanceStatusFilter = "active" | "all" | FinanceStatus;
@@ -81,20 +74,10 @@ interface FinanceTransaction {
   updatedAt?: string;
 }
 
-type Notice = { type: "success" | "error"; message: string } | null;
 type AdminLoadingStep = {
   label: string;
   detail: string;
   delayedDetail?: string;
-};
-type AdminTabGroupId = "cockpit" | "website" | "content" | "organisatie";
-type AdminTabMeta = {
-  id: TabId;
-  label: string;
-  description: string;
-  group: AdminTabGroupId;
-  requiresFinance?: boolean;
-  requiresAdmin?: boolean;
 };
 type AdminReadinessItem = {
   id: string;
@@ -160,25 +143,6 @@ const financeCurrencyFormatter = new Intl.NumberFormat("nl-BE", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
 });
-const adminTabDefinitions: AdminTabMeta[] = [
-  { id: "overview", label: "Overzicht", description: "Recente activiteit en aandachtspunten", group: "cockpit" },
-  { id: "posts", label: "Posts", description: "Nieuws, foto's en activiteiten publiceren", group: "cockpit" },
-  { id: "messages", label: "Inbox", description: "Contactberichten van ouders en bezoekers", group: "cockpit" },
-  { id: "finance", label: "Financiën", description: "Transacties en groepsbudgetten", group: "cockpit", requiresFinance: true },
-  { id: "home", label: "Homepage", description: "Banner, introductie en foto's", group: "website" },
-  { id: "groups", label: "Groepen", description: "Groepsinformatie en leiding", group: "website" },
-  { id: "registration", label: "Inschrijven", description: "Inschrijving, kledij en prijzen", group: "website" },
-  { id: "camp", label: "Kamp", description: "Kampinformatie en inschrijvingen", group: "website" },
-  { id: "contact", label: "Contactpagina", description: "Contactpersonen en formulierteksten", group: "website" },
-  { id: "songs", label: "Liedjes", description: "Liedteksten en liedbundel", group: "website" },
-  { id: "pages", label: "Overige pagina's", description: "Activiteiten, verhuur, verzekering en privacy", group: "website" },
-  { id: "site", label: "Instellingen", description: "Naam, contactgegevens en website-instellingen", group: "organisatie" },
-  { id: "team", label: "Team & toegang", description: "Teamleden, rollen en rechten", group: "organisatie", requiresAdmin: true }
-];
-const adminTabGroupLabels: Record<AdminTabGroupId, string> = {
-  cockpit: "Werkruimte", website: "Website", content: "Content", organisatie: "Beheer"
-};
-
 function cloneDefaults() {
   if (typeof structuredClone === "function") {
     return structuredClone(adminDefaultContent);
@@ -758,22 +722,6 @@ function getFinanceGroupLabel(groupSlug: string, groups: Group[]) {
   return groups.find((group) => group.slug === groupSlug)?.name ?? "Onbekende groep";
 }
 
-function canAccessFinance(profile: Profile | null | undefined) {
-  return Boolean(profile && (profile.role === "admin" || profile.managedGroupSlugs.length > 0));
-}
-
-function canManageFinanceGroup(profile: Profile | null | undefined, groupSlug: string) {
-  if (!profile) {
-    return false;
-  }
-
-  if (profile.role === "admin") {
-    return true;
-  }
-
-  return Boolean(groupSlug && profile.managedGroupSlugs.includes(groupSlug));
-}
-
 function getFinanceGroupTheme(themeKey: string) {
   const themeMap: Record<string, { accent: string; soft: string; glow: string }> = {
     ribbels: { accent: "#ec4899", soft: "#fdf2f8", glow: "rgba(236, 72, 153, .18)" },
@@ -1114,7 +1062,7 @@ function mapProfile(row: Record<string, unknown>): Profile {
     user_id: String(row.user_id ?? ""),
     email: String(row.email ?? ""),
     full_name: String(row.full_name ?? ""),
-    role: (row.role as Role) ?? "editor",
+    role: parseSiteRole(row.role),
     managedGroupSlugs: Array.isArray(row.managed_group_slugs)
       ? (row.managed_group_slugs as string[]).filter((item) => typeof item === "string")
       : [],
@@ -1753,8 +1701,14 @@ function ChecklistEditor(props: {
 export default function AdminApp(props: { adminAuthActionPath: string }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [appAccess, setAppAccess] = useState<AppAccess>(emptyAppAccess);
+  const [appAccessError, setAppAccessError] = useState("");
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [notificationTarget, setNotificationTarget] = useState<NotificationTarget | null>(null);
+  useEffect(() => {
+    if (appAccess.permissions.includes("app.access") && new URLSearchParams(location.search).has("notification")) setActiveTab("app-home");
+  }, [appAccess]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [postQuery, setPostQuery] = useState("");
   const [postFilter, setPostFilter] = useState("all");
@@ -1789,7 +1743,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
-  const [inviteRole, setInviteRole] = useState<Role>("editor");
+  const [inviteRole, setInviteRole] = useState<Role>("none");
   const [removingProfileId, setRemovingProfileId] = useState<string | null>(null);
   const [financeDraft, setFinanceDraft] = useState<FinanceTransaction | null>(null);
   const [financeEditingId, setFinanceEditingId] = useState<string | null>(null);
@@ -1843,6 +1797,17 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     }
   }, []);
 
+  async function refreshAppAccess() {
+    if (!supabase || !session) return;
+    try {
+      setAppAccess(await withTimeout(loadAppAccess(supabase), DASHBOARD_TIMEOUT_MS, "APP-toegang laden duurt te lang."));
+      setAppAccessError("");
+    } catch {
+      setAppAccess(emptyAppAccess);
+      setAppAccessError("APP-toegang kon niet geladen worden. Probeer opnieuw; laat bij een blijvend probleem de APP-migraties controleren.");
+    }
+  }
+
   async function loadDashboard() {
     if (!supabase || !session) {
       return false;
@@ -1857,6 +1822,25 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     }, DASHBOARD_STALL_MS);
 
     try {
+      const { data: actorRow, error: actorError } = await withTimeout(
+        Promise.resolve(supabase.from("profiles").select("*").eq("user_id", session.user.id).maybeSingle()),
+        DASHBOARD_TIMEOUT_MS, "Je profiel kon niet geladen worden."
+      );
+      if (actorError || !actorRow) throw new Error("Je profiel kon niet geladen worden.");
+      const actor = mapProfile(actorRow);
+      setProfile(actor);
+      await refreshAppAccess();
+      if (!hasPermission(actor, "site.manage")) {
+        setProfiles([actor]);
+        setMessages([]);
+        setFinanceTransactions([]);
+        setPosts([]);
+        setFinanceDraft(null);
+        setFinanceEditingId(null);
+        setFinanceDirty(false);
+        setFinanceSchemaError(null);
+        return true;
+      }
       const [
         siteSettingsResult,
         pageContentResult,
@@ -1954,7 +1938,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
           console.error("Finance-data kon niet worden geladen.", financeResult.error);
           setFinanceTransactions([]);
           setFinanceSchemaError(
-            "De finance-module is nog niet klaar in Supabase. Voer eerst de nieuwste `supabase/schema.sql` uit."
+            "Financiën zijn nog niet beschikbaar. Neem contact op met de beheerder."
           );
         } else {
           setFinanceTransactions(
@@ -2064,6 +2048,8 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       void loadDashboard();
     } else {
       setProfile(null);
+      setAppAccess(emptyAppAccess);
+      setAppAccessError("");
       setProfiles([]);
       setMessages([]);
       setFinanceTransactions([]);
@@ -2077,30 +2063,13 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       setDataLoading(false);
       setDataStalled(false);
     }
-  }, [session, authMode]);
+  }, [supabase, session?.user.id, authMode]);
 
   const canUseFinance = canAccessFinance(profile);
-  const availableTabs = adminTabDefinitions.filter((tab) => {
-    if (tab.requiresFinance && !canUseFinance) {
-      return false;
-    }
-
-    if (tab.requiresAdmin && profile?.role !== "admin") {
-      return false;
-    }
-
-    return true;
-  });
-  const activeAdminTab = availableTabs.find((tab) => tab.id === activeTab) ?? availableTabs[0];
-  const adminSidebarGroups = (Object.entries(adminTabGroupLabels) as Array<
-    [AdminTabGroupId, string]
-  >)
-    .map(([groupId, label]) => ({
-      groupId,
-      label,
-      tabs: availableTabs.filter((tab) => tab.group === groupId)
-    }))
-    .filter((group) => group.tabs.length > 0);
+  const availableTabs = getAvailableTabs(profile, appAccess.permissions);
+  const visibleTab = resolveTab(activeTab, profile, appAccess.permissions);
+  const activeAdminTab = availableTabs.find(tab => tab.id === visibleTab);
+  const adminSidebarGroups = getNavigationGroups(profile, appAccess.permissions);
   const orderedContactGroups = orderGroupsForContact(groups, pages.contact.groupCards);
   const adminDateLabel = new Date().toLocaleDateString("nl-BE", {
     weekday: "long",
@@ -2671,22 +2640,9 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
 
 
   useEffect(() => {
-    const nextAvailableTabs = adminTabDefinitions.filter((tab) => {
-      if (tab.requiresFinance && !canAccessFinance(profile)) {
-        return false;
-      }
-
-      if (tab.requiresAdmin && profile?.role !== "admin") {
-        return false;
-      }
-
-      return true;
-    });
-
-    if (!nextAvailableTabs.some((tab) => tab.id === activeTab)) {
-      setActiveTab(nextAvailableTabs[0]?.id ?? "overview");
-    }
-  }, [activeTab, profile]);
+    const nextTab = resolveTab(activeTab, profile, appAccess.permissions);
+    if (nextTab && nextTab !== activeTab) setActiveTab(nextTab);
+  }, [activeTab, profile, appAccess]);
 
   useEffect(() => {
     if (!canAccessFinance(profile)) {
@@ -2773,6 +2729,12 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       return;
     }
 
+    if (session && appAccess.permissions.includes("app.access")) {
+      try {
+        const { disableCurrentPush } = await import("@/features/app/notifications/push");
+        await withTimeout(disableCurrentPush(supabase, session.user.id), 5000, "PUSH_CLEANUP_TIMEOUT");
+      } catch { /* Logout must remain available if the device or network is unavailable. */ }
+    }
     await supabase.auth.signOut();
     clearStoredAdminAuth(supabaseStorageKey);
     clearAuthUrlState();
@@ -3288,7 +3250,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     if (financeSchemaError) {
       setNotice({
         type: "error",
-        message: "Voer eerst de nieuwste `supabase/schema.sql` uit voor je Financiën opslaat."
+        message: "Financiën zijn nog niet beschikbaar. Neem contact op met de beheerder."
       });
       return;
     }
@@ -3416,7 +3378,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
           email: current.email,
           full_name: current.full_name,
           role: current.role,
-          managed_group_slugs: current.role === "admin" ? [] : current.managedGroupSlugs
+          managed_group_slugs: current.role === "editor" ? current.managedGroupSlugs : []
         }))
       );
 
@@ -3453,7 +3415,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     if (response.ok) {
       setInviteEmail("");
       setInviteName("");
-      setInviteRole("editor");
+      setInviteRole("none");
       await loadDashboard();
     }
   }
@@ -3729,20 +3691,34 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     );
   }
 
+  if (!activeAdminTab) return <div class="admin-app admin-auth-wrap"><div class="admin-auth-card">
+    <h1>{dataLoading ? "Toegang laden…" : "Nog geen toegang"}</h1>
+    <p role={appAccessError ? "alert" : "status"}>{appAccessError || "Je account heeft geen SITE- of APP-toegang. Vraag een beheerder om de juiste rollen."}</p>
+    <div class="admin-auth-actions"><button class="btn" disabled={dataLoading} onClick={() => void loadDashboard()}>Opnieuw proberen</button>
+      <button class="btn btn-light" onClick={() => void signOut()}>Afmelden</button></div>
+  </div></div>;
+
   return (
-    <div class="admin-app">
-      <AdminNavigation groups={adminSidebarGroups} activeTab={activeTab} badges={adminTabBadges} userName={adminUserLabel} role={profile.role} onNavigate={tab => setActiveTab(tab as TabId)} onSignOut={() => void signOut()} />
-      <main class="admin-main" id="admin-content">
-        <header class="admin-topbar">
-          <div class="admin-breadcrumb"><span>Werkruimte</span><AdminIcon name="chevron" /><strong>{activeAdminTab?.label}</strong></div>
-          <div class="admin-topbar-actions">
-            <button class="admin-icon-button" type="button" aria-label="Gegevens verversen" title="Gegevens verversen" disabled={dataLoading || postsBusy} onClick={() => void loadDashboard()}><AdminIcon name="refresh" /></button>
-            <a class="admin-text-button" href="/" target="_blank" rel="noreferrer">Bekijk site<AdminIcon name="external" /></a>
-          </div>
-        </header>
-        <div class={"admin-main-shell " + (activeTab === "finance" ? "is-finance" : "")}>
-          {notice && <div class={"admin-notice admin-notice-" + notice.type} role={notice.type === "error" ? "alert" : "status"}>{notice.message}</div>}
-          {dataLoading && <div class="admin-loading-inline" role="status">Gegevens worden ververst…</div>}
+    <AdminShell groups={adminSidebarGroups} activeTab={activeAdminTab} badges={adminTabBadges}
+      userName={adminUserLabel} role={profile.role} notice={notice} loading={dataLoading}
+      refreshDisabled={dataLoading || postsBusy} onNavigate={setActiveTab}
+      notificationControl={supabase && appAccess.permissions.includes("app.access") && <Suspense fallback={null}><NotificationBell client={supabase} userId={session.user.id} onTarget={target => {
+        if (target.type === "EVENT" && !appAccess.permissions.includes("events.read")) { setNotice({ type: "error", message: "Cet événement n’est plus accessible." }); return; }
+        setNotificationTarget(target); setActiveTab(target.type === "EVENT" ? "app-agenda" : "app-tasks");
+      }} /></Suspense>}
+      onSignOut={() => void signOut()} onRefresh={() => void loadDashboard()}>
+      {visibleTab === "app-settings" && supabase && <Suspense fallback={<p role="status">Chargement des paramètres…</p>}><NotificationSettings client={supabase} userId={session.user.id} /></Suspense>}
+      {appAccessError && <p role="alert">{appAccessError}</p>}
+      {visibleTab === "app-home" && <><AppHome userName={adminUserLabel} access={appAccess} />{supabase && <>
+        {appAccess.permissions.includes("events.read") && <Suspense fallback={<p role="status">Chargement de l’agenda…</p>}><AgendaSummary client={supabase} onOpen={() => setActiveTab("app-agenda")} /></Suspense>}
+        <Suspense fallback={<p role="status">Chargement des tâches…</p>}><TaskSummary client={supabase} access={appAccess} userId={session.user.id} onOpen={() => setActiveTab("app-tasks")} /></Suspense>
+        {appAccess.permissions.includes("finance.access") && <Suspense fallback={<p role="status">Chargement des comptes…</p>}><FinanceSummary client={supabase} access={appAccess} onOpen={() => setActiveTab("app-finance")} /></Suspense>}
+      </>}</>}
+      {visibleTab === "app-finance" && supabase && <Suspense fallback={<p role="status">Chargement des comptes…</p>}><FinancePage client={supabase} access={appAccess} userId={session.user.id} /></Suspense>}
+      {visibleTab === "app-tasks" && supabase && <Suspense fallback={<p role="status">Chargement des tâches…</p>}><TasksPage client={supabase} access={appAccess} userId={session.user.id} openTaskId={notificationTarget?.type === "TASK" ? notificationTarget.id : undefined} onTargetHandled={() => setNotificationTarget(null)} /></Suspense>}
+      {visibleTab === "app-agenda" && supabase && <Suspense fallback={<p role="status">Chargement de l’agenda…</p>}><AgendaPage client={supabase} access={appAccess} openTarget={notificationTarget?.type === "EVENT" ? notificationTarget : undefined} onTargetHandled={() => setNotificationTarget(null)} /></Suspense>}
+      {visibleTab === "app-members" && supabase && <MembersPage client={supabase} access={appAccess} onAccessChanged={refreshAppAccess} />}
+      {hasPermission(profile, "site.manage") && activeAdminTab.domain === "site" && <>
           {activeTab === "overview" && <AdminOverview userName={adminUserLabel} date={adminDateLabel} posts={posts} messages={overviewRecentMessages} groupCount={groups.length} pendingCount={financePendingTransactions.length} canUseFinance={canUseFinance} warnings={overviewWarningItems} onNavigate={tab => setActiveTab(tab as TabId)} onNewPost={newPost} onEditPost={id => { setSelectedPostId(id); setActiveTab("posts"); }} />}
 
           {activeTab === "finance" && canUseFinance && (
@@ -4983,6 +4959,10 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                           folder="finance"
                           accept=".pdf,image/*"
                         />
+                        <p class="muted-small" role="note">
+                          Let op: bewijsstukken zijn via hun link openbaar toegankelijk.
+                          Upload hier geen vertrouwelijke of persoonlijke gegevens.
+                        </p>
 
                         <div class="admin-post-actions">
                           <button
@@ -5813,42 +5793,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
           </section>
         )}
 
-        {activeTab === "messages" && (
-          <section class="admin-panel">
-            <div class="admin-panel-head">
-              <div>
-                <h2>Contactberichten</h2>
-                <p>Nieuwe berichten die via het contactformulier zijn verstuurd.</p>
-              </div>
-            </div>
-
-            <div class="admin-messages">
-              {messages.length ? (
-                messages.map((message) => (
-                  <article class="admin-message-card" key={message.id}>
-                    <div class="admin-message-head">
-                      <div>
-                        <h3>{message.subject}</h3>
-                        <p class="muted-small">
-                          {message.name} | {message.email} | {message.category}
-                        </p>
-                      </div>
-                      <button class="admin-remove" type="button" onClick={() => deleteMessage(message.id ?? "")}>
-                        Verwijderen
-                      </button>
-                    </div>
-                    <p>{message.message}</p>
-                    <p class="muted-small">{message.createdAt ? new Date(message.createdAt).toLocaleString("nl-BE") : ""}</p>
-                  </article>
-                ))
-              ) : (
-                <div class="card empty-state">
-                  <p>Nog geen contactberichten.</p>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
+        {activeTab === "messages" && <InboxPanel messages={messages} onDelete={id => void deleteMessage(id)} />}
 
         {activeTab === "team" && profile?.role === "admin" && (
           <section class="admin-panel">
@@ -5868,8 +5813,9 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                 <TextField label="Naam" value={inviteName} onInput={setInviteName} />
                 <TextField label="E-mail" type="email" value={inviteEmail} onInput={setInviteEmail} />
                 <label class="admin-field">
-                  <span>Rol</span>
+                  <span>SITE-toegang</span>
                   <select value={inviteRole} onInput={(event) => setInviteRole((event.currentTarget as HTMLSelectElement).value as Role)}>
+                    <option value="none">Geen SITE-toegang</option>
                     <option value="editor">Editor</option>
                     <option value="admin">Admin</option>
                   </select>
@@ -5888,8 +5834,9 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                     <TextField label="Naam" value={currentProfile.full_name} onInput={(value) => setProfiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, full_name: value } : item))} />
                     <TextField label="E-mail" value={currentProfile.email} onInput={(value) => setProfiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, email: value } : item))} />
                     <label class="admin-field">
-                      <span>Rol</span>
+                      <span>SITE-toegang</span>
                       <select value={currentProfile.role} onInput={(event) => setProfiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, role: (event.currentTarget as HTMLSelectElement).value as Role } : item))}>
+                        <option value="none">Geen SITE-toegang</option>
                         <option value="editor">Editor</option>
                         <option value="admin">Admin</option>
                       </select>
@@ -5914,7 +5861,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                           <button
                             class={`admin-team-group-chip ${isActive ? "is-active" : ""}`}
                             type="button"
-                            disabled={currentProfile.role === "admin"}
+                            disabled={currentProfile.role !== "editor"}
                             onClick={() =>
                               setProfiles((current) =>
                                 current.map((item, itemIndex) => {
@@ -5970,8 +5917,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
             </div>
           </section>
         )}
-        </div>
-      </main>
-    </div>
+      </>}
+    </AdminShell>
   );
 }

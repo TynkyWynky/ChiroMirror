@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@supabase/supabase-js";
+import { createServiceClient } from "@/server/supabase";
 
 type RemoveTeamMemberPayload = {
   userId?: string;
@@ -8,21 +8,6 @@ type RemoveTeamMemberPayload = {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function createServiceClient() {
-  const url = import.meta.env.PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceRoleKey) {
-    return null;
-  }
-
-  return createClient(url, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-}
 
 export const POST: APIRoute = async ({ request }) => {
   const supabase = createServiceClient();

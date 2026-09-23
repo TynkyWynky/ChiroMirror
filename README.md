@@ -27,6 +27,19 @@ Nieuwe Astro/Supabase-versie van de site met:
 
 Dit gebruikt de bestaande `posts.body`, `posts.featured` en `site-media`-opslag; er is geen extra databasemigratie nodig.
 
+## SITE / APP foundation
+
+Phase 5 : cloche privée, **APP → Paramètres → Notifications**, rappels Agenda/Tâches et
+worker Netlify Web Push. Configuration, migration, garanties et recette HTTPS :
+[docs/app-notifications.md](docs/app-notifications.md). Aucun déploiement ni Push réel validé ici.
+
+De bestaande onderdelen staan onder **SITE**. **APP** bevat Accueil, Agenda, Tâches, Comptes en Membres.
+Nieuwe accounts krijgen geen SITE-rechten zonder expliciete toekenning. Bestaande accounts behouden hun rol.
+Pas vóór uitrol de beoordeelde migration toe volgens [supabase/README.md](supabase/README.md).
+De architectuur, veiligheidsgrenzen en resterende punten staan in [docs/app-foundation.md](docs/app-foundation.md).
+
+Tests: `npm test` en `npm run test:smoke` (lokale fallback-data, geen Supabase-verbinding).
+
 ## Lokale start
 
 1. Installeer dependencies:
@@ -82,7 +95,7 @@ Als `ADMIN_EMAIL` overeenkomt met een bestaande user, wordt die gebruiker meteen
 
 Belangrijk:
 
-- Rerun `supabase/schema.sql` ook wanneer je latere updates uit deze repo binnenhaalt.
+- Gebruik `supabase/schema.sql` alleen voor een nieuwe, lege database. Voor bestaande installaties: lees `supabase/README.md` en pas alleen de beoordeelde, versiegebonden migraties toe.
 - Als een `SUPABASE_SERVICE_ROLE_KEY` ooit zichtbaar gedeeld werd, roteer die meteen in Supabase en update daarna `.env` en Netlify.
 - Zet in `Authentication > URL Configuration` ook de `Site URL` zelf op `https://www.chironegenmanneke.be` en niet op een localhost-adres. De tekst in Supabase invite-mails gebruikt die waarde letterlijk.
 
@@ -173,6 +186,24 @@ Database-tabellen:
 - `profiles`
 
 ## Opmerking
+
+Le module [APP Comptes](docs/app-finance.md) suit les dettes, dépenses partagées et remboursements
+en centimes exacts, avec confidentialité PRIVATE et trésorerie séparée. Il est indépendant de la
+finance SITE. Migration `20260923000300_app_finance.sql`, après Tasks, non exécutée à distance.
+Test navigateur local : `npm run test:finance:browser`.
+
+L’APP intègre les [Tâches collaboratives et personnelles](docs/app-tasks.md), avec responsables,
+participants, progression, confidentialité et résumé d’accueil. La migration
+`20260923000200_app_tasks.sql` suit Agenda ; elle n’a pas été exécutée à distance.
+Test navigateur local : `npm run test:tasks:browser`.
+
+L’APP dispose maintenant d’un [Agenda interne](docs/app-agenda.md) en français : vues Mois/Liste,
+récurrences, exceptions, participants et permissions séparées du SITE. La nouvelle migration
+`20260923000100_app_agenda.sql` doit suivre les deux migrations de fondation.
+
+De APP heeft afzonderlijke rollen en een ledenbeheer. SITE-adminrechten geven geen
+automatische APP-toegang. Migratievolgorde en expliciete eerste APP-beheerder:
+[Membres et accès APP](docs/app-members.md), [SQL-procedure](supabase/README.md).
 
 - Het contactformulier verstuurt opnieuw via Netlify Forms een mailnotificatie en slaat het bericht tegelijk op in de admin-tab `Berichten`.
 - Publieke pagina's lezen bewust via de publieke Supabase-sleutel; de service key wordt alleen server-side gebruikt voor admin-acties en het contact endpoint.

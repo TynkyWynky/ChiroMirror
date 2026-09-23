@@ -1,10 +1,12 @@
+-- Bootstrap for a NEW, EMPTY database only.
+-- Existing installations: apply reviewed files in migrations/; see README.md.
 create extension if not exists pgcrypto;
 
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
   email text not null default '',
   full_name text not null default '',
-  role text not null default 'editor' check (role in ('admin', 'editor')),
+  role text not null default 'none' check (role in ('none', 'admin', 'editor')),
   managed_group_slugs jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default timezone('utc', now())
 );
@@ -197,11 +199,12 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (user_id, email, full_name)
+  insert into public.profiles (user_id, email, full_name, role)
   values (
     new.id,
     coalesce(new.email, ''),
-    coalesce(new.raw_user_meta_data ->> 'full_name', '')
+    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
+    'none'
   )
   on conflict (user_id) do update
   set email = excluded.email,
@@ -263,7 +266,8 @@ as $$
       and (
         role = 'admin'
         or (
-          coalesce(target_group_slug, '') <> ''
+          role = 'editor'
+          and coalesce(target_group_slug, '') <> ''
           and exists (
             select 1
             from jsonb_array_elements_text(coalesce(managed_group_slugs, '[]'::jsonb)) as managed_slug
@@ -479,3 +483,1436 @@ on storage.objects
 for delete
 to authenticated
 using (bucket_id = 'site-media' and public.is_site_editor());
+
+-- BEGIN APP FOUNDATION (mirrors 20260922000200_app_members_rbac.sql)
+-- Phase 1. Requires Phase 0; no automatic user/member/role assignments.
+begin;
+
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'role'
+      and column_default = '''none''::text'
+  ) then
+    raise exception 'Apply 20260922000100_neutral_site_role before Phase 1';
+  end if;
+end;
+$$;
+
+create table public.members (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid unique references auth.users(id) on delete set null,
+  first_name text not null check (first_name = btrim(first_name) and char_length(first_name) between 1 and 100),
+  last_name text not null check (last_name = btrim(last_name) and char_length(last_name) between 1 and 100),
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index members_active_name_idx on public.members(active, last_name, first_name, id);
+
+create table public.app_roles (
+  key text primary key,
+  label text not null,
+  system boolean not null default true
+);
+create table public.app_permissions (
+  key text primary key,
+  description text not null
+);
+create table public.app_role_permissions (
+  role_key text references public.app_roles(key) on delete restrict,
+  permission_key text references public.app_permissions(key) on delete restrict,
+  primary key (role_key, permission_key)
+);
+create index app_role_permissions_permission_idx on public.app_role_permissions(permission_key, role_key);
+create table public.app_user_roles (
+  user_id uuid references auth.users(id) on delete cascade,
+  role_key text references public.app_roles(key) on delete restrict,
+  assigned_by uuid references auth.users(id) on delete set null,
+  assigned_at timestamptz not null default now(),
+  primary key (user_id, role_key)
+);
+create index app_user_roles_role_idx on public.app_user_roles(role_key, user_id);
+
+insert into public.app_roles(key, label) values
+  ('APP_ADMIN', 'APP-beheerder'), ('RESPONSIBLE', 'Verantwoordelijke'),
+  ('TREASURER', 'Penningmeester'), ('MEMBER', 'Lid');
+insert into public.app_permissions(key, description) values
+  ('app.access', 'Interne toepassing openen'), ('members.read', 'Leden lezen'),
+  ('members.manage', 'Leden beheren'), ('roles.read', 'APP-toewijzingen lezen'),
+  ('roles.manage', 'APP-rollen toewijzen');
+insert into public.app_role_permissions(role_key, permission_key)
+  select r.key, p.key from public.app_roles r cross join public.app_permissions p
+  where r.key = 'APP_ADMIN' or p.key in ('app.access', 'members.read');
+
+create function public.has_app_permission(permission_key text)
+returns boolean language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1 from public.app_user_roles ur
+    join public.app_role_permissions rp on rp.role_key = ur.role_key
+    where ur.user_id = auth.uid() and rp.permission_key = $1
+  );
+$$;
+create function public.has_app_access()
+returns boolean language sql stable security definer set search_path = ''
+as $$ select public.has_app_permission('app.access'); $$;
+
+alter table public.members enable row level security;
+alter table public.app_roles enable row level security;
+alter table public.app_permissions enable row level security;
+alter table public.app_role_permissions enable row level security;
+alter table public.app_user_roles enable row level security;
+
+-- Explicit grants: do not depend on a project's default privileges.
+revoke all on public.members, public.app_roles, public.app_permissions,
+  public.app_role_permissions, public.app_user_roles from public, anon, authenticated;
+grant select on public.members, public.app_roles, public.app_permissions,
+  public.app_role_permissions, public.app_user_roles to authenticated;
+grant insert (user_id, first_name, last_name, active),
+  update (user_id, first_name, last_name, active) on public.members to authenticated;
+
+create policy members_read on public.members for select to authenticated
+  using (public.has_app_access() and public.has_app_permission('members.read'));
+create policy members_insert on public.members for insert to authenticated
+  with check (public.has_app_access() and public.has_app_permission('members.manage'));
+create policy members_update on public.members for update to authenticated
+  using (public.has_app_access() and public.has_app_permission('members.manage'))
+  with check (public.has_app_access() and public.has_app_permission('members.manage'));
+-- No DELETE policy or grant. Archiving does not revoke a linked account's roles.
+
+create policy app_roles_read on public.app_roles for select to authenticated
+  using (public.has_app_access() and (public.has_app_permission('roles.read') or exists (
+    select 1 from public.app_user_roles ur where ur.user_id = auth.uid() and ur.role_key = key
+  )));
+create policy app_permissions_read on public.app_permissions for select to authenticated
+  using (public.has_app_access());
+create policy app_role_permissions_read on public.app_role_permissions for select to authenticated
+  using (public.has_app_access() and (public.has_app_permission('roles.read') or exists (
+    select 1 from public.app_user_roles ur where ur.user_id = auth.uid() and ur.role_key = app_role_permissions.role_key
+  )));
+create policy app_user_roles_read on public.app_user_roles for select to authenticated
+  using (public.has_app_access() and (user_id = auth.uid() or public.has_app_permission('roles.read')));
+-- Role catalogs/matrix are system-owned. Assignments can only change via the RPC below.
+
+create function public.touch_member_updated_at()
+returns trigger language plpgsql set search_path = ''
+as $$ begin new.updated_at = now(); return new; end; $$;
+create trigger members_updated_at before update on public.members
+  for each row execute function public.touch_member_updated_at();
+
+create function public.get_my_app_access()
+returns jsonb language sql stable security definer set search_path = ''
+as $$
+  select jsonb_build_object(
+    'permissions', coalesce((select jsonb_agg(distinct rp.permission_key)
+      from public.app_user_roles ur join public.app_role_permissions rp on rp.role_key = ur.role_key
+      where ur.user_id = auth.uid()), '[]'::jsonb),
+    'roles', coalesce((select jsonb_agg(jsonb_build_object('key', r.key, 'label', r.label, 'system', r.system))
+      from public.app_user_roles ur join public.app_roles r on r.key = ur.role_key
+      where ur.user_id = auth.uid() and public.has_app_access()), '[]'::jsonb),
+    'member', (select to_jsonb(m) from public.members m where m.user_id = auth.uid()
+      and public.has_app_access() and public.has_app_permission('members.read'))
+  );
+$$;
+
+-- Account email comes from Auth, not editable profile.email. No anonymous directory.
+create function public.list_app_accounts()
+returns table(user_id uuid, email text, full_name text, member_id uuid)
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if not public.has_app_access() or not (
+    public.has_app_permission('members.manage') or public.has_app_permission('roles.manage')
+  ) then raise exception 'APP account directory forbidden' using errcode = '42501'; end if;
+  return query select u.id, u.email::text, p.full_name, m.id
+    from auth.users u join public.profiles p on p.user_id = u.id
+    left join public.members m on m.user_id = u.id order by p.full_name, u.id;
+end;
+$$;
+
+create function public.set_app_user_roles(target_user_id uuid, role_keys text[])
+returns void language plpgsql security definer set search_path = ''
+as $$
+begin
+  if not public.has_app_access() or not public.has_app_permission('roles.manage') then
+    raise exception 'APP role management forbidden' using errcode = '42501';
+  end if;
+  -- Serialize permission changes, then recheck authority after the lock.
+  perform pg_advisory_xact_lock(20260922, 2);
+  if not public.has_app_access() or not public.has_app_permission('roles.manage') then
+    raise exception 'APP role management forbidden' using errcode = '42501';
+  end if;
+  if role_keys is null or cardinality(role_keys) > 20 or exists (
+    select 1 from unnest(role_keys) k where k is null or not exists (select 1 from public.app_roles r where r.key = k)
+  ) then raise exception 'Invalid APP roles' using errcode = '22023'; end if;
+  if not exists (select 1 from auth.users where id = target_user_id) then
+    raise exception 'Account not found' using errcode = '22023';
+  end if;
+  if exists (select 1 from public.app_user_roles ur join public.app_role_permissions rp on rp.role_key = ur.role_key
+      where ur.user_id = target_user_id and rp.permission_key = 'roles.manage')
+    and not exists (select 1 from public.app_role_permissions where role_key = any(role_keys) and permission_key = 'roles.manage')
+    and not exists (select 1 from public.app_user_roles ur join public.app_role_permissions rp on rp.role_key = ur.role_key
+      where ur.user_id <> target_user_id and rp.permission_key = 'roles.manage') then
+    raise exception 'Keep at least one APP role manager' using errcode = '23514';
+  end if;
+  delete from public.app_user_roles where user_id = target_user_id and not (role_key = any(role_keys));
+  insert into public.app_user_roles(user_id, role_key, assigned_by)
+    select target_user_id, k, auth.uid() from (select distinct unnest(role_keys) k) selected
+    on conflict (user_id, role_key) do nothing;
+end;
+$$;
+
+-- Auth invitation is external; linking and granting roles must succeed or fail together.
+create function public.complete_app_member_invitation(target_member_id uuid, target_user_id uuid, role_keys text[])
+returns void language plpgsql security definer set search_path = ''
+as $$
+declare linked_user uuid;
+begin
+  if not public.has_app_access() or not public.has_app_permission('members.manage')
+    or not public.has_app_permission('roles.manage') then
+    raise exception 'APP invitation completion forbidden' using errcode = '42501';
+  end if;
+  -- Same lock order as role management. A second completion must not overwrite a link.
+  perform pg_advisory_xact_lock(20260922, 2);
+  if not public.has_app_access() or not public.has_app_permission('members.manage')
+    or not public.has_app_permission('roles.manage') then
+    raise exception 'APP invitation completion forbidden' using errcode = '42501';
+  end if;
+  select m.user_id into linked_user from public.members m where m.id = target_member_id for update;
+  if not found or linked_user is not null then
+    raise exception 'Member unavailable or already linked' using errcode = '22023';
+  end if;
+  perform public.set_app_user_roles(target_user_id, role_keys);
+  update public.members set user_id = target_user_id where id = target_member_id;
+end;
+$$;
+
+revoke all on function public.complete_app_member_invitation(uuid, uuid, text[]) from public, anon, authenticated;
+grant execute on function public.complete_app_member_invitation(uuid, uuid, text[]) to authenticated;
+
+revoke all on function public.has_app_permission(text), public.has_app_access(),
+  public.get_my_app_access(), public.list_app_accounts(), public.set_app_user_roles(uuid, text[]),
+  public.touch_member_updated_at() from public, anon, authenticated;
+grant execute on function public.has_app_permission(text), public.has_app_access(),
+  public.get_my_app_access(), public.list_app_accounts(), public.set_app_user_roles(uuid, text[]) to authenticated;
+
+commit;
+
+-- BEGIN APP AGENDA (mirrors 20260923000100_app_agenda.sql)
+-- Phase 2. Additive; requires the Phase 0 and Phase 1 migrations. No remote execution.
+begin;
+
+insert into public.app_permissions(key, description) values
+  ('events.read', 'Lire l’agenda'), ('events.create', 'Créer un événement'),
+  ('events.update', 'Modifier un événement'), ('events.delete', 'Annuler un événement');
+insert into public.app_role_permissions(role_key, permission_key)
+  select r.key, p.key from public.app_roles r cross join public.app_permissions p
+  where p.key in ('events.read', 'events.create', 'events.update', 'events.delete')
+    and (r.key in ('APP_ADMIN', 'RESPONSIBLE') or (r.key in ('MEMBER', 'TREASURER') and p.key = 'events.read'));
+
+create table public.event_categories (key text primary key, label text not null);
+insert into public.event_categories values
+  ('ACTIVITY', 'Activité'), ('MEETING', 'Réunion'), ('EVENT', 'Événement'),
+  ('WEEKEND', 'Weekend'), ('CAMP', 'Camp'), ('DEADLINE', 'Échéance'), ('OTHER', 'Autre');
+
+create function public.agenda_valid_timing(all_day boolean, start_date date, end_date date, starts_at timestamptz, ends_at timestamptz, zone text)
+returns boolean language sql immutable set search_path = '' as $$
+  select coalesce(zone = 'Europe/Brussels' and (
+    (all_day and start_date is not null and end_date is not null and starts_at is null and ends_at is null
+      and start_date >= date '2000-01-01' and end_date <= date '2100-12-31' and end_date >= start_date)
+    or (not all_day and start_date is null and end_date is null and starts_at is not null and ends_at is not null
+      and (starts_at at time zone 'Europe/Brussels')::date >= date '2000-01-01'
+      and (ends_at at time zone 'Europe/Brussels')::date <= date '2100-12-31' and ends_at >= starts_at)
+  ), false);
+$$;
+
+create table public.events (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (title = btrim(title) and title ~ '[^[:space:]]' and char_length(title) <= 200),
+  description text not null default '' check (char_length(description) <= 10000),
+  category text not null references public.event_categories(key),
+  location text not null default '' check (char_length(location) <= 300),
+  all_day boolean not null,
+  start_date date, end_date date, starts_at timestamptz, ends_at timestamptz,
+  timezone text not null default 'Europe/Brussels',
+  audience_type text not null check (audience_type in ('ALL', 'SELECTED')),
+  frequency text not null default 'NONE' check (frequency in ('NONE', 'WEEKLY', 'MONTHLY')),
+  recurrence_interval integer not null default 1 check (recurrence_interval between 1 and 52),
+  weekdays integer[] not null default '{}',
+  until_date date,
+  occurrence_count integer check (occurrence_count between 1 and 10000),
+  status text not null default 'SCHEDULED' check (status in ('SCHEDULED', 'CANCELLED')),
+  created_by uuid references auth.users(id) on delete set null,
+  updated_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+  revision bigint not null default 1,
+  check (public.agenda_valid_timing(all_day, start_date, end_date, starts_at, ends_at, timezone)),
+  check (until_date is null or (until_date >= coalesce(start_date, (starts_at at time zone 'Europe/Brussels')::date) and until_date <= date '2100-12-31')),
+  check ((frequency = 'WEEKLY' and cardinality(weekdays) between 1 and 7 and weekdays <@ array[1,2,3,4,5,6,7]
+      and array_position(weekdays, null) is null
+      and extract(isodow from coalesce(start_date, (starts_at at time zone 'Europe/Brussels')::date))::integer = any(weekdays))
+    or (frequency <> 'WEEKLY' and cardinality(weekdays) = 0)),
+  check (frequency <> 'NONE' or (recurrence_interval = 1 and until_date is null and occurrence_count is null))
+);
+create index events_starts_at_idx on public.events(starts_at) where not all_day;
+create index events_start_date_idx on public.events(start_date) where all_day;
+create index events_category_status_idx on public.events(category, status);
+
+create table public.event_participants (
+  event_id uuid not null references public.events(id) on delete restrict,
+  member_id uuid not null references public.members(id) on delete restrict,
+  primary key(event_id, member_id)
+);
+create index event_participants_member_idx on public.event_participants(member_id, event_id);
+
+create table public.event_occurrence_overrides (
+  event_id uuid not null references public.events(id) on delete restrict,
+  occurrence_date date not null,
+  title text not null check (title = btrim(title) and title ~ '[^[:space:]]' and char_length(title) <= 200),
+  description text not null default '' check (char_length(description) <= 10000),
+  category text not null references public.event_categories(key),
+  location text not null default '' check (char_length(location) <= 300),
+  all_day boolean not null,
+  start_date date, end_date date, starts_at timestamptz, ends_at timestamptz,
+  timezone text not null default 'Europe/Brussels',
+  status text not null default 'SCHEDULED' check (status in ('SCHEDULED', 'CANCELLED')),
+  updated_by uuid references auth.users(id) on delete set null,
+  updated_at timestamptz not null default now(),
+  primary key(event_id, occurrence_date),
+  check (public.agenda_valid_timing(all_day, start_date, end_date, starts_at, ends_at, timezone))
+);
+create index event_overrides_start_idx on public.event_occurrence_overrides(starts_at, start_date);
+
+-- Data only: no delivery worker, cron, notification queue or push subscription.
+create table public.event_reminders (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete restrict,
+  kind text not null check (kind in ('OFFSET', 'LOCAL_TIME', 'ABSOLUTE')),
+  offset_minutes integer check (offset_minutes between 0 and 525600),
+  days_before integer check (days_before between 0 and 365),
+  local_time time,
+  scheduled_at timestamptz,
+  timezone text not null default 'Europe/Brussels' check (timezone = 'Europe/Brussels'),
+  check ((kind = 'OFFSET' and offset_minutes is not null and days_before is null and local_time is null and scheduled_at is null)
+    or (kind = 'LOCAL_TIME' and offset_minutes is null and days_before is not null and local_time is not null and scheduled_at is null)
+    or (kind = 'ABSOLUTE' and offset_minutes is null and days_before is null and local_time is null and scheduled_at is not null))
+);
+create index event_reminders_event_idx on public.event_reminders(event_id);
+
+alter table public.event_categories enable row level security;
+alter table public.events enable row level security;
+alter table public.event_participants enable row level security;
+alter table public.event_occurrence_overrides enable row level security;
+alter table public.event_reminders enable row level security;
+revoke all on public.event_categories, public.events, public.event_participants, public.event_occurrence_overrides, public.event_reminders from public, anon, authenticated;
+grant select on public.event_categories, public.events, public.event_participants, public.event_occurrence_overrides, public.event_reminders to authenticated;
+create policy event_categories_read on public.event_categories for select to authenticated using (public.has_app_access() and public.has_app_permission('events.read'));
+create policy events_read on public.events for select to authenticated using (public.has_app_access() and public.has_app_permission('events.read'));
+create policy event_participants_read on public.event_participants for select to authenticated using (public.has_app_access() and public.has_app_permission('events.read'));
+create policy event_overrides_read on public.event_occurrence_overrides for select to authenticated using (public.has_app_access() and public.has_app_permission('events.read'));
+create policy event_reminders_read on public.event_reminders for select to authenticated using (public.has_app_access() and public.has_app_permission('events.read'));
+-- No direct client DML, even for admins. Targeted RPCs enforce mutation permissions and atomicity.
+
+create function public.agenda_require_permission(permission text)
+returns void language plpgsql stable security definer set search_path = '' as $$
+begin
+  if auth.uid() is null or not public.has_app_access() or not public.has_app_permission(permission) then
+    raise exception 'Agenda permission denied' using errcode = '42501';
+  end if;
+end;
+$$;
+
+create function public.agenda_is_occurrence(e public.events, candidate date)
+returns boolean language plpgsql immutable set search_path = '' as $$
+declare first_day date := coalesce(e.start_date, (e.starts_at at time zone 'Europe/Brussels')::date);
+  monday date; day_value date; month_diff integer; n integer := 0;
+begin
+  if candidate is null or candidate < first_day or candidate > date '2100-12-31'
+    or (e.until_date is not null and candidate > e.until_date) then return false; end if;
+  if e.frequency = 'NONE' then return candidate = first_day; end if;
+  monday := first_day - (extract(isodow from first_day)::integer - 1);
+  -- Bounded civil-date iteration also counts monthly rules which skip missing month days.
+  for day_value in select first_day + i from generate_series(0, candidate - first_day) i loop
+    month_diff := (extract(year from day_value)::integer - extract(year from first_day)::integer) * 12
+      + extract(month from day_value)::integer - extract(month from first_day)::integer;
+    if (e.frequency = 'WEEKLY' and ((day_value - monday) / 7) % e.recurrence_interval = 0
+          and extract(isodow from day_value)::integer = any(e.weekdays))
+      or (e.frequency = 'MONTHLY' and month_diff % e.recurrence_interval = 0
+          and extract(day from day_value) = extract(day from first_day)) then
+      n := n + 1;
+      if e.occurrence_count is not null and n > e.occurrence_count then return false; end if;
+      if day_value = candidate then return true; end if;
+    end if;
+  end loop;
+  return false;
+end;
+$$;
+
+create function public.save_agenda_event(target_id uuid, expected_revision bigint, details jsonb, participant_ids uuid[])
+returns uuid language plpgsql security definer set search_path = '' as $$
+declare candidate public.events; previous public.events; saved_id uuid;
+begin
+  perform public.agenda_require_permission(case when target_id is null then 'events.create' else 'events.update' end);
+  if jsonb_typeof(details) is distinct from 'object' then raise exception 'Invalid event' using errcode = '22023'; end if;
+  candidate := jsonb_populate_record(null::public.events, details);
+  if participant_ids is null or cardinality(participant_ids) > 5000 or array_position(participant_ids, null) is not null
+    or cardinality(participant_ids) <> (select count(distinct x) from unnest(participant_ids) x)
+    or (candidate.audience_type = 'ALL' and cardinality(participant_ids) <> 0)
+    or (candidate.audience_type = 'SELECTED' and cardinality(participant_ids) = 0) then
+    raise exception 'Invalid participants' using errcode = '22023';
+  end if;
+  if cardinality(candidate.weekdays) <> (select count(distinct x) from unnest(candidate.weekdays) x) then
+    raise exception 'Duplicate weekdays' using errcode = '22023';
+  end if;
+  if target_id is not null then
+    select * into previous from public.events where id = target_id for update;
+    if not found or previous.revision is distinct from expected_revision then
+      raise exception 'Event changed; reload before saving' using errcode = '40001';
+    end if;
+    if previous.status = 'CANCELLED' then raise exception 'Event cancelled' using errcode = '22023'; end if;
+  end if;
+  -- Keep historical archived participants; reject new archived selections and nonexistent IDs.
+  if exists (select 1 from unnest(participant_ids) p left join public.members m on m.id = p
+    where m.id is null or (not m.active and not exists (
+      select 1 from public.event_participants ep where ep.event_id = target_id and ep.member_id = p))) then
+    raise exception 'Participant missing or archived' using errcode = '22023';
+  end if;
+  if target_id is null then
+    insert into public.events(title, description, category, location, all_day, start_date, end_date, starts_at, ends_at,
+      timezone, audience_type, frequency, recurrence_interval, weekdays, until_date, occurrence_count, created_by, updated_by)
+    values(candidate.title, candidate.description, candidate.category, candidate.location, candidate.all_day,
+      candidate.start_date, candidate.end_date, candidate.starts_at, candidate.ends_at, candidate.timezone,
+      candidate.audience_type, candidate.frequency, candidate.recurrence_interval, candidate.weekdays,
+      candidate.until_date, candidate.occurrence_count, auth.uid(), auth.uid()) returning id into saved_id;
+    insert into public.event_reminders(event_id, kind, days_before, local_time)
+      select saved_id, 'LOCAL_TIME', d, time '19:00' from unnest(case candidate.category
+        when 'ACTIVITY' then array[1] when 'WEEKEND' then array[7,1] when 'CAMP' then array[14,7,1] else array[]::integer[] end) d;
+  else
+    update public.events set title = candidate.title, description = candidate.description, category = candidate.category,
+      location = candidate.location, all_day = candidate.all_day, start_date = candidate.start_date, end_date = candidate.end_date,
+      starts_at = candidate.starts_at, ends_at = candidate.ends_at, timezone = candidate.timezone,
+      audience_type = candidate.audience_type, frequency = candidate.frequency, recurrence_interval = candidate.recurrence_interval,
+      weekdays = candidate.weekdays, until_date = candidate.until_date, occurrence_count = candidate.occurrence_count,
+      updated_by = auth.uid(), updated_at = clock_timestamp(), revision = revision + 1
+      where id = target_id returning * into candidate;
+    if exists (select 1 from public.event_occurrence_overrides o where o.event_id = target_id
+      and (candidate.frequency = 'NONE' or not public.agenda_is_occurrence(candidate, o.occurrence_date))) then
+      raise exception 'This recurrence change would orphan exceptions; preserve their original dates' using errcode = '22023';
+    end if;
+    saved_id := target_id;
+  end if;
+  delete from public.event_participants where event_id = saved_id and not (member_id = any(participant_ids));
+  insert into public.event_participants(event_id, member_id) select saved_id, p from unnest(participant_ids) p
+    on conflict (event_id, member_id) do nothing;
+  return saved_id;
+end;
+$$;
+
+create function public.save_agenda_occurrence(target_id uuid, original_date date, expected_revision bigint, details jsonb)
+returns void language plpgsql security definer set search_path = '' as $$
+declare parent public.events; candidate public.event_occurrence_overrides;
+begin
+  perform public.agenda_require_permission('events.update');
+  select * into parent from public.events where id = target_id for update;
+  if not found or parent.revision is distinct from expected_revision then
+    raise exception 'Event changed; reload before saving' using errcode = '40001'; end if;
+  if parent.status = 'CANCELLED' or parent.frequency = 'NONE' or not public.agenda_is_occurrence(parent, original_date) then
+    raise exception 'Invalid occurrence' using errcode = '22023'; end if;
+  if exists (select 1 from public.event_occurrence_overrides where event_id = target_id and occurrence_date = original_date and status = 'CANCELLED') then
+    raise exception 'Occurrence cancelled' using errcode = '22023'; end if;
+  if jsonb_typeof(details) is distinct from 'object' then raise exception 'Invalid occurrence' using errcode = '22023'; end if;
+  candidate := jsonb_populate_record(null::public.event_occurrence_overrides, details);
+  insert into public.event_occurrence_overrides(event_id, occurrence_date, title, description, category, location,
+    all_day, start_date, end_date, starts_at, ends_at, timezone, updated_by)
+    values (target_id, original_date, candidate.title, candidate.description, candidate.category, candidate.location,
+      candidate.all_day, candidate.start_date, candidate.end_date, candidate.starts_at, candidate.ends_at, candidate.timezone, auth.uid())
+    on conflict (event_id, occurrence_date) do update set title = excluded.title, description = excluded.description,
+      category = excluded.category, location = excluded.location, all_day = excluded.all_day, start_date = excluded.start_date,
+      end_date = excluded.end_date, starts_at = excluded.starts_at, ends_at = excluded.ends_at, timezone = excluded.timezone,
+      updated_by = auth.uid(), updated_at = clock_timestamp();
+  update public.events set revision = revision + 1, updated_by = auth.uid(), updated_at = clock_timestamp() where id = target_id;
+end;
+$$;
+
+create function public.cancel_agenda_event(target_id uuid, original_date date, expected_revision bigint)
+returns void language plpgsql security definer set search_path = '' as $$
+declare parent public.events; first_day date; day_offset integer; shifted_start timestamptz; shifted_end timestamptz;
+begin
+  perform public.agenda_require_permission('events.delete');
+  select * into parent from public.events where id = target_id for update;
+  if not found or parent.revision is distinct from expected_revision then
+    raise exception 'Event changed; reload before saving' using errcode = '40001'; end if;
+  if original_date is null then
+    update public.events set status = 'CANCELLED', revision = revision + 1,
+      updated_at = clock_timestamp(), updated_by = auth.uid() where id = target_id;
+    return;
+  end if;
+  if parent.frequency = 'NONE' or parent.status = 'CANCELLED' or not public.agenda_is_occurrence(parent, original_date) then
+    raise exception 'Invalid occurrence' using errcode = '22023'; end if;
+  first_day := coalesce(parent.start_date, (parent.starts_at at time zone 'Europe/Brussels')::date);
+  day_offset := original_date - first_day;
+  shifted_start := ((parent.starts_at at time zone 'Europe/Brussels') + day_offset * interval '1 day') at time zone 'Europe/Brussels';
+  shifted_end := ((parent.ends_at at time zone 'Europe/Brussels') + day_offset * interval '1 day') at time zone 'Europe/Brussels';
+  if shifted_end < shifted_start then shifted_end := shifted_start + (parent.ends_at - parent.starts_at); end if;
+  insert into public.event_occurrence_overrides(event_id, occurrence_date, title, description, category, location,
+    all_day, start_date, end_date, starts_at, ends_at, timezone, status, updated_by)
+    values (target_id, original_date, parent.title, parent.description, parent.category, parent.location, parent.all_day,
+      parent.start_date + day_offset, parent.end_date + day_offset,
+      shifted_start, shifted_end,
+      parent.timezone, 'CANCELLED', auth.uid())
+    on conflict (event_id, occurrence_date) do update set status = 'CANCELLED', updated_by = auth.uid(), updated_at = clock_timestamp();
+  update public.events set revision = revision + 1, updated_by = auth.uid(), updated_at = clock_timestamp() where id = target_id;
+end;
+$$;
+
+revoke all on function public.agenda_valid_timing(boolean, date, date, timestamptz, timestamptz, text),
+  public.agenda_require_permission(text), public.agenda_is_occurrence(public.events, date),
+  public.save_agenda_event(uuid, bigint, jsonb, uuid[]), public.save_agenda_occurrence(uuid, date, bigint, jsonb),
+  public.cancel_agenda_event(uuid, date, bigint) from public, anon, authenticated;
+grant execute on function public.save_agenda_event(uuid, bigint, jsonb, uuid[]),
+  public.save_agenda_occurrence(uuid, date, bigint, jsonb), public.cancel_agenda_event(uuid, date, bigint) to authenticated;
+
+commit;
+
+-- BEGIN APP TASKS (mirrors 20260923000200_app_tasks.sql)
+-- Phase 3: tasks. Additive, after Agenda. No automatic member/account assignments.
+begin;
+insert into public.app_permissions(key,description) values
+ ('tasks.create_team','Créer une tâche d’équipe'),('tasks.read_all','Lire toutes les tâches d’équipe'),('tasks.manage_all','Administrer les tâches d’équipe');
+insert into public.app_role_permissions(role_key,permission_key) values
+ ('APP_ADMIN','tasks.create_team'),('APP_ADMIN','tasks.read_all'),('APP_ADMIN','tasks.manage_all'),
+ ('RESPONSIBLE','tasks.create_team'),('RESPONSIBLE','tasks.read_all');
+
+create table public.tasks (
+ id uuid primary key default gen_random_uuid(),
+ scope text not null check (scope in ('PERSONAL','TEAM')),
+ owner_member_id uuid references public.members(id) on delete restrict,
+ -- Bind private data to its actual account as well: relinking a member is not a privacy bypass.
+ owner_user_id uuid references auth.users(id) on delete set null,
+ title text not null check (title = btrim(title) and title ~ '[^[:space:]]' and char_length(title) <= 200),
+ description text check (char_length(description) <= 10000),
+ status text not null default 'TODO' check (status in ('TODO','IN_PROGRESS','DONE','CANCELLED')),
+ priority text not null default 'NORMAL' check (priority in ('LOW','NORMAL','HIGH','URGENT')),
+ deadline_date date check (deadline_date between date '2000-01-01' and date '2100-12-31'),
+ deadline_at timestamptz check ((deadline_at at time zone 'Europe/Brussels')::date between date '2000-01-01' and date '2100-12-31'),
+ timezone text not null default 'Europe/Brussels' check (timezone = 'Europe/Brussels'),
+ event_id uuid references public.events(id) on delete restrict,
+ event_occurrence_date date,
+ created_by uuid references auth.users(id) on delete set null,
+ updated_by uuid references auth.users(id) on delete set null,
+ created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+ revision bigint not null default 1,
+ check (deadline_date is null or deadline_at is null),
+ check (event_occurrence_date is null or event_id is not null),
+ check ((scope = 'PERSONAL' and owner_member_id is not null and event_id is null and event_occurrence_date is null)
+   or (scope = 'TEAM' and owner_member_id is null and owner_user_id is null))
+);
+create index tasks_owner_idx on public.tasks(owner_user_id,owner_member_id) where scope='PERSONAL';
+create index tasks_team_status_idx on public.tasks(status,priority) where scope='TEAM';
+create index tasks_deadline_date_idx on public.tasks(deadline_date);
+create index tasks_deadline_at_idx on public.tasks(deadline_at);
+create index tasks_event_idx on public.tasks(event_id,event_occurrence_date);
+create table public.task_members (
+ task_id uuid not null references public.tasks(id) on delete restrict,
+ member_id uuid not null references public.members(id) on delete restrict,
+ role text not null check (role in ('LEAD','CONTRIBUTOR')),
+ work_status text not null default 'TODO' check (work_status in ('TODO','DONE')),
+ created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+ primary key(task_id,member_id)
+);
+create index task_members_member_idx on public.task_members(member_id,role,task_id);
+create table public.task_activity (
+ id uuid primary key default gen_random_uuid(),
+ task_id uuid not null references public.tasks(id) on delete restrict,
+ actor_id uuid references auth.users(id) on delete set null,
+ action text not null check (action in ('TASK_CREATED','TASK_UPDATED','STATUS_CHANGED','TASK_CANCELLED',
+   'MEMBER_ADDED','MEMBER_REMOVED','MEMBER_ROLE_CHANGED','MEMBER_WORK_COMPLETED','MEMBER_WORK_REOPENED')),
+ metadata jsonb not null default '{}' check (jsonb_typeof(metadata)='object'),
+ created_at timestamptz not null default clock_timestamp()
+);
+create index task_activity_task_idx on public.task_activity(task_id,created_at,id);
+create table public.task_reminders (
+ id uuid primary key default gen_random_uuid(),
+ task_id uuid not null references public.tasks(id) on delete restrict,
+ kind text not null check (kind in ('OFFSET','LOCAL_TIME','ABSOLUTE')),
+ offset_minutes integer check (offset_minutes between 0 and 525600),
+ days_before integer check (days_before between 0 and 365), local_time time, scheduled_at timestamptz,
+ timezone text not null default 'Europe/Brussels' check (timezone='Europe/Brussels'),
+ check ((kind='OFFSET' and offset_minutes is not null and days_before is null and local_time is null and scheduled_at is null)
+  or (kind='LOCAL_TIME' and offset_minutes is null and days_before is not null and local_time is not null and scheduled_at is null)
+  or (kind='ABSOLUTE' and offset_minutes is null and days_before is null and local_time is null and scheduled_at is not null))
+);
+create index task_reminders_task_idx on public.task_reminders(task_id);
+
+create function public.task_current_member_id() returns uuid language sql stable security definer set search_path='' as $$
+ select id from public.members where user_id=auth.uid();
+$$;
+create function public.can_read_task(target uuid) returns boolean language sql stable security definer set search_path='' as $$
+ select public.has_app_access() and exists (select 1 from public.tasks t where t.id=target and (
+  (t.scope='PERSONAL' and t.owner_user_id=auth.uid() and t.owner_member_id=public.task_current_member_id())
+  or (t.scope='TEAM' and (public.has_app_permission('tasks.read_all') or public.has_app_permission('tasks.manage_all')
+   or (t.created_by=auth.uid() and public.has_app_permission('tasks.create_team'))
+   or exists (select 1 from public.task_members tm where tm.task_id=t.id and tm.member_id=public.task_current_member_id())))
+ ));
+$$;
+create function public.can_manage_task(target uuid) returns boolean language sql stable security definer set search_path='' as $$
+ select public.has_app_access() and exists (select 1 from public.tasks t where t.id=target and (
+  (t.scope='PERSONAL' and t.owner_user_id=auth.uid() and t.owner_member_id=public.task_current_member_id())
+  or (t.scope='TEAM' and (public.has_app_permission('tasks.manage_all')
+   or (t.created_by=auth.uid() and public.has_app_permission('tasks.create_team'))
+   or exists (select 1 from public.task_members tm where tm.task_id=t.id and tm.member_id=public.task_current_member_id() and tm.role='LEAD')))
+ ));
+$$;
+alter table public.tasks enable row level security;
+alter table public.task_members enable row level security;
+alter table public.task_activity enable row level security;
+alter table public.task_reminders enable row level security;
+revoke all on public.tasks,public.task_members,public.task_activity,public.task_reminders from public,anon,authenticated;
+grant select on public.tasks,public.task_members,public.task_activity,public.task_reminders to authenticated;
+create policy tasks_read on public.tasks for select to authenticated using (public.can_read_task(id));
+create policy task_members_read on public.task_members for select to authenticated using (public.can_read_task(task_id));
+create policy task_activity_read on public.task_activity for select to authenticated using (public.can_read_task(task_id));
+create policy task_reminders_read on public.task_reminders for select to authenticated using (public.can_read_task(task_id));
+-- All writes, including audit, are through controlled RPCs; no direct DML grants.
+
+create function public.save_task(target_id uuid, expected_revision bigint, details jsonb, assignments jsonb)
+returns uuid language plpgsql security definer set search_path='' as $$
+declare candidate public.tasks; previous public.tasks; saved public.tasks; actor_member uuid; linked public.events;
+ changed_fields jsonb; current_assignment record;
+begin
+ if not public.has_app_access() then raise exception 'Task permission denied' using errcode='42501'; end if;
+ if jsonb_typeof(details) is distinct from 'object' or jsonb_typeof(assignments) is distinct from 'array'
+   or jsonb_array_length(assignments)>5000 then raise exception 'Invalid task input' using errcode='22023'; end if;
+ candidate := jsonb_populate_record(null::public.tasks,details);
+ actor_member := public.task_current_member_id();
+ if target_id is null then
+   if candidate.scope='PERSONAL' then
+     if actor_member is null or not exists (select 1 from public.members m where m.id=actor_member and m.active) then
+       raise exception 'An active linked member is required' using errcode='42501'; end if;
+   elsif candidate.scope='TEAM' then
+     if not public.has_app_permission('tasks.create_team') then raise exception 'Task permission denied' using errcode='42501'; end if;
+   else raise exception 'Invalid task scope' using errcode='22023'; end if;
+ else
+   -- Check authorization before returning revision/existence information.
+   if not public.can_manage_task(target_id) then raise exception 'Task permission denied' using errcode='42501'; end if;
+   select * into previous from public.tasks where id=target_id for update;
+   if not public.can_manage_task(target_id) then raise exception 'Task permission denied' using errcode='42501'; end if;
+   if previous.revision is distinct from expected_revision then raise exception 'Task changed; reload' using errcode='40001'; end if;
+   if candidate.scope is distinct from previous.scope then raise exception 'Task scope is immutable' using errcode='22023'; end if;
+ end if;
+ if candidate.scope='PERSONAL' then
+   if jsonb_array_length(assignments)<>0 or candidate.event_id is not null or candidate.event_occurrence_date is not null then
+     raise exception 'Personal tasks cannot have collaborators or an event' using errcode='22023'; end if;
+ else
+   if exists (select 1 from jsonb_array_elements(assignments) x where jsonb_typeof(x) is distinct from 'object') then
+     raise exception 'Invalid task members' using errcode='22023'; end if;
+   if not exists (select 1 from jsonb_to_recordset(assignments) as a(member_id uuid,role text) where a.role='LEAD')
+    or exists (select 1 from jsonb_to_recordset(assignments) as a(member_id uuid,role text) where a.member_id is null or a.role is null or a.role not in ('LEAD','CONTRIBUTOR'))
+    or (select count(*) from jsonb_to_recordset(assignments) as a(member_id uuid,role text)) <>
+       (select count(distinct a.member_id) from jsonb_to_recordset(assignments) as a(member_id uuid,role text)) then
+     raise exception 'At least one lead and unique members are required' using errcode='22023'; end if;
+   if exists (select 1 from jsonb_to_recordset(assignments) as a(member_id uuid,role text) left join public.members m on m.id=a.member_id
+      where m.id is null or (not m.active and not exists (select 1 from public.task_members tm where tm.task_id=target_id and tm.member_id=a.member_id))) then
+     raise exception 'Task member missing or archived' using errcode='22023'; end if;
+   -- Closing is stricter than editing: creator status alone cannot close a team task.
+   if candidate.status='DONE' and (target_id is null or previous.status<>'DONE')
+    and not public.has_app_permission('tasks.manage_all')
+    and not exists (select 1 from public.task_members tm where tm.task_id=target_id and tm.member_id=actor_member and tm.role='LEAD')
+    and not (target_id is null and exists (select 1 from jsonb_to_recordset(assignments) as a(member_id uuid,role text) where a.member_id=actor_member and a.role='LEAD')) then
+     raise exception 'Only a lead or global manager can complete a team task' using errcode='42501'; end if;
+ end if;
+ -- Validate new/changed links. Historical links survive cancellations and future series edits.
+ if candidate.event_id is not null and (target_id is null or candidate.event_id is distinct from previous.event_id
+      or candidate.event_occurrence_date is distinct from previous.event_occurrence_date) then
+   if not public.has_app_permission('events.read') then raise exception 'Agenda permission denied' using errcode='42501'; end if;
+   select * into linked from public.events where id=candidate.event_id for share;
+   if not found then raise exception 'Event not found' using errcode='22023'; end if;
+   if candidate.event_occurrence_date is not null and (linked.frequency='NONE' or not public.agenda_is_occurrence(linked,candidate.event_occurrence_date)) then
+     raise exception 'Invalid event occurrence' using errcode='22023'; end if;
+ end if;
+ if target_id is null then
+   insert into public.tasks(scope,owner_member_id,owner_user_id,title,description,status,priority,deadline_date,deadline_at,timezone,event_id,event_occurrence_date,created_by,updated_by)
+   values(candidate.scope,case when candidate.scope='PERSONAL' then actor_member end,case when candidate.scope='PERSONAL' then auth.uid() end,
+    candidate.title,candidate.description,candidate.status,candidate.priority,candidate.deadline_date,candidate.deadline_at,candidate.timezone,
+    candidate.event_id,candidate.event_occurrence_date,auth.uid(),auth.uid()) returning * into saved;
+   insert into public.task_activity(task_id,actor_id,action) values(saved.id,auth.uid(),'TASK_CREATED');
+ else
+   update public.tasks set title=candidate.title,description=candidate.description,status=candidate.status,priority=candidate.priority,
+    deadline_date=candidate.deadline_date,deadline_at=candidate.deadline_at,timezone=candidate.timezone,event_id=candidate.event_id,event_occurrence_date=candidate.event_occurrence_date,
+    revision=revision+1,updated_at=clock_timestamp(),updated_by=auth.uid() where id=target_id returning * into saved;
+   select coalesce(jsonb_agg(x.key),'[]') into changed_fields from jsonb_each(to_jsonb(saved)) x
+    where x.key in ('title','description','priority','deadline_date','deadline_at','event_id','event_occurrence_date')
+    and x.value is distinct from to_jsonb(previous)->x.key;
+   if jsonb_array_length(changed_fields)>0 then insert into public.task_activity(task_id,actor_id,action,metadata)
+     values(saved.id,auth.uid(),'TASK_UPDATED',jsonb_build_object('fields',changed_fields)); end if;
+   if previous.status<>saved.status then insert into public.task_activity(task_id,actor_id,action,metadata)
+     values(saved.id,auth.uid(),case when saved.status='CANCELLED' then 'TASK_CANCELLED' else 'STATUS_CHANGED' end,
+       jsonb_build_object('before',previous.status,'after',saved.status)); end if;
+ end if;
+ -- Record membership changes before targeted insert/update/delete; preserve work_status on promotion.
+ for current_assignment in select tm.member_id,tm.role old_role,a.role new_role from public.task_members tm
+   left join jsonb_to_recordset(assignments) as a(member_id uuid,role text) on a.member_id=tm.member_id where tm.task_id=saved.id loop
+   if current_assignment.new_role is null or current_assignment.new_role<>current_assignment.old_role then
+     insert into public.task_activity(task_id,actor_id,action,metadata) values(saved.id,auth.uid(),
+      case when current_assignment.new_role is null then 'MEMBER_REMOVED' else 'MEMBER_ROLE_CHANGED' end,
+      jsonb_build_object('member_id',current_assignment.member_id,'before',current_assignment.old_role,'after',current_assignment.new_role));
+   end if;
+ end loop;
+ insert into public.task_activity(task_id,actor_id,action,metadata)
+   select saved.id,auth.uid(),'MEMBER_ADDED',jsonb_build_object('member_id',a.member_id,'after',a.role)
+   from jsonb_to_recordset(assignments) as a(member_id uuid,role text)
+   where not exists(select 1 from public.task_members tm where tm.task_id=saved.id and tm.member_id=a.member_id);
+ delete from public.task_members tm where tm.task_id=saved.id and not exists
+   (select 1 from jsonb_to_recordset(assignments) as a(member_id uuid,role text) where a.member_id=tm.member_id);
+ insert into public.task_members(task_id,member_id,role)
+   select saved.id,a.member_id,a.role from jsonb_to_recordset(assignments) as a(member_id uuid,role text)
+   on conflict(task_id,member_id) do update set role=excluded.role,updated_at=clock_timestamp() where task_members.role<>excluded.role;
+ -- Only initial default reminder data exists in this phase; keep it aligned with the deadline.
+ if target_id is null or previous.deadline_date is distinct from saved.deadline_date or previous.deadline_at is distinct from saved.deadline_at then
+   delete from public.task_reminders where task_id=saved.id;
+   if saved.deadline_date is not null then insert into public.task_reminders(task_id,kind,days_before,local_time) values(saved.id,'LOCAL_TIME',1,'19:00');
+   elsif saved.deadline_at is not null then insert into public.task_reminders(task_id,kind,offset_minutes) values(saved.id,'OFFSET',1440); end if;
+ end if;
+ return saved.id;
+end;
+$$;
+
+create function public.set_my_task_work_status(target_id uuid, expected_revision bigint, new_status text)
+returns void language plpgsql security definer set search_path='' as $$
+declare parent public.tasks; own public.task_members; actor_member uuid:=public.task_current_member_id();
+begin
+ if not public.can_read_task(target_id) then raise exception 'Task permission denied' using errcode='42501'; end if;
+ select * into parent from public.tasks where id=target_id for update;
+ select * into own from public.task_members tm where tm.task_id=target_id and tm.member_id=actor_member;
+ if not public.can_read_task(target_id) or not found or parent.scope<>'TEAM' then raise exception 'Task permission denied' using errcode='42501'; end if;
+ if parent.revision is distinct from expected_revision then raise exception 'Task changed; reload' using errcode='40001'; end if;
+ if new_status is null or new_status not in ('TODO','DONE') or parent.status='CANCELLED' then raise exception 'Invalid work status' using errcode='22023'; end if;
+ if own.work_status=new_status then return; end if;
+ update public.task_members tm set work_status=new_status,updated_at=clock_timestamp() where tm.task_id=target_id and tm.member_id=actor_member;
+ update public.tasks set revision=revision+1,updated_at=clock_timestamp(),updated_by=auth.uid() where id=target_id;
+ insert into public.task_activity(task_id,actor_id,action,metadata) values(target_id,auth.uid(),
+  case when new_status='DONE' then 'MEMBER_WORK_COMPLETED' else 'MEMBER_WORK_REOPENED' end,
+  jsonb_build_object('member_id',actor_member,'before',own.work_status,'after',new_status));
+end;
+$$;
+
+revoke all on function public.task_current_member_id(),public.can_read_task(uuid),public.can_manage_task(uuid),
+ public.save_task(uuid,bigint,jsonb,jsonb),public.set_my_task_work_status(uuid,bigint,text) from public,anon,authenticated;
+grant execute on function public.can_read_task(uuid),public.can_manage_task(uuid),
+ public.save_task(uuid,bigint,jsonb,jsonb),public.set_my_task_work_status(uuid,bigint,text) to authenticated;
+commit;
+
+-- BEGIN APP FINANCE (mirrors 20260923000300_app_finance.sql)
+-- APP Comptes: independent of SITE finance_transactions. EUR, exact integer cents.
+begin;
+insert into public.app_permissions(key,description) values
+ ('finance.access','Consulter ses comptes'),('finance.treasury.read','Lire la trésorerie'),('finance.treasury.manage','Gérer la trésorerie');
+insert into public.app_role_permissions(role_key,permission_key)
+ select key,'finance.access' from public.app_roles where key in ('APP_ADMIN','RESPONSIBLE','TREASURER','MEMBER');
+-- Technical administration grants no treasury or private financial super-reader rights.
+insert into public.app_role_permissions(role_key,permission_key) values
+ ('TREASURER','finance.treasury.read'),('TREASURER','finance.treasury.manage');
+
+create table public.app_financial_entities (
+ id uuid primary key default gen_random_uuid(),
+ type text not null check(type in ('MEMBER','CHIRO')),
+ member_id uuid unique references public.members(id) on delete restrict,
+ check((type='MEMBER' and member_id is not null) or (type='CHIRO' and member_id is null))
+);
+create unique index app_financial_single_chiro on public.app_financial_entities(type) where type='CHIRO';
+insert into public.app_financial_entities(type) values('CHIRO');
+insert into public.app_financial_entities(type,member_id) select 'MEMBER',id from public.members;
+create function public.app_finance_member_entity() returns trigger language plpgsql security definer set search_path='' as $$
+begin insert into public.app_financial_entities(type,member_id) values('MEMBER',new.id); return new; end $$;
+create trigger app_finance_member_entity after insert on public.members for each row execute function public.app_finance_member_entity();
+
+create table public.app_finance_transactions (
+ id uuid primary key default gen_random_uuid(),
+ kind text not null check(kind in ('EXPENSE','DIRECT_DEBT')),
+ title text not null check(title=btrim(title) and title ~ '[^[:space:]]' and char_length(title)<=200),
+ description text check(char_length(description)<=10000),
+ amount_cents bigint not null check(amount_cents between 1 and 999999999999),
+ currency text not null default 'EUR' check(currency='EUR'),
+ paid_by_entity_id uuid references public.app_financial_entities(id) on delete restrict,
+ debtor_entity_id uuid references public.app_financial_entities(id) on delete restrict,
+ creditor_entity_id uuid references public.app_financial_entities(id) on delete restrict,
+ split_mode text check(split_mode in ('EQUAL','CUSTOM_AMOUNT')),
+ expense_date date not null check(expense_date between date '2000-01-01' and date '2100-12-31'),
+ visibility text not null check(visibility in ('PRIVATE','TREASURY')),
+ status text not null default 'ACTIVE' check(status in ('ACTIVE','CANCELLED')),
+ created_by uuid references auth.users(id) on delete set null,
+ updated_by uuid references auth.users(id) on delete set null,
+ created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+ revision bigint not null default 1 check(revision>0),
+ check((kind='EXPENSE' and paid_by_entity_id is not null and split_mode is not null and debtor_entity_id is null and creditor_entity_id is null)
+  or (kind='DIRECT_DEBT' and paid_by_entity_id is null and split_mode is null and debtor_entity_id is not null and creditor_entity_id is not null and debtor_entity_id<>creditor_entity_id))
+);
+create index app_finance_transactions_date on public.app_finance_transactions(expense_date,id);
+create index app_finance_transactions_visibility on public.app_finance_transactions(visibility,status);
+create table public.app_expense_shares (
+ transaction_id uuid not null references public.app_finance_transactions(id) on delete restrict,
+ entity_id uuid not null references public.app_financial_entities(id) on delete restrict,
+ amount_cents bigint not null check(amount_cents between 0 and 999999999999),
+ primary key(transaction_id,entity_id)
+);
+create index app_expense_shares_entity on public.app_expense_shares(entity_id,transaction_id);
+create table public.app_finance_obligations (
+ id uuid primary key default gen_random_uuid(),
+ transaction_id uuid not null references public.app_finance_transactions(id) on delete restrict,
+ debtor_entity_id uuid not null references public.app_financial_entities(id) on delete restrict,
+ creditor_entity_id uuid not null references public.app_financial_entities(id) on delete restrict,
+ original_amount_cents bigint not null check(original_amount_cents between 1 and 999999999999),
+ check(debtor_entity_id<>creditor_entity_id),
+ unique(transaction_id,debtor_entity_id,creditor_entity_id)
+);
+create index app_finance_obligations_debtor on public.app_finance_obligations(debtor_entity_id,transaction_id);
+create index app_finance_obligations_creditor on public.app_finance_obligations(creditor_entity_id,transaction_id);
+create table public.app_finance_payments (
+ id uuid primary key default gen_random_uuid(),
+ transaction_id uuid not null references public.app_finance_transactions(id) on delete restrict,
+ from_entity_id uuid not null references public.app_financial_entities(id) on delete restrict,
+ to_entity_id uuid not null references public.app_financial_entities(id) on delete restrict,
+ amount_cents bigint not null check(amount_cents between 1 and 999999999999),
+ payment_date date not null check(payment_date between date '2000-01-01' and date '2100-12-31'),
+ comment text check(char_length(comment)<=2000),
+ status text not null default 'ACTIVE' check(status in ('ACTIVE','CANCELLED')),
+ created_by uuid references auth.users(id) on delete set null,
+ created_at timestamptz not null default clock_timestamp(),
+ cancelled_by uuid references auth.users(id) on delete set null,
+ cancelled_at timestamptz, cancellation_reason text,
+ check(from_entity_id<>to_entity_id)
+);
+create index app_finance_payments_transaction on public.app_finance_payments(transaction_id);
+-- V1: one obligation per payment RPC. Separate allocations allow future multi-debt payments.
+create table public.app_payment_allocations (
+ payment_id uuid not null references public.app_finance_payments(id) on delete restrict,
+ obligation_id uuid not null references public.app_finance_obligations(id) on delete restrict,
+ amount_cents bigint not null check(amount_cents between 1 and 999999999999),
+ primary key(payment_id,obligation_id)
+);
+create index app_payment_allocations_obligation on public.app_payment_allocations(obligation_id,payment_id);
+create table public.app_finance_activity (
+ id uuid primary key default gen_random_uuid(),
+ transaction_id uuid not null references public.app_finance_transactions(id) on delete restrict,
+ actor_id uuid references auth.users(id) on delete set null,
+ action text not null check(action in ('EXPENSE_CREATED','DIRECT_DEBT_CREATED','TRANSACTION_UPDATED','TRANSACTION_CANCELLED','PAYMENT_RECORDED','PAYMENT_CANCELLED')),
+ metadata jsonb not null default '{}' check(jsonb_typeof(metadata)='object'),
+ created_at timestamptz not null default clock_timestamp()
+);
+create index app_finance_activity_transaction on public.app_finance_activity(transaction_id,created_at,id);
+
+create function public.app_finance_access() returns boolean language sql stable security definer set search_path='' as $$
+ select public.has_app_access() and public.has_app_permission('finance.access');
+$$;
+create function public.app_finance_own_entity() returns uuid language sql stable security definer set search_path='' as $$
+ select e.id from public.app_financial_entities e join public.members m on m.id=e.member_id where m.user_id=auth.uid();
+$$;
+create function public.can_read_app_finance(target uuid) returns boolean language sql stable security definer set search_path='' as $$
+ select public.app_finance_access() and exists(select 1 from public.app_finance_transactions t where t.id=target and (
+  public.app_finance_own_entity() in (t.paid_by_entity_id,t.debtor_entity_id,t.creditor_entity_id)
+  or exists(select 1 from public.app_expense_shares s where s.transaction_id=t.id and s.entity_id=public.app_finance_own_entity())
+  or (t.visibility='TREASURY' and (public.has_app_permission('finance.treasury.read') or public.has_app_permission('finance.treasury.manage')))
+ ));
+$$;
+create function public.can_manage_app_finance(target uuid) returns boolean language sql stable security definer set search_path='' as $$
+ select public.can_read_app_finance(target) and exists(select 1 from public.app_finance_transactions t where t.id=target and (
+  (t.visibility='PRIVATE' and t.created_by=auth.uid())
+  or (t.visibility='TREASURY' and public.has_app_permission('finance.treasury.manage'))
+ ));
+$$;
+
+alter table public.app_financial_entities enable row level security;
+alter table public.app_finance_transactions enable row level security;
+alter table public.app_expense_shares enable row level security;
+alter table public.app_finance_obligations enable row level security;
+alter table public.app_finance_payments enable row level security;
+alter table public.app_payment_allocations enable row level security;
+alter table public.app_finance_activity enable row level security;
+revoke all on public.app_financial_entities,public.app_finance_transactions,public.app_expense_shares,public.app_finance_obligations,
+ public.app_finance_payments,public.app_payment_allocations,public.app_finance_activity from public,anon,authenticated;
+grant select on public.app_financial_entities,public.app_finance_transactions,public.app_expense_shares,public.app_finance_obligations,
+ public.app_finance_payments,public.app_payment_allocations,public.app_finance_activity to authenticated;
+create policy app_financial_entities_read on public.app_financial_entities for select to authenticated using(public.app_finance_access());
+create policy app_finance_transactions_read on public.app_finance_transactions for select to authenticated using(public.can_read_app_finance(id));
+create policy app_expense_shares_read on public.app_expense_shares for select to authenticated using(public.can_read_app_finance(transaction_id));
+create policy app_finance_obligations_read on public.app_finance_obligations for select to authenticated using(public.can_read_app_finance(transaction_id));
+create policy app_finance_payments_read on public.app_finance_payments for select to authenticated using(public.can_read_app_finance(transaction_id));
+create policy app_payment_allocations_read on public.app_payment_allocations for select to authenticated using(exists(
+ select 1 from public.app_finance_payments p where p.id=payment_id and public.can_read_app_finance(p.transaction_id)));
+create policy app_finance_activity_read on public.app_finance_activity for select to authenticated using(public.can_read_app_finance(transaction_id));
+
+create function public.save_app_finance(target_id uuid, expected_revision bigint, details jsonb, shares jsonb)
+returns uuid language plpgsql security definer set search_path='' as $$
+declare candidate public.app_finance_transactions; previous public.app_finance_transactions; saved public.app_finance_transactions;
+ own_entity uuid:=public.app_finance_own_entity(); entities uuid[]; count_shares bigint; chiro_involved boolean;
+begin
+ if not public.app_finance_access() then raise exception 'Finance permission denied' using errcode='42501'; end if;
+ if jsonb_typeof(details) is distinct from 'object' or jsonb_typeof(shares) is distinct from 'array' then raise exception 'Invalid finance input' using errcode='22023'; end if;
+ -- Check the original text before bigint coercion (JSON fractional numbers must never round).
+ if coalesce(details->>'amount_cents','') !~ '^[0-9]{1,12}$' then raise exception 'Invalid integer cents' using errcode='22023'; end if;
+ candidate:=jsonb_populate_record(null::public.app_finance_transactions,details);
+ if target_id is not null then
+  if not public.can_manage_app_finance(target_id) then raise exception 'Finance permission denied' using errcode='42501'; end if;
+  select * into previous from public.app_finance_transactions where id=target_id for update;
+  if not public.can_manage_app_finance(target_id) then raise exception 'Finance permission denied' using errcode='42501'; end if;
+  if previous.revision is distinct from expected_revision then raise exception 'Finance changed; reload' using errcode='40001'; end if;
+  if previous.status<>'ACTIVE' or exists(select 1 from public.app_finance_payments where transaction_id=target_id) then
+   raise exception 'Payments exist or transaction cancelled; cancel and replace explicitly' using errcode='55000'; end if;
+  if candidate.kind is distinct from previous.kind or candidate.visibility is distinct from previous.visibility then
+   raise exception 'Kind and visibility are immutable' using errcode='22023'; end if;
+ end if;
+ count_shares:=jsonb_array_length(shares);
+ if count_shares>5000 or exists(select 1 from jsonb_array_elements(shares) s where jsonb_typeof(s) is distinct from 'object') then raise exception 'Invalid shares' using errcode='22023'; end if;
+ if candidate.kind='EXPENSE' then
+  if count_shares=0 or candidate.split_mode is null or candidate.split_mode not in ('EQUAL','CUSTOM_AMOUNT') then raise exception 'Invalid split' using errcode='22023'; end if;
+  if exists(select 1 from jsonb_to_recordset(shares) as s(entity_id uuid) where s.entity_id is null)
+   or count_shares<>(select count(distinct s.entity_id) from jsonb_to_recordset(shares) as s(entity_id uuid)) then raise exception 'Duplicate or missing entity' using errcode='22023'; end if;
+  if candidate.split_mode='CUSTOM_AMOUNT' then
+   if exists(select 1 from jsonb_array_elements(shares) s where coalesce(s->>'amount_cents','') !~ '^[0-9]{1,12}$') then raise exception 'Invalid share cents' using errcode='22023'; end if;
+   if (select sum(s.amount_cents) from jsonb_to_recordset(shares) as s(amount_cents bigint))<>candidate.amount_cents then raise exception 'Shares must equal total' using errcode='22023'; end if;
+  end if;
+  select array_agg(s.entity_id) || array[candidate.paid_by_entity_id] into entities from jsonb_to_recordset(shares) as s(entity_id uuid);
+ elsif candidate.kind='DIRECT_DEBT' then
+  if count_shares<>0 then raise exception 'Direct debt cannot have shares' using errcode='22023'; end if;
+  entities:=array[candidate.debtor_entity_id,candidate.creditor_entity_id];
+ else raise exception 'Invalid kind' using errcode='22023'; end if;
+ if exists(select 1 from unnest(entities) x left join public.app_financial_entities e on e.id=x left join public.members m on m.id=e.member_id
+  where e.id is null or (e.type='MEMBER' and not m.active and not (target_id is not null and
+   (coalesce(e.id in (previous.paid_by_entity_id,previous.debtor_entity_id,previous.creditor_entity_id),false)
+     or exists(select 1 from public.app_expense_shares s where s.transaction_id=target_id and s.entity_id=e.id))))) then
+  raise exception 'Entity missing or archived' using errcode='22023'; end if;
+ select exists(select 1 from public.app_financial_entities e where e.id=any(entities) and e.type='CHIRO') into chiro_involved;
+ if candidate.visibility='PRIVATE' then
+  if chiro_involved or own_entity is null or (candidate.kind='EXPENSE' and candidate.paid_by_entity_id<>own_entity)
+   or (candidate.kind='DIRECT_DEBT' and not (own_entity=any(entities))) then raise exception 'Private finance permission denied' using errcode='42501'; end if;
+ elsif candidate.visibility='TREASURY' then
+  if not chiro_involved or not public.has_app_permission('finance.treasury.manage') then raise exception 'Treasury permission denied' using errcode='42501'; end if;
+ else raise exception 'Invalid visibility' using errcode='22023'; end if;
+ if target_id is null then
+  insert into public.app_finance_transactions(kind,title,description,amount_cents,paid_by_entity_id,debtor_entity_id,creditor_entity_id,split_mode,expense_date,visibility,created_by,updated_by)
+  values(candidate.kind,candidate.title,candidate.description,candidate.amount_cents,candidate.paid_by_entity_id,candidate.debtor_entity_id,candidate.creditor_entity_id,candidate.split_mode,candidate.expense_date,candidate.visibility,auth.uid(),auth.uid()) returning * into saved;
+ else
+  update public.app_finance_transactions set title=candidate.title,description=candidate.description,amount_cents=candidate.amount_cents,
+   paid_by_entity_id=candidate.paid_by_entity_id,debtor_entity_id=candidate.debtor_entity_id,creditor_entity_id=candidate.creditor_entity_id,
+   split_mode=candidate.split_mode,expense_date=candidate.expense_date,updated_by=auth.uid(),updated_at=clock_timestamp(),revision=revision+1
+   where id=target_id returning * into saved;
+  -- No payment (even cancelled) exists. Record the former distribution before replacement.
+  insert into public.app_finance_activity(transaction_id,actor_id,action,metadata) values(saved.id,auth.uid(),'TRANSACTION_UPDATED',
+   jsonb_build_object('before_amount_cents',previous.amount_cents::text,'after_amount_cents',saved.amount_cents::text,
+    'before_payer',previous.paid_by_entity_id,'before_debtor',previous.debtor_entity_id,'before_creditor',previous.creditor_entity_id,
+    'before_shares',coalesce((select jsonb_agg(jsonb_build_object('entity_id',s.entity_id,'amount_cents',s.amount_cents::text)) from public.app_expense_shares s where s.transaction_id=target_id),'[]'::jsonb)));
+  delete from public.app_finance_obligations where transaction_id=target_id;
+  delete from public.app_expense_shares where transaction_id=target_id;
+ end if;
+ if saved.kind='EXPENSE' then
+  insert into public.app_expense_shares(transaction_id,entity_id,amount_cents)
+   select saved.id,s.entity_id,case when saved.split_mode='CUSTOM_AMOUNT' then s.amount_cents
+    else saved.amount_cents/count_shares + case when row_number() over(order by s.entity_id)<=saved.amount_cents%count_shares then 1 else 0 end end
+   from jsonb_to_recordset(shares) as s(entity_id uuid,amount_cents bigint);
+  insert into public.app_finance_obligations(transaction_id,debtor_entity_id,creditor_entity_id,original_amount_cents)
+   select saved.id,s.entity_id,saved.paid_by_entity_id,s.amount_cents from public.app_expense_shares s
+   where s.transaction_id=saved.id and s.entity_id<>saved.paid_by_entity_id and s.amount_cents>0;
+ else
+  insert into public.app_finance_obligations(transaction_id,debtor_entity_id,creditor_entity_id,original_amount_cents)
+   values(saved.id,saved.debtor_entity_id,saved.creditor_entity_id,saved.amount_cents);
+ end if;
+ if target_id is null then insert into public.app_finance_activity(transaction_id,actor_id,action) values(saved.id,auth.uid(),
+  case when saved.kind='EXPENSE' then 'EXPENSE_CREATED' else 'DIRECT_DEBT_CREATED' end); end if;
+ return saved.id;
+end $$;
+
+create function public.record_app_finance_payment(obligation_id uuid, expected_revision bigint, details jsonb)
+returns uuid language plpgsql security definer set search_path='' as $$
+declare obligation public.app_finance_obligations; parent public.app_finance_transactions; payment public.app_finance_payments;
+ remaining bigint; own_entity uuid:=public.app_finance_own_entity();
+begin
+ select * into obligation from public.app_finance_obligations o where o.id=obligation_id;
+ if not found or not public.can_read_app_finance(obligation.transaction_id) then raise exception 'Finance permission denied' using errcode='42501'; end if;
+ -- Same lock order for all mutations: parent first. Re-read obligation after acquiring the lock.
+ select * into parent from public.app_finance_transactions where id=obligation.transaction_id for update;
+ select * into obligation from public.app_finance_obligations o where o.id=obligation_id;
+ if not found or not public.can_read_app_finance(parent.id) then raise exception 'Finance permission denied' using errcode='42501'; end if;
+ if (parent.visibility='TREASURY' and not public.has_app_permission('finance.treasury.manage'))
+  or (parent.visibility='PRIVATE' and (own_entity is null or own_entity not in (obligation.debtor_entity_id,obligation.creditor_entity_id))) then raise exception 'Payment permission denied' using errcode='42501'; end if;
+ if parent.status<>'ACTIVE' then raise exception 'Transaction cancelled' using errcode='55000'; end if;
+ if parent.revision is distinct from expected_revision then raise exception 'Finance changed; reload' using errcode='40001'; end if;
+ if jsonb_typeof(details) is distinct from 'object' or coalesce(details->>'amount_cents','') !~ '^[0-9]{1,12}$' then raise exception 'Invalid payment cents' using errcode='22023'; end if;
+ payment:=jsonb_populate_record(null::public.app_finance_payments,details);
+ select obligation.original_amount_cents-coalesce(sum(a.amount_cents),0) into remaining from public.app_payment_allocations a
+  join public.app_finance_payments p on p.id=a.payment_id where a.obligation_id=obligation.id and p.status='ACTIVE';
+ if payment.amount_cents>remaining then raise exception 'Payment exceeds remaining balance' using errcode='22003',detail=remaining::text; end if;
+ insert into public.app_finance_payments(transaction_id,from_entity_id,to_entity_id,amount_cents,payment_date,comment,created_by)
+  values(parent.id,obligation.debtor_entity_id,obligation.creditor_entity_id,payment.amount_cents,payment.payment_date,payment.comment,auth.uid()) returning * into payment;
+ insert into public.app_payment_allocations(payment_id,obligation_id,amount_cents) values(payment.id,obligation.id,payment.amount_cents);
+ update public.app_finance_transactions set revision=revision+1,updated_by=auth.uid(),updated_at=clock_timestamp() where id=parent.id;
+ insert into public.app_finance_activity(transaction_id,actor_id,action,metadata) values(parent.id,auth.uid(),'PAYMENT_RECORDED',
+  jsonb_build_object('payment_id',payment.id,'obligation_id',obligation.id,'amount_cents',payment.amount_cents::text));
+ return payment.id;
+end $$;
+
+create function public.cancel_app_finance_payment(target_id uuid, expected_revision bigint, reason text)
+returns void language plpgsql security definer set search_path='' as $$
+declare payment public.app_finance_payments; parent public.app_finance_transactions; own_entity uuid:=public.app_finance_own_entity();
+begin
+ select * into payment from public.app_finance_payments where id=target_id;
+ if not found or not public.can_read_app_finance(payment.transaction_id) then raise exception 'Finance permission denied' using errcode='42501'; end if;
+ select * into parent from public.app_finance_transactions where id=payment.transaction_id for update;
+ select * into payment from public.app_finance_payments where id=target_id;
+ if not public.can_read_app_finance(parent.id) or (parent.visibility='TREASURY' and not public.has_app_permission('finance.treasury.manage'))
+  or (parent.visibility='PRIVATE' and (own_entity is null or own_entity not in (payment.from_entity_id,payment.to_entity_id))) then raise exception 'Payment permission denied' using errcode='42501'; end if;
+ if parent.revision is distinct from expected_revision then raise exception 'Finance changed; reload' using errcode='40001'; end if;
+ if payment.status<>'ACTIVE' or parent.status<>'ACTIVE' then raise exception 'Already cancelled' using errcode='55000'; end if;
+ if reason is null or btrim(reason) !~ '[^[:space:]]' or char_length(reason)>2000 then raise exception 'Cancellation reason required' using errcode='22023'; end if;
+ update public.app_finance_payments set status='CANCELLED',cancelled_at=clock_timestamp(),cancelled_by=auth.uid(),cancellation_reason=btrim(reason) where id=target_id;
+ update public.app_finance_transactions set revision=revision+1,updated_by=auth.uid(),updated_at=clock_timestamp() where id=parent.id;
+ insert into public.app_finance_activity(transaction_id,actor_id,action,metadata) values(parent.id,auth.uid(),'PAYMENT_CANCELLED',jsonb_build_object('payment_id',payment.id,'reason',btrim(reason)));
+end $$;
+
+create function public.cancel_app_finance_transaction(target_id uuid, expected_revision bigint, reason text)
+returns void language plpgsql security definer set search_path='' as $$
+declare parent public.app_finance_transactions;
+begin
+ if not public.can_manage_app_finance(target_id) then raise exception 'Finance permission denied' using errcode='42501'; end if;
+ select * into parent from public.app_finance_transactions where id=target_id for update;
+ if not public.can_manage_app_finance(target_id) then raise exception 'Finance permission denied' using errcode='42501'; end if;
+ if parent.revision is distinct from expected_revision then raise exception 'Finance changed; reload' using errcode='40001'; end if;
+ if parent.status<>'ACTIVE' or exists(select 1 from public.app_finance_payments where transaction_id=target_id and status='ACTIVE') then
+  raise exception 'Active payments exist or transaction already cancelled' using errcode='55000'; end if;
+ if reason is null or btrim(reason) !~ '[^[:space:]]' or char_length(reason)>2000 then raise exception 'Cancellation reason required' using errcode='22023'; end if;
+ update public.app_finance_transactions set status='CANCELLED',revision=revision+1,updated_by=auth.uid(),updated_at=clock_timestamp() where id=target_id;
+ insert into public.app_finance_activity(transaction_id,actor_id,action,metadata) values(target_id,auth.uid(),'TRANSACTION_CANCELLED',jsonb_build_object('reason',btrim(reason)));
+end $$;
+
+-- One statement, one MVCC snapshot: balances never combine pre-payment and post-payment rows.
+-- SECURITY INVOKER deliberately retains every underlying RLS policy.
+create function public.get_app_finance_snapshot() returns jsonb language sql stable security invoker set search_path='' as $$
+ select jsonb_build_object(
+  'entities',coalesce((select jsonb_agg(to_jsonb(e) order by e.id) from public.app_financial_entities e),'[]'::jsonb),
+  'members',coalesce((select jsonb_agg(to_jsonb(m) order by m.last_name,m.id) from public.members m),'[]'::jsonb),
+  'transactions',coalesce((select jsonb_agg(to_jsonb(t) order by t.expense_date desc,t.id) from public.app_finance_transactions t),'[]'::jsonb),
+  'shares',coalesce((select jsonb_agg(to_jsonb(s)) from public.app_expense_shares s),'[]'::jsonb),
+  'obligations',coalesce((select jsonb_agg(to_jsonb(o)) from public.app_finance_obligations o),'[]'::jsonb),
+  'payments',coalesce((select jsonb_agg(to_jsonb(p) order by p.payment_date desc,p.id) from public.app_finance_payments p),'[]'::jsonb),
+  'allocations',coalesce((select jsonb_agg(to_jsonb(a)) from public.app_payment_allocations a),'[]'::jsonb)
+ ) where public.app_finance_access();
+$$;
+revoke all on function public.get_app_finance_snapshot() from public,anon,authenticated;
+grant execute on function public.get_app_finance_snapshot() to authenticated;
+
+revoke all on function public.app_finance_member_entity(),public.app_finance_access(),public.app_finance_own_entity(),
+ public.can_read_app_finance(uuid),public.can_manage_app_finance(uuid),public.save_app_finance(uuid,bigint,jsonb,jsonb),
+ public.record_app_finance_payment(uuid,bigint,jsonb),public.cancel_app_finance_payment(uuid,bigint,text),public.cancel_app_finance_transaction(uuid,bigint,text) from public,anon,authenticated;
+grant execute on function public.app_finance_access(),public.can_read_app_finance(uuid),public.can_manage_app_finance(uuid),
+ public.save_app_finance(uuid,bigint,jsonb,jsonb),public.record_app_finance_payment(uuid,bigint,jsonb),
+ public.cancel_app_finance_payment(uuid,bigint,text),public.cancel_app_finance_transaction(uuid,bigint,text) to authenticated;
+commit;
+
+-- BEGIN APP NOTIFICATIONS (mirrors 20260923000400_app_notifications.sql)
+-- Notifications: owner-only inbox/settings; service-only planning and delivery.
+begin;
+create table public.notification_preferences (
+ user_id uuid primary key references auth.users(id) on delete cascade,
+ push_enabled boolean not null default false,
+ event_notifications_enabled boolean not null default true,
+ task_notifications_enabled boolean not null default true,
+ push_details boolean not null default false,
+ created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+create table public.notification_category_preferences (
+ user_id uuid not null references auth.users(id) on delete cascade,
+ category_key text not null references public.event_categories(key) on delete cascade,
+ enabled boolean not null default true, primary key(user_id,category_key)
+);
+create table public.push_subscriptions (
+ id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,
+ endpoint text not null unique check(char_length(endpoint)<=2048),
+ p256dh text not null check(char_length(p256dh) between 80 and 100), auth text not null check(char_length(auth) between 20 and 30),
+ device_label text not null default 'Cet appareil' check(char_length(device_label) between 1 and 80),
+ active boolean not null default true, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), last_seen_at timestamptz not null default now()
+);
+create index push_subscriptions_user on public.push_subscriptions(user_id,active);
+create table public.notification_rebuild_queue (
+ source_type text not null check(source_type in ('EVENT','TASK')), source_id uuid not null,
+ revision bigint not null default 1, next_plan_at timestamptz not null default now(),
+ claimed_at timestamptz, claim_token uuid, last_error_code text,
+ primary key(source_type,source_id)
+);
+create table public.notification_jobs (
+ id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,
+ source_type text not null check(source_type in ('EVENT','TASK','SYSTEM')), source_id uuid not null,
+ source_occurrence_key text not null default '', reminder_id uuid not null, source_revision bigint not null,
+ due_at timestamptz not null, expires_at timestamptz not null,
+ title text not null check(char_length(title)<=250), body text not null check(char_length(body)<=1000),
+ status text not null default 'PENDING' check(status in ('PENDING','PROCESSING','COMPLETED','FAILED','CANCELLED')),
+ attempt_count integer not null default 0, next_attempt_at timestamptz not null default now(), last_error_code text,
+ created_at timestamptz not null default now(), claimed_at timestamptz, completed_at timestamptz,
+ test_subscription_id uuid references public.push_subscriptions(id) on delete set null,
+ unique(user_id,source_type,source_id,source_occurrence_key,reminder_id,due_at)
+);
+create index notification_jobs_due on public.notification_jobs(status,due_at,next_attempt_at);
+create index notification_jobs_source on public.notification_jobs(source_type,source_id);
+create table public.notifications (
+ id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,
+ job_id uuid unique references public.notification_jobs(id) on delete set null,
+ kind text not null check(kind in ('EVENT_REMINDER','TASK_REMINDER','SYSTEM')),
+ title text not null, body text not null, source_type text not null, source_id uuid not null, source_occurrence_key text not null default '',
+ created_at timestamptz not null default now(), read_at timestamptz
+);
+create index notifications_user_date on public.notifications(user_id,created_at desc,id);
+create index notifications_unread on public.notifications(user_id) where read_at is null;
+create table public.notification_deliveries (
+ id uuid primary key default gen_random_uuid(), job_id uuid not null references public.notification_jobs(id) on delete cascade,
+ subscription_id uuid references public.push_subscriptions(id) on delete set null,
+ status text not null default 'PENDING' check(status in ('PENDING','PROCESSING','SENT','FAILED','CANCELLED')),
+ attempts integer not null default 0, next_attempt_at timestamptz not null default now(), claimed_at timestamptz, claim_token uuid,
+ last_error_code text, sent_at timestamptz, unique(job_id,subscription_id)
+);
+create index notification_deliveries_due on public.notification_deliveries(status,next_attempt_at);
+alter table public.notification_preferences enable row level security;
+alter table public.notification_category_preferences enable row level security;
+alter table public.push_subscriptions enable row level security;
+alter table public.notifications enable row level security;
+alter table public.notification_jobs enable row level security;
+alter table public.notification_deliveries enable row level security;
+alter table public.notification_rebuild_queue enable row level security;
+revoke all on public.notification_preferences,public.notification_category_preferences,public.push_subscriptions,public.notifications,
+ public.notification_jobs,public.notification_deliveries,public.notification_rebuild_queue from public,anon,authenticated;
+grant select on public.notification_preferences,public.notification_category_preferences,public.push_subscriptions,public.notifications to authenticated;
+create policy notification_preferences_own on public.notification_preferences for select to authenticated using(user_id=auth.uid() and public.has_app_access());
+create policy notification_category_own on public.notification_category_preferences for select to authenticated using(user_id=auth.uid() and public.has_app_access());
+create policy push_subscriptions_own on public.push_subscriptions for select to authenticated using(user_id=auth.uid() and public.has_app_access());
+create policy notifications_own on public.notifications for select to authenticated using(user_id=auth.uid() and public.has_app_access());
+
+create function public.notification_user_permission(target_user uuid, permission text) returns boolean language sql stable security definer set search_path='' as $$
+ select exists(select 1 from public.app_user_roles ur join public.app_role_permissions rp on rp.role_key=ur.role_key where ur.user_id=target_user and rp.permission_key=permission);
+$$;
+create function public.notification_recipient_allowed(kind text, source uuid, target_user uuid) returns boolean language plpgsql stable security definer set search_path='' as $$
+declare person public.members; pref public.notification_preferences; e public.events; t public.tasks;
+begin
+ if not public.notification_user_permission(target_user,'app.access') then return false; end if;
+ if kind='SYSTEM' then return true; end if;
+ select * into person from public.members where user_id=target_user and active;
+ if not found then return false; end if;
+ select * into pref from public.notification_preferences where user_id=target_user;
+ if kind='EVENT' then
+  if not coalesce(pref.event_notifications_enabled,true) or not public.notification_user_permission(target_user,'events.read') then return false; end if;
+  select * into e from public.events where id=source and status='SCHEDULED';
+  if not found then return false; end if;
+  return e.audience_type='ALL' or exists(select 1 from public.event_participants p where p.event_id=e.id and p.member_id=person.id);
+ elsif kind='TASK' then
+  if not coalesce(pref.task_notifications_enabled,true) then return false; end if;
+  select * into t from public.tasks where id=source and status not in ('DONE','CANCELLED') and (deadline_date is not null or deadline_at is not null);
+  if not found then return false; end if;
+  return (t.scope='PERSONAL' and t.owner_member_id=person.id and t.owner_user_id=target_user)
+    or (t.scope='TEAM' and exists(select 1 from public.task_members tm where tm.task_id=t.id and tm.member_id=person.id and tm.work_status='TODO'));
+ end if;
+ return false;
+end $$;
+
+create function public.notification_dirty(kind text, source uuid) returns void language plpgsql security definer set search_path='' as $$
+begin
+ insert into public.notification_rebuild_queue(source_type,source_id) values(kind,source)
+ on conflict(source_type,source_id) do update set revision=notification_rebuild_queue.revision+1,next_plan_at=now();
+ update public.notification_jobs set status='CANCELLED' where source_type=kind and source_id=source and status in ('PENDING','PROCESSING');
+ update public.notification_deliveries d set status='CANCELLED',claim_token=null where d.status in ('PENDING','PROCESSING')
+  and exists(select 1 from public.notification_jobs j where j.id=d.job_id and j.source_type=kind and j.source_id=source);
+end $$;
+create function public.notification_source_changed() returns trigger language plpgsql security definer set search_path='' as $$
+declare row_data jsonb;
+begin
+ row_data:=case when tg_op='DELETE' then to_jsonb(old) else to_jsonb(new) end;
+ perform public.notification_dirty(tg_argv[0],(row_data->>tg_argv[1])::uuid);
+ return null;
+end $$;
+create trigger notifications_event_changed after insert or update or delete on public.events for each row execute function public.notification_source_changed('EVENT','id');
+create trigger notifications_event_participants after insert or update or delete on public.event_participants for each row execute function public.notification_source_changed('EVENT','event_id');
+create trigger notifications_event_overrides after insert or update or delete on public.event_occurrence_overrides for each row execute function public.notification_source_changed('EVENT','event_id');
+create trigger notifications_event_reminders after insert or update or delete on public.event_reminders for each row execute function public.notification_source_changed('EVENT','event_id');
+create trigger notifications_task_changed after insert or update or delete on public.tasks for each row execute function public.notification_source_changed('TASK','id');
+create trigger notifications_task_members after insert or update or delete on public.task_members for each row execute function public.notification_source_changed('TASK','task_id');
+create trigger notifications_task_reminders after insert or update or delete on public.task_reminders for each row execute function public.notification_source_changed('TASK','task_id');
+
+-- A user's opt-out must not discard another recipient's already queued device retries.
+create function public.notification_dirty_user(kind text,source uuid,users uuid[]) returns void language plpgsql security definer set search_path='' as $$
+declare version bigint;
+begin
+ insert into public.notification_rebuild_queue(source_type,source_id) values(kind,source)
+ on conflict(source_type,source_id) do update set revision=notification_rebuild_queue.revision+1,next_plan_at=now()
+ returning revision into version;
+ update public.notification_jobs set source_revision=version where source_type=kind and source_id=source and not(user_id=any(array_remove(users,null)));
+ update public.notification_jobs set status='CANCELLED' where source_type=kind and source_id=source and user_id=any(users) and status in ('PENDING','PROCESSING');
+ update public.notification_deliveries d set status='CANCELLED',claim_token=null where d.status in ('PENDING','PROCESSING')
+  and exists(select 1 from public.notification_jobs j where j.id=d.job_id and j.source_type=kind and j.source_id=source and j.user_id=any(users));
+end $$;
+create function public.notification_user_changed() returns trigger language plpgsql security definer set search_path='' as $$
+declare person uuid; row_data jsonb; old_data jsonb; target_user uuid; old_user uuid; source record;
+begin
+ row_data:=case when tg_op='DELETE' then to_jsonb(old) else to_jsonb(new) end;
+ if tg_op='UPDATE' then old_data:=to_jsonb(old); end if;
+ if tg_table_name='members' then
+  -- Editing a name does not require cancelling pending reminders.
+  if tg_op='UPDATE' and row_data->'active'=old_data->'active' and row_data->'user_id' is not distinct from old_data->'user_id' then return null; end if;
+  person:=(row_data->>'id')::uuid;
+ end if;
+ target_user:=(row_data->>'user_id')::uuid; old_user:=(old_data->>'user_id')::uuid;
+ if person is null then select id into person from public.members where user_id=target_user; end if;
+ -- User changes affect this person's tasks and the Agenda audience; no browser dependency.
+ for source in select 'EVENT' kind,e.id from public.events e where e.status='SCHEDULED'
+  union select 'TASK',t.id from public.tasks t where t.owner_member_id=person or t.owner_user_id in (target_user,old_user)
+   or exists(select 1 from public.task_members tm where tm.task_id=t.id and tm.member_id=person)
+ loop perform public.notification_dirty_user(source.kind,source.id,array[target_user,old_user]); end loop;
+ return null;
+end $$;
+create trigger notifications_member_changed after insert or update or delete on public.members for each row execute function public.notification_user_changed();
+create trigger notifications_roles_changed after insert or update or delete on public.app_user_roles for each row execute function public.notification_user_changed();
+create trigger notifications_preferences_changed after insert or update or delete on public.notification_preferences for each row execute function public.notification_user_changed();
+create trigger notifications_categories_changed after insert or update or delete on public.notification_category_preferences for each row execute function public.notification_user_changed();
+create function public.notification_role_permissions_changed() returns trigger language plpgsql security definer set search_path='' as $$
+declare source record;
+begin
+ for source in select source_type,source_id from public.notification_rebuild_queue loop perform public.notification_dirty(source.source_type,source.source_id); end loop;
+ return null;
+end $$;
+create trigger notifications_permission_matrix_changed after insert or update or delete on public.app_role_permissions for each statement execute function public.notification_role_permissions_changed();
+insert into public.notification_rebuild_queue(source_type,source_id) select 'EVENT',id from public.events union all select 'TASK',id from public.tasks;
+
+create function public.save_notification_preferences(details jsonb, categories jsonb) returns void language plpgsql security definer set search_path='' as $$
+begin
+ if not public.has_app_access() then raise exception 'Notification permission denied' using errcode='42501'; end if;
+ if jsonb_typeof(details) is distinct from 'object' or jsonb_typeof(categories) is distinct from 'array' or jsonb_array_length(categories)>100 then raise exception 'Invalid preferences' using errcode='22023'; end if;
+ insert into public.notification_preferences(user_id,push_enabled,event_notifications_enabled,task_notifications_enabled,push_details)
+ values(auth.uid(),(details->>'push_enabled')::boolean,(details->>'event_notifications_enabled')::boolean,(details->>'task_notifications_enabled')::boolean,coalesce((details->>'push_details')::boolean,false))
+ on conflict(user_id) do update set push_enabled=excluded.push_enabled,event_notifications_enabled=excluded.event_notifications_enabled,
+ task_notifications_enabled=excluded.task_notifications_enabled,push_details=excluded.push_details,updated_at=now();
+ delete from public.notification_category_preferences where user_id=auth.uid();
+ insert into public.notification_category_preferences(user_id,category_key,enabled)
+ select auth.uid(),p.category_key,p.enabled from jsonb_to_recordset(categories) as p(category_key text,enabled boolean);
+end $$;
+create function public.mark_notifications_read(target_id uuid default null) returns void language plpgsql security definer set search_path='' as $$
+begin
+ if not public.has_app_access() then raise exception 'Notification permission denied' using errcode='42501'; end if;
+ update public.notifications set read_at=coalesce(read_at,now()) where user_id=auth.uid() and (target_id is null or id=target_id);
+end $$;
+create function public.register_push_subscription(details jsonb) returns uuid language plpgsql security definer set search_path='' as $$
+declare saved uuid; endpoint_value text:=details->>'endpoint';
+begin
+ if not public.has_app_access() then raise exception 'Notification permission denied' using errcode='42501'; end if;
+ -- Prevent SSRF through arbitrary user-provided delivery destinations. Standard browser services only.
+ if endpoint_value is null or endpoint_value !~ '^https://(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9-]+\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com)/[^[:space:]#]+$'
+  or coalesce(details->>'p256dh','') !~ '^[A-Za-z0-9_-]{87}=?$' or coalesce(details->>'auth','') !~ '^[A-Za-z0-9_-]{22}(==)?$' then raise exception 'Invalid push subscription' using errcode='22023'; end if;
+ if exists(select 1 from public.push_subscriptions where endpoint=endpoint_value and user_id<>auth.uid()) then raise exception 'Renew this browser subscription' using errcode='42501'; end if;
+ if (select count(*) from public.push_subscriptions where user_id=auth.uid() and active)>=20
+  and not exists(select 1 from public.push_subscriptions where endpoint=endpoint_value and user_id=auth.uid() and active) then raise exception 'Device limit reached' using errcode='22023'; end if;
+ insert into public.push_subscriptions(user_id,endpoint,p256dh,auth,device_label)
+ values(auth.uid(),endpoint_value,details->>'p256dh',details->>'auth',coalesce(nullif(btrim(details->>'device_label'),''),'Cet appareil'))
+ on conflict(endpoint) do update set p256dh=excluded.p256dh,auth=excluded.auth,device_label=excluded.device_label,active=true,updated_at=now(),last_seen_at=now()
+ where push_subscriptions.user_id=auth.uid() returning id into saved;
+ if saved is null then raise exception 'Notification permission denied' using errcode='42501'; end if;
+ return saved;
+end $$;
+create function public.disable_push_subscription(target_id uuid) returns void language plpgsql security definer set search_path='' as $$
+begin
+ if not public.has_app_access() then raise exception 'Notification permission denied' using errcode='42501'; end if;
+ update public.push_subscriptions set active=false,updated_at=now() where id=target_id and user_id=auth.uid();
+ update public.notification_deliveries d set status='CANCELLED',claim_token=null where subscription_id=target_id and status in ('PENDING','PROCESSING')
+  and exists(select 1 from public.push_subscriptions s where s.id=target_id and s.user_id=auth.uid());
+end $$;
+create function public.touch_push_subscription(endpoint_value text) returns uuid language plpgsql security definer set search_path='' as $$
+declare saved uuid;
+begin
+ if not public.has_app_access() then raise exception 'Notification permission denied' using errcode='42501'; end if;
+ update public.push_subscriptions set last_seen_at=now() where user_id=auth.uid() and endpoint=endpoint_value and active returning id into saved;
+ return saved;
+end $$;
+
+-- Reminder definitions are edited atomically with the existing domain RPC, retaining IDs.
+create function public.notification_replace_reminders(kind text, source uuid, definitions jsonb) returns void language plpgsql security definer set search_path='' as $$
+declare r record;
+begin
+ if jsonb_typeof(definitions) is distinct from 'array' or jsonb_array_length(definitions)>10 then raise exception 'Maximum ten reminders' using errcode='22023'; end if;
+ if exists(select 1 from jsonb_to_recordset(definitions) as d(id uuid) where d.id is not null group by d.id having count(*)>1) then raise exception 'Duplicate reminder' using errcode='22023'; end if;
+ if exists(select 1 from jsonb_to_recordset(definitions) as d(kind text,offset_minutes integer,days_before integer,local_time time,scheduled_at timestamptz)
+  group by d.kind,d.offset_minutes,d.days_before,d.local_time,d.scheduled_at having count(*)>1) then raise exception 'Duplicate reminder' using errcode='22023'; end if;
+ if kind='EVENT' and exists(select 1 from public.events where id=source and frequency<>'NONE')
+  and exists(select 1 from jsonb_array_elements(definitions) d where d->>'kind'='ABSOLUTE') then raise exception 'Use relative reminders for a series' using errcode='22023'; end if;
+ if kind='TASK' and jsonb_array_length(definitions)>0 and exists(select 1 from public.tasks where id=source and deadline_date is null and deadline_at is null) then raise exception 'Task deadline required' using errcode='22023'; end if;
+ if kind='EVENT' then
+  if exists(select 1 from public.event_reminders er join jsonb_to_recordset(definitions) as d(id uuid) on d.id=er.id where er.event_id<>source) then raise exception 'Invalid reminder' using errcode='22023'; end if;
+  delete from public.event_reminders where event_id=source;
+ else
+  if exists(select 1 from public.task_reminders tr join jsonb_to_recordset(definitions) as d(id uuid) on d.id=tr.id where tr.task_id<>source) then raise exception 'Invalid reminder' using errcode='22023'; end if;
+  delete from public.task_reminders where task_id=source;
+ end if;
+ for r in select * from jsonb_to_recordset(definitions) as d(id uuid,kind text,offset_minutes integer,days_before integer,local_time time,scheduled_at timestamptz) loop
+  if kind='EVENT' then
+   insert into public.event_reminders(id,event_id,kind,offset_minutes,days_before,local_time,scheduled_at)
+   values(coalesce(r.id,gen_random_uuid()),source,r.kind,r.offset_minutes,r.days_before,r.local_time,r.scheduled_at);
+  else
+   insert into public.task_reminders(id,task_id,kind,offset_minutes,days_before,local_time,scheduled_at)
+   values(coalesce(r.id,gen_random_uuid()),source,r.kind,r.offset_minutes,r.days_before,r.local_time,r.scheduled_at);
+  end if;
+ end loop;
+end $$;
+create function public.save_agenda_event_with_reminders(target_id uuid,expected_revision bigint,details jsonb,participant_ids uuid[],reminders jsonb)
+returns uuid language plpgsql security definer set search_path='' as $$
+declare saved uuid;
+begin
+ saved:=public.save_agenda_event(target_id,expected_revision,details,participant_ids);
+ if reminders is not null then perform public.notification_replace_reminders('EVENT',saved,reminders); end if;
+ return saved;
+end $$;
+create function public.save_task_with_reminders(target_id uuid,expected_revision bigint,details jsonb,assignments jsonb,reminders jsonb)
+returns uuid language plpgsql security definer set search_path='' as $$
+declare saved uuid;
+begin
+ saved:=public.save_task(target_id,expected_revision,details,assignments);
+ if reminders is not null then perform public.notification_replace_reminders('TASK',saved,reminders); end if;
+ return saved;
+end $$;
+
+-- Server-only planner leases. Dirty revision changes invalidate the lease's plan at commit.
+create function public.claim_notification_sources(batch_size integer default 5) returns jsonb language plpgsql security definer set search_path='' as $$
+declare result jsonb;
+begin
+ with chosen as (select q.source_type,q.source_id from public.notification_rebuild_queue q where q.next_plan_at<=now()
+  and (q.claimed_at is null or q.claimed_at<now()-interval '2 minutes') order by q.next_plan_at,q.source_id for update skip locked limit least(greatest(batch_size,1),20)),
+ claimed as (update public.notification_rebuild_queue q set claimed_at=now(),claim_token=gen_random_uuid()
+  from chosen c where q.source_type=c.source_type and q.source_id=c.source_id returning q.*)
+ select coalesce(jsonb_agg(to_jsonb(c)||jsonb_build_object(
+  'source',case when c.source_type='EVENT' then (select to_jsonb(e) from public.events e where e.id=c.source_id) else (select to_jsonb(t) from public.tasks t where t.id=c.source_id) end,
+  'reminders',case when c.source_type='EVENT' then coalesce((select jsonb_agg(to_jsonb(r)) from public.event_reminders r where r.event_id=c.source_id),'[]') else coalesce((select jsonb_agg(to_jsonb(r)) from public.task_reminders r where r.task_id=c.source_id),'[]') end,
+  'overrides',case when c.source_type='EVENT' then coalesce((select jsonb_agg(to_jsonb(o)) from public.event_occurrence_overrides o where o.event_id=c.source_id),'[]') else '[]'::jsonb end,
+  'recipients',coalesce((select jsonb_agg(jsonb_build_object('user_id',m.user_id,'disabled_categories',coalesce((select jsonb_agg(p.category_key) from public.notification_category_preferences p where p.user_id=m.user_id and not p.enabled),'[]'::jsonb))) from public.members m where m.active and m.user_id is not null and public.notification_recipient_allowed(c.source_type,c.source_id,m.user_id)),'[]')
+ )),'[]') into result from claimed c;
+ return result;
+end $$;
+create function public.commit_notification_plan(kind text,source uuid,expected_revision bigint,token uuid,planned jsonb) returns boolean language plpgsql security definer set search_path='' as $$
+declare q public.notification_rebuild_queue; p record;
+begin
+ select * into q from public.notification_rebuild_queue where source_type=kind and source_id=source for update;
+ if not found or q.revision<>expected_revision or q.claim_token is distinct from token then return false; end if;
+ if jsonb_typeof(planned) is distinct from 'array' or jsonb_array_length(planned)>20000 then raise exception 'Plan too large' using errcode='22023'; end if;
+ -- Reconciliation also cancels jobs removed from a recurring window or preference change.
+ update public.notification_jobs set status='CANCELLED' where source_type=kind and source_id=source and status='PENDING';
+ for p in select * from jsonb_to_recordset(planned) as d(user_id uuid,occurrence_key text,reminder_id uuid,due_at timestamptz,expires_at timestamptz,title text,body text) loop
+  if p.due_at<now()-interval '24 hours' or p.due_at>now()+interval '91 days' or p.expires_at<=now()
+    or not public.notification_recipient_allowed(kind,source,p.user_id) then continue; end if;
+  insert into public.notification_jobs(user_id,source_type,source_id,source_occurrence_key,reminder_id,source_revision,due_at,expires_at,title,body)
+   values(p.user_id,kind,source,coalesce(p.occurrence_key,''),p.reminder_id,expected_revision,p.due_at,p.expires_at,p.title,p.body)
+  on conflict(user_id,source_type,source_id,source_occurrence_key,reminder_id,due_at) do update set status='PENDING',source_revision=excluded.source_revision,
+    expires_at=excluded.expires_at,title=excluded.title,body=excluded.body,next_attempt_at=now()
+    where notification_jobs.status in ('PENDING','CANCELLED') and not exists(select 1 from public.notifications n where n.job_id=notification_jobs.id);
+ end loop;
+ update public.notification_rebuild_queue set next_plan_at=now()+interval '6 hours',claimed_at=null,claim_token=null,last_error_code=null where source_type=kind and source_id=source;
+ return true;
+end $$;
+create function public.fail_notification_plan(kind text,source uuid,token uuid) returns void language plpgsql security definer set search_path='' as $$
+begin update public.notification_rebuild_queue set claimed_at=null,claim_token=null,next_plan_at=now()+interval '1 minute',last_error_code='PLAN_FAILED'
+ where source_type=kind and source_id=source and claim_token=token; end $$;
+
+create function public.notification_job_allowed(job public.notification_jobs) returns boolean language sql stable security definer set search_path='' as $$
+ select job.expires_at>now() and public.notification_recipient_allowed(job.source_type,job.source_id,job.user_id)
+ and (job.source_type<>'EVENT' or not exists(select 1 from public.notification_category_preferences p where p.user_id=job.user_id and not p.enabled
+  and p.category_key=coalesce((select o.category from public.event_occurrence_overrides o where o.event_id=job.source_id and o.occurrence_date::text=job.source_occurrence_key),(select e.category from public.events e where e.id=job.source_id))))
+ and (job.source_type='SYSTEM' or exists(select 1 from public.notification_rebuild_queue q where q.source_type=job.source_type and q.source_id=job.source_id and q.revision=job.source_revision));
+$$;
+create function public.materialize_notification_jobs(batch_size integer default 30) returns integer language plpgsql security definer set search_path='' as $$
+declare job public.notification_jobs; total integer:=0;
+begin
+ for job in select * from public.notification_jobs where status='PENDING' and due_at<=now() and next_attempt_at<=now()
+  order by due_at,id for update skip locked limit least(greatest(batch_size,1),50) loop
+  if not public.notification_job_allowed(job) or job.due_at<now()-interval '24 hours' then
+   update public.notification_jobs set status='CANCELLED' where id=job.id; continue;
+  end if;
+  update public.notification_jobs set status='PROCESSING',claimed_at=now(),attempt_count=attempt_count+1 where id=job.id;
+  insert into public.notifications(user_id,job_id,kind,title,body,source_type,source_id,source_occurrence_key)
+   values(job.user_id,job.id,case job.source_type when 'EVENT' then 'EVENT_REMINDER' when 'TASK' then 'TASK_REMINDER' else 'SYSTEM' end,job.title,job.body,job.source_type,job.source_id,job.source_occurrence_key)
+   on conflict(job_id) do nothing;
+  insert into public.notification_deliveries(job_id,subscription_id)
+   select job.id,s.id from public.push_subscriptions s where s.user_id=job.user_id and s.active
+    and (job.source_type<>'SYSTEM' or s.id=job.test_subscription_id)
+    and exists(select 1 from public.notification_preferences p where p.user_id=job.user_id and p.push_enabled)
+   on conflict(job_id,subscription_id) do nothing;
+  update public.notification_jobs set status='COMPLETED',completed_at=now() where id=job.id;
+  total:=total+1;
+ end loop;
+ return total;
+end $$;
+create function public.claim_notification_deliveries(batch_size integer default 10) returns jsonb language plpgsql security definer set search_path='' as $$
+declare d public.notification_deliveries; j public.notification_jobs; s public.push_subscriptions; n public.notifications; result jsonb:='[]'; details boolean;
+begin
+ for d in select * from public.notification_deliveries where
+  (status='PENDING' and next_attempt_at<=now()) or (status='PROCESSING' and claimed_at<now()-interval '90 seconds')
+  order by next_attempt_at,id for update skip locked limit least(greatest(batch_size,1),20) loop
+  select * into j from public.notification_jobs where id=d.job_id;
+  select * into s from public.push_subscriptions where id=d.subscription_id;
+  if not public.notification_job_allowed(j) or not coalesce(s.active,false) or s.user_id is distinct from j.user_id
+   or not exists(select 1 from public.notification_preferences p where p.user_id=j.user_id and p.push_enabled) then
+   update public.notification_deliveries set status='CANCELLED',claim_token=null where id=d.id; continue;
+  end if;
+  if d.attempts>=4 then update public.notification_deliveries set status='FAILED',last_error_code='RETRY_LIMIT',claim_token=null where id=d.id; continue; end if;
+  select * into n from public.notifications where job_id=j.id;
+  select push_details into details from public.notification_preferences where user_id=j.user_id;
+  update public.notification_deliveries set status='PROCESSING',attempts=attempts+1,claimed_at=now(),claim_token=gen_random_uuid() where id=d.id returning * into d;
+  result:=result||jsonb_build_array(jsonb_build_object('id',d.id,'token',d.claim_token,'subscription_id',s.id,
+   'subscription',jsonb_build_object('endpoint',s.endpoint,'keys',jsonb_build_object('p256dh',s.p256dh,'auth',s.auth)),
+   'payload',jsonb_build_object('notificationId',n.id,'deliveryId',d.id,'title',case when details then n.title else 'Chiro Negenmanneke' end,
+   'body',case when details then n.body else 'Un rappel vous attend dans l’application.' end)));
+ end loop;
+ return result;
+end $$;
+create function public.authorize_notification_delivery(target_id uuid,token uuid) returns boolean language sql stable security definer set search_path='' as $$
+ select exists(select 1 from public.notification_deliveries d join public.notification_jobs j on j.id=d.job_id
+  join public.push_subscriptions s on s.id=d.subscription_id join public.notification_preferences p on p.user_id=j.user_id
+  where d.id=target_id and d.claim_token=token and d.status='PROCESSING' and s.active and s.user_id=j.user_id and p.push_enabled and public.notification_job_allowed(j));
+$$;
+create function public.finish_notification_delivery(target_id uuid,token uuid,result_code text) returns void language plpgsql security definer set search_path='' as $$
+declare d public.notification_deliveries;
+begin
+ select * into d from public.notification_deliveries where id=target_id and claim_token=token and status='PROCESSING' for update;
+ if not found then return; end if;
+ if result_code='CANCELLED' then update public.notification_deliveries set status='CANCELLED',claim_token=null where id=d.id;
+ elsif result_code='OK' then update public.notification_deliveries set status='SENT',sent_at=now(),claim_token=null,last_error_code=null where id=d.id;
+ elsif result_code in ('404','410') then
+  update public.push_subscriptions set active=false,updated_at=now() where id=d.subscription_id;
+  update public.notification_deliveries set status='FAILED',last_error_code=result_code,claim_token=null where id=d.id;
+ elsif result_code in ('TEMPORARY','429','500','502','503','504') and d.attempts<4 then
+  update public.notification_deliveries set status='PENDING',next_attempt_at=now()+case d.attempts when 1 then interval '1 minute' when 2 then interval '5 minutes' else interval '15 minutes' end,
+   last_error_code=result_code,claim_token=null where id=d.id;
+ else update public.notification_deliveries set status='FAILED',last_error_code=case when result_code in ('400','401','403','CONFIG') then result_code else 'PERMANENT' end,claim_token=null where id=d.id;
+ end if;
+end $$;
+create function public.enqueue_my_notification_test(subscription_id uuid) returns uuid language plpgsql security definer set search_path='' as $$
+declare saved uuid;
+begin
+ if not public.has_app_access() or not exists(select 1 from public.push_subscriptions s where s.id=subscription_id and s.user_id=auth.uid() and s.active)
+  or not exists(select 1 from public.notification_preferences p where p.user_id=auth.uid() and p.push_enabled) then raise exception 'Notification permission denied' using errcode='42501'; end if;
+ -- Serialize per user and rate-limit tests to one per minute.
+ perform 1 from public.notification_preferences where user_id=auth.uid() for update;
+ if exists(select 1 from public.notification_jobs where user_id=auth.uid() and source_type='SYSTEM' and created_at>now()-interval '1 minute') then raise exception 'Wait one minute before testing again' using errcode='22023'; end if;
+ insert into public.notification_jobs(user_id,source_type,source_id,reminder_id,source_revision,due_at,expires_at,title,body,test_subscription_id)
+ values(auth.uid(),'SYSTEM',auth.uid(),'00000000-0000-0000-0000-000000000000',0,now(),now()+interval '10 minutes','Notification de test','Les notifications Chiro sont prêtes.',subscription_id) returning id into saved;
+ return saved;
+end $$;
+create function public.cleanup_notifications() returns void language plpgsql security definer set search_path='' as $$
+begin
+ delete from public.notifications where id in(select id from public.notifications where read_at<now()-interval '365 days' order by read_at limit 200);
+ delete from public.notification_jobs where id in(select id from public.notification_jobs where created_at<now()-interval '180 days' and status in ('COMPLETED','CANCELLED','FAILED') order by created_at limit 200);
+ delete from public.push_subscriptions where id in(select id from public.push_subscriptions where not active and updated_at<now()-interval '90 days' order by updated_at limit 50);
+end $$;
+
+-- Explicit allowlists of exposed entrypoints. System helpers and queues are never client APIs.
+revoke all on function public.notification_user_permission(uuid,text),public.notification_recipient_allowed(text,uuid,uuid),public.notification_dirty(text,uuid),
+ public.notification_dirty_user(text,uuid,uuid[]),
+ public.notification_source_changed(),public.notification_user_changed(),public.notification_role_permissions_changed(),public.notification_replace_reminders(text,uuid,jsonb),public.notification_job_allowed(public.notification_jobs),
+ public.save_notification_preferences(jsonb,jsonb),public.mark_notifications_read(uuid),public.register_push_subscription(jsonb),public.disable_push_subscription(uuid),public.touch_push_subscription(text),
+ public.save_agenda_event_with_reminders(uuid,bigint,jsonb,uuid[],jsonb),public.save_task_with_reminders(uuid,bigint,jsonb,jsonb,jsonb),public.enqueue_my_notification_test(uuid),
+ public.claim_notification_sources(integer),public.commit_notification_plan(text,uuid,bigint,uuid,jsonb),public.fail_notification_plan(text,uuid,uuid),public.materialize_notification_jobs(integer),
+ public.claim_notification_deliveries(integer),public.authorize_notification_delivery(uuid,uuid),public.finish_notification_delivery(uuid,uuid,text),public.cleanup_notifications() from public,anon,authenticated;
+grant execute on function public.save_notification_preferences(jsonb,jsonb),public.mark_notifications_read(uuid),public.register_push_subscription(jsonb),public.disable_push_subscription(uuid),public.touch_push_subscription(text),
+ public.save_agenda_event_with_reminders(uuid,bigint,jsonb,uuid[],jsonb),public.save_task_with_reminders(uuid,bigint,jsonb,jsonb,jsonb),public.enqueue_my_notification_test(uuid) to authenticated;
+grant execute on function public.claim_notification_sources(integer),public.commit_notification_plan(text,uuid,bigint,uuid,jsonb),public.fail_notification_plan(text,uuid,uuid),public.materialize_notification_jobs(integer),
+ public.claim_notification_deliveries(integer),public.authorize_notification_delivery(uuid,uuid),public.finish_notification_delivery(uuid,uuid,text),public.cleanup_notifications() to service_role;
+commit;

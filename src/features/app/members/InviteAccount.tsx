@@ -1,0 +1,48 @@
+import { useState } from "preact/hooks";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { appError } from "../data";
+import type { Member, AppRole, AppRoleKey } from "../types";
+
+export default function InviteAccount({ client, members, roles, onInvited }: { client: SupabaseClient; members: Member[]; roles: AppRole[]; onInvited: () => Promise<void> }) {
+  const [memberId, setMemberId] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState<AppRoleKey[]>(["MEMBER"]);
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [failed, setFailed] = useState(false);
+  async function invite() {
+    setBusy(true); setMessage(""); setFailed(false);
+    try {
+      const { data, error } = await client.auth.getSession();
+      if (error || !data.session) throw new Error("Reconnectez-vous.");
+      const response = await fetch("/api/app/invite", { method: "POST", headers: {
+        "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}`
+      }, body: JSON.stringify({ email, fullName, memberId, roles: selectedRoles }) });
+      const result: { message: string; userId?: string } = await response.json();
+      if (!response.ok || !result.userId) {
+        if (result.userId) await onInvited();
+        throw new Error(result.message);
+      }
+      setMessage(result.message);
+      setEmail(""); setFullName(""); setMemberId(""); setSelectedRoles(["MEMBER"]);
+      await onInvited();
+    } catch (error) { setFailed(true); setMessage(appError(error)); }
+    finally { setBusy(false); }
+  }
+  return <form class="admin-subpanel app-member-form" onSubmit={event => { event.preventDefault(); void invite(); }}>
+    <h2>Inviter un compte</h2>
+    <p>Choisissez un membre existant sans compte. L’invitation lie le nouveau compte et lui attribue les rôles APP sélectionnés. Les accès SITE restent inchangés.</p>
+    <fieldset disabled={busy}><div class="app-member-fields">
+      <label>Membre *<select required value={memberId} onChange={event => {
+        const id = event.currentTarget.value; setMemberId(id);
+        const member = members.find(item => item.id === id);
+        setFullName(member ? `${member.first_name} ${member.last_name}` : "");
+      }}><option value="">Choisissez un membre sans compte</option>{members.filter(member => !member.user_id).map(member => <option key={member.id} value={member.id}>{member.first_name} {member.last_name}{member.active ? "" : " (inactif)"}</option>)}</select></label>
+      <label>Nom<input maxLength={120} value={fullName} onInput={event => setFullName(event.currentTarget.value)} /></label>
+      <label>E-mail *<input type="email" required maxLength={254} value={email} onInput={event => setEmail(event.currentTarget.value)} /></label>
+    </div><div class="app-role-options">{roles.map(role => <label class="app-check" key={role.key}><input type="checkbox" checked={selectedRoles.includes(role.key)} onChange={event => setSelectedRoles(event.currentTarget.checked ? [...selectedRoles, role.key] : selectedRoles.filter(key => key !== role.key))} />{role.label}</label>)}</div>
+    <button class="btn" type="submit" disabled={!memberId || !selectedRoles.length}>{busy ? "Envoi…" : "Inviter et donner accès"}</button></fieldset>
+    {message && <p role={failed ? "alert" : "status"}>{message}</p>}
+  </form>;
+}

@@ -1,4 +1,9 @@
 const paths: Record<string, string> = {
+  notifications: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4",
+  "app-settings": "M4 7h16 M4 17h16 M8 4v6 M16 14v6",
+  "app-finance": "M3 5h18v15H3z M3 9h18 M15 13h6v4h-6z M7 15h3",
+  "app-tasks": "M9 5h12 M9 12h12 M9 19h12 M2 4l2 2 3-4 M2 11l2 2 3-4 M2 18l2 2 3-4",
+  "app-agenda": "M4 5h16v16H4z M8 3v4 M16 3v4 M4 10h16 M8 14h2 M14 14h2 M8 18h2",
   overview: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   posts: "M5 3h10l4 4v14H5z M14 3v5h5 M8 12h8 M8 16h6",
   messages: "M3 5h18v14H3z M3 6l9 7 9-7",

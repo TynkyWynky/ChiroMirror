@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import AdminIcon from "./AdminIcon";
+import { siteRoleLabel, type SiteRole } from "../../lib/auth/access";
+import type { NavigationGroup, TabId } from "./navigation";
 
 interface Props {
-  groups: Array<{ groupId: string; label: string; tabs: Array<{ id: string; label: string; description: string }> }>;
-  activeTab: string;
-  badges: Partial<Record<string, string>>;
+  groups: NavigationGroup[];
+  activeTab: TabId;
+  badges: Partial<Record<TabId, string>>;
   userName: string;
-  role: string;
-  onNavigate: (tab: string) => void;
+  role: SiteRole;
+  onNavigate: (tab: TabId) => void;
   onSignOut: () => void;
 }
 
 export default function AdminNavigation(props: Props) {
+  const app = props.activeTab.startsWith("app-");
+  const t = (fr: string, nl: string) => app ? fr : nl;
   const dialog = useRef<HTMLDialogElement>(null);
   const [query, setQuery] = useState("");
   useEffect(() => {
@@ -21,7 +25,7 @@ export default function AdminNavigation(props: Props) {
     return () => media.removeEventListener("change", close);
   }, []);
 
-  function navigate(tab: string) {
+  function navigate(tab: TabId) {
     props.onNavigate(tab);
     dialog.current?.close();
     setQuery("");
@@ -32,31 +36,31 @@ export default function AdminNavigation(props: Props) {
     return <>
       <div class="admin-brand">
         <span class="admin-brand-mark">N.</span>
-        <div><strong>Negenmanneke</strong><span>Beheeromgeving</span></div>
-        {mobile && <button class="admin-icon-button" type="button" aria-label="Menu sluiten" onClick={() => dialog.current?.close()}><AdminIcon name="close" /></button>}
+        <div><strong>Negenmanneke</strong><span>{t("Espace interne", "Beheeromgeving")}</span></div>
+        {mobile && <button class="admin-icon-button" type="button" aria-label={t("Fermer le menu", "Menu sluiten")} onClick={() => dialog.current?.close()}><AdminIcon name="close" /></button>}
       </div>
-      <label class="admin-nav-search"><AdminIcon name="search" /><input type="search" aria-label="Zoek een onderdeel" placeholder="Zoek een onderdeel…" value={query} onInput={event => setQuery(event.currentTarget.value)} /></label>
-      <nav class="admin-sidebar-nav" aria-label="Admin onderdelen">
+      <label class="admin-nav-search"><AdminIcon name="search" /><input type="search" aria-label={t("Rechercher une rubrique", "Zoek een onderdeel")} placeholder={t("Rechercher une rubrique…", "Zoek een onderdeel…")} value={query} onInput={event => setQuery(event.currentTarget.value)} /></label>
+      <nav class="admin-sidebar-nav" aria-label={t("Rubriques", "Admin onderdelen")}>
         {groups.map(group => <section class="admin-sidebar-section" key={group.groupId}>
           <p class="admin-sidebar-section-label">{group.label}</p>
           {group.tabs.map(tab => <button class={`admin-sidebar-tab ${props.activeTab === tab.id ? "is-active" : ""}`} type="button" key={tab.id} aria-current={props.activeTab === tab.id ? "page" : undefined} title={tab.description} onClick={() => navigate(tab.id)}>
             <AdminIcon name={tab.id} /><span>{tab.label}</span>{props.badges[tab.id] && <small>{props.badges[tab.id]}</small>}
           </button>)}
         </section>)}
-        {!groups.length && <p class="admin-nav-empty">Geen onderdelen gevonden.</p>}
+        {!groups.length && <p class="admin-nav-empty">{t("Aucune rubrique trouvée.", "Geen onderdelen gevonden.")}</p>}
       </nav>
       <div class="admin-sidebar-foot">
         <span class="admin-avatar">{props.userName.slice(0, 1).toLocaleUpperCase()}</span>
-        <div class="admin-user"><strong>{props.userName}</strong><span>{props.role === "admin" ? "Beheerder" : "Editor"}</span></div>
-        <button class="admin-icon-button" type="button" onClick={props.onSignOut} aria-label="Uitloggen" title="Uitloggen"><AdminIcon name="logout" /></button>
+        <div class="admin-user"><strong>{props.userName}</strong><span>{app ? { none: "Aucun accès SITE", editor: "Éditeur SITE", admin: "Administrateur SITE" }[props.role] : siteRoleLabel(props.role)}</span></div>
+        <button class="admin-icon-button" type="button" onClick={props.onSignOut} aria-label={t("Se déconnecter", "Uitloggen")} title={t("Se déconnecter", "Uitloggen")}><AdminIcon name="logout" /></button>
       </div>
     </>;
   }
 
   return <>
     <aside class="admin-sidebar">{navigation()}</aside>
-    <button class="admin-icon-button admin-mobile-nav-trigger" type="button" aria-label="Navigatie openen" onClick={() => dialog.current?.showModal()}><AdminIcon name="menu" /></button>
-    <dialog class="admin-nav-dialog" ref={dialog} aria-label="Navigatie" onClick={event => { if (event.target === event.currentTarget) dialog.current?.close(); }}>
+    <button class="admin-icon-button admin-mobile-nav-trigger" type="button" aria-label={t("Ouvrir la navigation", "Navigatie openen")} onClick={() => dialog.current?.showModal()}><AdminIcon name="menu" /></button>
+    <dialog class="admin-nav-dialog" ref={dialog} aria-label={t("Navigation", "Navigatie")} onClick={event => { if (event.target === event.currentTarget) dialog.current?.close(); }}>
       <div class="admin-mobile-sidebar">{navigation(true)}</div>
     </dialog>
   </>;
