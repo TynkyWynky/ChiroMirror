@@ -1,5 +1,19 @@
 # SQL versionné
 
+## Compatibilité avec l'ancien SITE
+
+Pour le schéma historique à huit tables, sans `profiles.managed_group_slugs` ni
+`can_manage_group(text)`, appliquer d'abord
+`20260922000000_legacy_profile_groups.sql`, puis les six migrations APP dans leur
+ordre. Cette étape ajoute uniquement la colonne JSONB manquante avec une liste
+vide; elle conserve les valeurs existantes et n'attribue aucun droit de groupe.
+La migration suivante crée la fonction manquante et conserve les rôles des
+comptes existants. La table de finance SITE n'est pas requise pour installer l'APP.
+
+Le fichier généré `install-app.sql` inclut ce prérequis et les six migrations
+dans une seule transaction. Utiliser son contenu actualisé dans SQL Editor.
+Ne pas appliquer le bundle sur un schéma APP partiellement installé.
+
 La Phase 5 ajoute `20260923000400_app_notifications.sql` **après Finance** : centre privé,
 préférences, appareils Push, jobs/deliveries et reconstruction transactionnelle. Bootstrap
 synchronisé, RLS sans exception APP_ADMIN, RPC serveur réservées au worker. Exécutée
