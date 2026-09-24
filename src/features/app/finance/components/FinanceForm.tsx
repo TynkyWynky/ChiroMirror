@@ -35,7 +35,7 @@ export default function FinanceForm({ kind, transaction, data, access, busy, err
       {manager && <label>Zichtbaarheid<select aria-label="Zichtbaarheid" disabled={Boolean(transaction)} value={draft.visibility} onChange={e => setDraft(current => ({ ...current, visibility: e.currentTarget.value as FinanceDraft["visibility"], payer: own ?? "", debtor: own ?? "", creditor: "", shares: [] }))}>
         <option value="PRIVATE">Privé — betrokken personen</option><option value="TREASURY">Chirokas — met de Chiro</option>
       </select></label>}
-      <p>{draft.visibility === "PRIVATE" ? "Alleen de betrokken personen kunnen deze transactie bekijken. Beheerders krijgen niet automatisch toegang." : "Zichtbaar voor de betrokken personen en de penningmeester. De penningmeester registreert de terugbetalingen."}</p>
+      <p>{draft.visibility === "PRIVATE" ? "Alleen de betrokken personen kunnen deze transactie bekijken. Beheerders krijgen niet automatisch toegang." : "Zichtbaar voor de betrokken personen en Financiën. Terugbetalingen worden via Financiën geregistreerd."}</p>
       {kind === "DIRECT_DEBT" ? <div class="finance-fields">
         <label>Wie is geld verschuldigd? *<select aria-label="Wie is geld verschuldigd?" required value={draft.debtor} onChange={e => change("debtor", e.currentTarget.value)}><option value="">Kiezen</option>{options}</select></label>
         <label>Aan wie? *<select aria-label="Aan wie?" required value={draft.creditor} onChange={e => change("creditor", e.currentTarget.value)}><option value="">Kiezen</option>{options}</select></label>

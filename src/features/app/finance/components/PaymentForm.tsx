@@ -32,7 +32,7 @@ export default function PaymentForm({ data, access, initialId, busy, error, onSa
     <fieldset disabled={busy}>
       <label>Terug te betalen schuld<select aria-label="Terug te betalen schuld" required value={id} onChange={e => { setId(e.currentTarget.value); setAmount(""); }}><option value="">Kies een schuld</option>{available.map(o => <option value={o.id} key={o.id}>{data.transactions.find(t => t.id === o.transaction_id)?.title} — {entityName(o.debtor_entity_id, data)} → {entityName(o.creditor_entity_id, data)} — {formatMoney(obligationAmounts(o, data).remaining)}</option>)}</select></label>
       {amounts && <div class="finance-amounts"><p>Oorspronkelijke schuld: <strong>{formatMoney(amounts.original)}</strong></p><p>Al terugbetaald: <strong>{formatMoney(amounts.paid)}</strong></p><p>Resterend: <strong>{formatMoney(amounts.remaining)}</strong></p></div>}
-      {!available.length && <p>Geen openstaande schuld die je kunt terugbetalen. Chirobetalingen zijn voorbehouden aan de penningmeester.</p>}
+      {!available.length && <p>Geen openstaande schuld die je kunt terugbetalen. Chirobetalingen worden beheerd via Financiën.</p>}
       <label>Bedrag van de terugbetaling (€) *<input autoFocus required inputMode="decimal" value={amount} onInput={e => setAmount(e.currentTarget.value)} /></label>
       {amounts && <button class="btn btn-light" type="button" onClick={() => setAmount(moneyInput(amounts.remaining))}>Volledig resterend bedrag</button>}
       <label>Betaaldatum *<input type="date" required min={MIN_DATE} max={MAX_DATE} value={date} onInput={e => setDate(e.currentTarget.value)} /></label>

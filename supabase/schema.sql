@@ -2029,3 +2029,15 @@ grant execute on function public.has_app_permission(text), public.has_app_access
 
 commit;
 -- END APP DEFAULT ACCESS
+
+
+-- BEGIN APP ROLE LABELS (mirrors 20260925000100_app_role_labels.sql)
+-- Keep user-facing APP role labels aligned with the Dutch APP terminology.
+begin;
+
+update public.app_roles
+set label = 'Financiën'
+where key = 'TREASURER';
+
+commit;
+-- END APP ROLE LABELS
