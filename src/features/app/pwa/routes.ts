@@ -22,6 +22,6 @@ export function appRouteUrl(basePath: string, route: AppRoute) {
   if (route.screen === "tasks" && route.task && uuid.test(route.task)) params.set("task",route.task);
   if (route.screen === "agenda" && route.event && uuid.test(route.event)) { params.set("event",route.event); if (route.occurrence && /^\d{4}-\d{2}-\d{2}$/.test(route.occurrence)) params.set("occurrence",route.occurrence); }
   if (route.screen === "notifications" && route.notification && uuid.test(route.notification)) params.set("notification",route.notification);
-  if (!/^\/[a-z0-9-]+\/$/.test(basePath)) throw new Error("Invalid APP path");
+  if (!/^\/[a-z0-9-]+\/$/.test(basePath)) throw new Error("Ongeldig APP-pad");
   return `${basePath}?${params}`;
 }

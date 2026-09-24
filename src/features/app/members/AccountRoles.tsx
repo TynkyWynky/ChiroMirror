@@ -13,17 +13,17 @@ export default function AccountRoles({ accounts, roles, assignments, busy, onSav
   const [selected, setSelected] = useState<AppRoleKey[]>([]);
   return <form class="admin-subpanel app-member-form" onSubmit={event => {
     event.preventDefault();
-    if (window.confirm("Remplacer les rôles APP de ce compte ? Sans rôle, il perd l’accès APP. Les droits SITE restent séparés.")) void onSave(userId, selected);
+    if (window.confirm("De APP-rollen van dit account vervangen? Zonder rol verliest het account APP-toegang. De SITE-rechten blijven afzonderlijk beheerd.")) void onSave(userId, selected);
   }}>
-    <h2>Rôles APP des comptes</h2>
-    <p>Un compte sans membre lié peut aussi posséder des rôles APP.</p>
+    <h2>APP-rollen van accounts</h2>
+    <p>Ook een account zonder gekoppeld lid kan APP-rollen hebben.</p>
     <fieldset disabled={busy}>
-      <label>Compte<select required value={userId} onChange={event => {
+      <label>Account<select required value={userId} onChange={event => {
         const id = event.currentTarget.value; setUserId(id);
         setSelected(assignments.filter(row => row.user_id === id).map(row => row.role_key));
-      }}><option value="">Choisissez un compte</option>{accounts.map(account => <option key={account.user_id} value={account.user_id}>{account.full_name || account.email} — {account.email}{account.member_id ? "" : " (sans membre)"}</option>)}</select></label>
+      }}><option value="">Kies een account</option>{accounts.map(account => <option key={account.user_id} value={account.user_id}>{account.full_name || account.email} — {account.email}{account.member_id ? "" : " (zonder lid)"}</option>)}</select></label>
       {userId && <><div class="app-role-options">{roles.map(role => <label key={role.key} class="app-check"><input type="checkbox" checked={selected.includes(role.key)} onChange={event => setSelected(event.currentTarget.checked ? [...selected, role.key] : selected.filter(key => key !== role.key))} />{role.label}</label>)}</div>
-        <button class="btn" type="submit">Enregistrer les rôles</button></>}
+        <button class="btn" type="submit">Rollen opslaan</button></>}
     </fieldset>
   </form>;
 }

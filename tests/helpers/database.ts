@@ -8,6 +8,7 @@ export const fixtureId = (n: number) => `00000000-0000-0000-0000-${String(n).pad
 export const tasksMarker = "-- BEGIN APP TASKS (mirrors 20260923000200_app_tasks.sql)";
 export const financeMarker = "-- BEGIN APP FINANCE (mirrors 20260923000300_app_finance.sql)";
 export const notificationsMarker = "-- BEGIN APP NOTIFICATIONS (mirrors 20260923000400_app_notifications.sql)";
+export const dutchMarker = "-- BEGIN APP DUTCH (mirrors 20260924000100_app_dutch.sql)";
 export async function legacyDatabase() {
   const db = new PGlite();
   await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
@@ -29,5 +30,6 @@ export async function database(withTasks = false, withFinance = false, withNotif
   if (withTasks || withFinance || withNotifications) await db.exec(sqlFile("migrations/20260923000200_app_tasks.sql"));
   if (withFinance || withNotifications) await db.exec(sqlFile("migrations/20260923000300_app_finance.sql"));
   if (withNotifications) await db.exec(sqlFile("migrations/20260923000400_app_notifications.sql"));
+  if (withNotifications) await db.exec(sqlFile("migrations/20260924000100_app_dutch.sql"));
   return db;
 }

@@ -69,7 +69,7 @@ test("Repayments preserve original amount, settle exactly, restore on payment ca
   assert.deepEqual(obligationAmounts(obligation,rows),{original:8000n,paid:4000n,remaining:4000n,cancelled:false});
   rows.payments[1].status="CANCELLED"; assert.equal(obligationAmounts(obligation,rows).remaining,5000n);
   rows.allocations[0].amount_cents="8000"; assert.equal(obligationAmounts(obligation,rows).remaining,0n);
-  rows.allocations[0].amount_cents="8001"; assert.throws(()=>obligationAmounts(obligation,rows),/incohérentes/);
+  rows.allocations[0].amount_cents="8001"; assert.throws(()=>obligationAmounts(obligation,rows),/Inconsistente/);
   rows.allocations[0].amount_cents="3000";
   assert.equal(obligationAmounts(obligation,{...rows,transactions:[{...tx,status:"CANCELLED"}]}).remaining,0n);
   assert.equal(tx.amount_cents,"8000"); assert.equal(obligation.original_amount_cents,"8000");
@@ -94,12 +94,12 @@ test("Finance UI authorization: treasury permission is explicit, SITE and techni
 test("Finance validation: self debt, archived member, exact shares and treasury involvement",()=>{
   const data={...emptyFinance,entities:[{id:"e1",type:"MEMBER" as const,member_id:"m1"},{id:"e2",type:"MEMBER" as const,member_id:"m2"},{id:"chiro",type:"CHIRO" as const,member_id:null}],members:[member,{...member,id:"m2",user_id:null,active:false}]};
   const draft={...makeFinanceDraft("DIRECT_DEBT","e1"),title:"Dette",amount:"80",creditor:"e1"};
-  assert.throws(()=>validateFinance(draft,data),/elle-même/);
-  assert.throws(()=>validateFinance({...draft,creditor:"e2"},data),/actifs/);
+  assert.throws(()=>validateFinance(draft,data),/zichzelf/);
+  assert.throws(()=>validateFinance({...draft,creditor:"e2"},data),/actieve/);
   assert.equal(validateFinance({...draft,creditor:"e2"},data,tx).details.amount_cents,"8000");
-  assert.throws(()=>validateFinance({...draft,creditor:"chiro"},data),/trésorerie/);
+  assert.throws(()=>validateFinance({...draft,creditor:"chiro"},data),/kastransactie/);
   assert.equal(validateFinance({...draft,creditor:"chiro",visibility:"TREASURY"},data).details.amount_cents,"8000");
   assert.throws(()=>validateFinance({...draft,date:"2026-02-30"},data));
   assert.throws(()=>validateFinance({...draft,title:" "},data));
-  assert.equal(financeError({code:"22003",details:"2000"}),"Le montant dépasse le solde restant de 20,00\u00a0€.");
+  assert.equal(financeError({code:"22003",details:"2000"}),"Het bedrag is hoger dan het resterende saldo van 20,00\u00a0€.");
 });

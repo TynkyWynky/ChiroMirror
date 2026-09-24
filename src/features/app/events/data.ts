@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireOnline, networkError } from "../pwa/network.ts";
+import { localizeCategories } from "./categories.ts";
 import type { Member } from "../types.ts";
 import type { Reminder } from "../notifications/types.ts";
 import type { CalendarEvent, EventCategory, EventInput, EventOverride, EventParticipant } from "./types.ts";
@@ -24,7 +25,7 @@ export async function loadAgenda(client: SupabaseClient): Promise<AgendaData> {
     pages<Member>((a, b) => client.from("members").select("*").order("last_name").order("first_name").order("id").range(a, b)),
     pages<Reminder>((a, b) => client.from("event_reminders").select("*").order("id").range(a, b))
   ]);
-  return { events, overrides, participants, categories, members, reminders };
+  return { events, overrides, participants, categories: localizeCategories(categories), members, reminders };
 }
 export async function saveEvent(client: SupabaseClient, event: CalendarEvent | null, input: EventInput, occurrenceDate?: string) {
   requireOnline();
@@ -42,10 +43,10 @@ export async function cancelEvent(client: SupabaseClient, event: CalendarEvent, 
 export function agendaError(error: unknown): string {
   const network = networkError(error); if(network)return network;
   if (typeof error === "object" && error !== null && "code" in error) {
-    if (error.code === "40001") return "Cet événement a été modifié ailleurs. Fermez le formulaire, actualisez l’agenda puis reprenez votre modification.";
-    if (error.code === "42501") return "Vous n’avez plus les droits nécessaires. Actualisez vos accès.";
-    if (error.code === "22023") return "Vérifiez les participants et la répétition. Un membre peut avoir été archivé ; les dates d’origine des exceptions doivent rester dans la série.";
-    if (error.code === "23514" || error.code === "23503" || error.code === "23502") return "Données invalides : vérifiez le titre, les dates, le type et les membres sélectionnés.";
+    if (error.code === "40001") return "Deze activiteit is elders gewijzigd. Sluit het formulier, ververs de agenda en probeer opnieuw.";
+    if (error.code === "42501") return "Je hebt niet meer de vereiste rechten. Ververs je toegangsrechten.";
+    if (error.code === "22023") return "Controleer de deelnemers en herhaling. Een lid kan gearchiveerd zijn; de oorspronkelijke datums van uitzonderingen moeten binnen de reeks blijven.";
+    if (error.code === "23514" || error.code === "23503" || error.code === "23502") return "Ongeldige gegevens: controleer de titel, datums, het type en de geselecteerde leden.";
   }
-  return error instanceof Error ? error.message : "Impossible de charger ou d’enregistrer l’agenda. Réessayez.";
+  return error instanceof Error ? error.message : "De agenda kon niet worden geladen of opgeslagen. Probeer opnieuw.";
 }

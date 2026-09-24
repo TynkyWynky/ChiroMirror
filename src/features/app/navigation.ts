@@ -1,9 +1,9 @@
 export const appTabs = [
-  { id: "app-home", label: "Accueil", description: "Bienvenue dans l’application Chiro", permission: "app.access" },
-  { id: "app-agenda", label: "Agenda", description: "Activités et événements internes", permission: "events.read" },
-  { id: "app-tasks", label: "Tâches", description: "Mes tâches et coordination d’équipe", permission: "app.access" },
-  { id: "app-finance", label: "Comptes", description: "Dettes, dépenses partagées et remboursements", permission: "finance.access" },
-  { id: "app-members", label: "Membres", description: "Membres Chiro et accès APP", permission: "members.read" },
-  { id: "app-notifications", label: "Notifications", description: "Vos rappels privés", permission: "app.access" },
-  { id: "app-settings", label: "Paramètres", description: "Application, notifications et appareils", permission: "app.access" }
+  { id: "app-home", label: "Start", description: "Welkom in de Chiro-app", permission: "app.access" },
+  { id: "app-agenda", label: "Agenda", description: "Interne activiteiten en evenementen", permission: "events.read" },
+  { id: "app-tasks", label: "Taken", description: "Mijn taken en teamcoördinatie", permission: "app.access" },
+  { id: "app-finance", label: "Rekeningen", description: "Schulden, gedeelde uitgaven en terugbetalingen", permission: "finance.access" },
+  { id: "app-members", label: "Leden", description: "Chiro-leden en APP-toegang", permission: "members.read" },
+  { id: "app-notifications", label: "Meldingen", description: "Je persoonlijke herinneringen", permission: "app.access" },
+  { id: "app-settings", label: "Instellingen", description: "App, meldingen en apparaten", permission: "app.access" }
 ] as const;

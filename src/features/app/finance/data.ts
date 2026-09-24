@@ -11,7 +11,7 @@ export const emptyFinance: FinanceData = { entities: [], members: [], transactio
 export async function loadFinance(client: SupabaseClient): Promise<FinanceData> {
   const { data, error } = await client.rpc("get_app_finance_snapshot");
   if (error) throw error;
-  if (!data) throw new Error("L’accès aux comptes n’est pas disponible. Actualisez vos accès.");
+  if (!data) throw new Error("De rekeningen zijn niet toegankelijk. Ververs je toegangsrechten.");
   return data as FinanceData;
 }
 export async function loadActivity(client: SupabaseClient, transactionId: string): Promise<FinanceActivity[]> {
@@ -24,21 +24,21 @@ export function entityName(id: string | null, data: FinanceData) {
   const entity = data.entities.find(e => e.id === id);
   if (entity?.type === "CHIRO") return "Chiro Negenmanneke";
   const member = data.members.find(m => m.id === entity?.member_id);
-  return member ? `${member.first_name} ${member.last_name}${member.active ? "" : " (archivé)"}` : "Membre non consultable";
+  return member ? `${member.first_name} ${member.last_name}${member.active ? "" : " (gearchiveerd)"}` : "Lid niet zichtbaar";
 }
 export function actorName(id: string | null, data: FinanceData, userId?: string) {
-  if (id && id === userId) return "vous";
+  if (id && id === userId) return "jij";
   const member = data.members.find(m => m.user_id === id);
-  return member ? `${member.first_name} ${member.last_name}` : "compte authentifié (identité indisponible)";
+  return member ? `${member.first_name} ${member.last_name}` : "aangemeld account (identiteit niet beschikbaar)";
 }
 export function financeError(cause: unknown): string {
   const network = networkError(cause); if(network)return network;
   if (typeof cause === "object" && cause !== null && "code" in cause) {
-    if (cause.code === "40001") return "Cette opération a changé. Fermez le formulaire, actualisez les comptes puis recommencez.";
-    if (cause.code === "42501") return "Vous n’avez pas les droits nécessaires pour cette opération financière.";
-    if (cause.code === "55000") return "Cette opération est annulée ou possède des remboursements. Annulez explicitement les paiements erronés puis l’opération à corriger.";
-    if (cause.code === "22003" && "details" in cause && /^\d+$/.test(String(cause.details))) return `Le montant dépasse le solde restant de ${formatMoney(String(cause.details))}.`;
-    if (["22023", "23514", "23503", "23502", "23505", "22P02", "22003"].includes(String(cause.code))) return "Vérifiez les montants, la somme des parts, la date et les membres actifs sélectionnés.";
+    if (cause.code === "40001") return "Deze transactie is gewijzigd. Sluit het formulier, ververs de rekeningen en probeer opnieuw.";
+    if (cause.code === "42501") return "Je hebt niet de vereiste rechten voor deze financiële transactie.";
+    if (cause.code === "55000") return "Deze transactie is geannuleerd of heeft terugbetalingen. Annuleer eerst de foutieve betalingen en daarna de te corrigeren transactie.";
+    if (cause.code === "22003" && "details" in cause && /^\d+$/.test(String(cause.details))) return `Het bedrag is hoger dan het resterende saldo van ${formatMoney(String(cause.details))}.`;
+    if (["22023", "23514", "23503", "23502", "23505", "22P02", "22003"].includes(String(cause.code))) return "Controleer de bedragen, de som van de aandelen, de datum en de geselecteerde actieve leden.";
   }
-  return cause instanceof Error ? cause.message : "Impossible de charger ou d’enregistrer les comptes. Réessayez.";
+  return cause instanceof Error ? cause.message : "De rekeningen konden niet worden geladen of opgeslagen. Probeer opnieuw.";
 }

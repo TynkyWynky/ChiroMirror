@@ -12,8 +12,8 @@ export default function FinanceSummary({ client, access, onOpen }: { client: Sup
     loadFinance(client).then(data => { if (active) setTotals(entityBalances(ownEntity(data.entities, access), data)); }).catch(cause => { if (active) setError(financeError(cause)); });
     return () => { active = false; };
   }, [client, access, attempt]);
-  return <section class="admin-subpanel" lang="fr"><h2>Mes comptes</h2>
-    {error ? <p role="alert">{error} <button type="button" onClick={() => setAttempt(n => n + 1)}>Réessayer</button></p> : totals ? <><p>À payer : <strong>{formatMoney(totals.payable)}</strong></p><p>À recevoir : <strong>{formatMoney(totals.receivable)}</strong></p></> : <p role="status">Chargement des comptes…</p>}
-    <button class="btn btn-light" type="button" onClick={onOpen}>Ouvrir mes comptes</button>
+  return <section class="admin-subpanel" lang="nl"><h2>Mijn rekeningen</h2>
+    {error ? <p role="alert">{error} <button type="button" onClick={() => setAttempt(n => n + 1)}>Opnieuw proberen</button></p> : totals ? <><p>Te betalen: <strong>{formatMoney(totals.payable)}</strong></p><p>Te ontvangen: <strong>{formatMoney(totals.receivable)}</strong></p></> : <p role="status">Rekeningen laden…</p>}
+    <button class="btn btn-light" type="button" onClick={onOpen}>Mijn rekeningen openen</button>
   </section>;
 }

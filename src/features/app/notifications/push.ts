@@ -50,7 +50,7 @@ export async function enablePush(client: SupabaseClient, userId: string, publicK
   }
   subscription ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
   const serialized = subscription.toJSON();
-  const id = await notificationRpc<string>(client, "register_push_subscription", { details: { endpoint: serialized.endpoint, p256dh: serialized.keys?.p256dh, auth: serialized.keys?.auth, device_label: label.trim() || "Cet appareil" } });
+  const id = await notificationRpc<string>(client, "register_push_subscription", { details: { endpoint: serialized.endpoint, p256dh: serialized.keys?.p256dh, auth: serialized.keys?.auth, device_label: label.trim() || "Dit apparaat" } });
   await setPushDevice(false,subscription.endpoint);
   remember(userId, id); return id;
 }

@@ -23,35 +23,35 @@ export default function FinanceForm({ kind, transaction, data, access, busy, err
   const options = entities.map(e => <option key={e.id} value={e.id}>{entityName(e.id, data)}</option>);
   return <form class="admin-subpanel finance-form" onSubmit={e => {
     e.preventDefault(); setInvalid("");
-    try { const value = validateFinance(draft, data, transaction); void onSave(value); } catch (cause) { setInvalid(cause instanceof Error ? cause.message : "Vérifiez les champs."); }
+    try { const value = validateFinance(draft, data, transaction); void onSave(value); } catch (cause) { setInvalid(cause instanceof Error ? cause.message : "Controleer de velden."); }
   }}>
-    <h2>{transaction ? "Modifier l’opération" : kind === "EXPENSE" ? "Nouvelle dépense partagée" : "Nouvelle dette"}</h2>
+    <h2>{transaction ? "Transactie bewerken" : kind === "EXPENSE" ? "Nieuwe gedeelde uitgave" : "Nieuwe schuld"}</h2>
     {(invalid || error) && <p role="alert" class="finance-error">{invalid || error}</p>}
     <fieldset disabled={busy}>
-      <label>Motif *<input ref={title} required maxLength={200} value={draft.title} onInput={e => change("title", e.currentTarget.value)} /></label>
-      <label>Description<textarea maxLength={10000} value={draft.description} onInput={e => change("description", e.currentTarget.value)} /></label>
-      <div class="finance-fields"><label>Montant total (€) *<input required inputMode="decimal" value={draft.amount} onInput={e => change("amount", e.currentTarget.value)} /></label>
-        <label>Date *<input type="date" required min={MIN_DATE} max={MAX_DATE} value={draft.date} onInput={e => change("date", e.currentTarget.value)} /></label></div>
-      {manager && <label>Visibilité<select aria-label="Visibilité" disabled={Boolean(transaction)} value={draft.visibility} onChange={e => setDraft(current => ({ ...current, visibility: e.currentTarget.value as FinanceDraft["visibility"], payer: own ?? "", debtor: own ?? "", creditor: "", shares: [] }))}>
-        <option value="PRIVATE">Privée — personnes impliquées</option><option value="TREASURY">Trésorerie — implique la Chiro</option>
+      <label>Reden *<input ref={title} required maxLength={200} value={draft.title} onInput={e => change("title", e.currentTarget.value)} /></label>
+      <label>Beschrijving<textarea maxLength={10000} value={draft.description} onInput={e => change("description", e.currentTarget.value)} /></label>
+      <div class="finance-fields"><label>Totaalbedrag (€) *<input required inputMode="decimal" value={draft.amount} onInput={e => change("amount", e.currentTarget.value)} /></label>
+        <label>Datum *<input type="date" required min={MIN_DATE} max={MAX_DATE} value={draft.date} onInput={e => change("date", e.currentTarget.value)} /></label></div>
+      {manager && <label>Zichtbaarheid<select aria-label="Zichtbaarheid" disabled={Boolean(transaction)} value={draft.visibility} onChange={e => setDraft(current => ({ ...current, visibility: e.currentTarget.value as FinanceDraft["visibility"], payer: own ?? "", debtor: own ?? "", creditor: "", shares: [] }))}>
+        <option value="PRIVATE">Privé — betrokken personen</option><option value="TREASURY">Chirokas — met de Chiro</option>
       </select></label>}
-      <p>{draft.visibility === "PRIVATE" ? "Seules les personnes impliquées peuvent consulter cette opération, sans accès automatique des administrateurs." : "Visible aux personnes impliquées et à la trésorerie. Les remboursements sont enregistrés par la trésorerie."}</p>
+      <p>{draft.visibility === "PRIVATE" ? "Alleen de betrokken personen kunnen deze transactie bekijken. Beheerders krijgen niet automatisch toegang." : "Zichtbaar voor de betrokken personen en de penningmeester. De penningmeester registreert de terugbetalingen."}</p>
       {kind === "DIRECT_DEBT" ? <div class="finance-fields">
-        <label>Qui doit ? *<select aria-label="Qui doit ?" required value={draft.debtor} onChange={e => change("debtor", e.currentTarget.value)}><option value="">Choisir</option>{options}</select></label>
-        <label>À qui ? *<select aria-label="À qui ?" required value={draft.creditor} onChange={e => change("creditor", e.currentTarget.value)}><option value="">Choisir</option>{options}</select></label>
+        <label>Wie is geld verschuldigd? *<select aria-label="Wie is geld verschuldigd?" required value={draft.debtor} onChange={e => change("debtor", e.currentTarget.value)}><option value="">Kiezen</option>{options}</select></label>
+        <label>Aan wie? *<select aria-label="Aan wie?" required value={draft.creditor} onChange={e => change("creditor", e.currentTarget.value)}><option value="">Kiezen</option>{options}</select></label>
       </div> : <>
-        <label>Payé par *<select aria-label="Payé par" required value={draft.payer} onChange={e => change("payer", e.currentTarget.value)}><option value="">Choisir</option>{entities.filter(e => draft.visibility === "TREASURY" || e.id === own).map(e => <option key={e.id} value={e.id}>{entityName(e.id, data)}</option>)}</select></label>
-        <label>Répartition<select aria-label="Répartition" value={draft.split} onChange={e => change("split", e.currentTarget.value as FinanceDraft["split"])}><option value="EQUAL">Égale</option><option value="CUSTOM_AMOUNT">Montants personnalisés</option></select></label>
-        <fieldset class="finance-picker"><legend>Participants — cochez aussi le payeur s’il participe</legend>
+        <label>Betaald door *<select aria-label="Betaald door" required value={draft.payer} onChange={e => change("payer", e.currentTarget.value)}><option value="">Kiezen</option>{entities.filter(e => draft.visibility === "TREASURY" || e.id === own).map(e => <option key={e.id} value={e.id}>{entityName(e.id, data)}</option>)}</select></label>
+        <label>Verdeling<select aria-label="Verdeling" value={draft.split} onChange={e => change("split", e.currentTarget.value as FinanceDraft["split"])}><option value="EQUAL">Gelijk</option><option value="CUSTOM_AMOUNT">Aangepaste bedragen</option></select></label>
+        <fieldset class="finance-picker"><legend>Deelnemers — vink ook de betaler aan als die deelneemt</legend>
           {entities.map(entity => { const share = draft.shares.find(s => s.entity_id === entity.id); return <div class="finance-share" key={entity.id}>
             <label class="finance-checkbox"><input type="checkbox" checked={Boolean(share)} onChange={e => change("shares", e.currentTarget.checked ? [...draft.shares, { entity_id: entity.id, amount: "" }] : draft.shares.filter(s => s.entity_id !== entity.id))} />{entityName(entity.id, data)}</label>
-            {share && draft.split === "CUSTOM_AMOUNT" && <label>Part de {entityName(entity.id, data)} (€)<input required inputMode="decimal" value={share.amount} onInput={e => change("shares", draft.shares.map(s => s.entity_id === entity.id ? { ...s, amount: e.currentTarget.value } : s))} /></label>}
+            {share && draft.split === "CUSTOM_AMOUNT" && <label>Aandeel van {entityName(entity.id, data)} (€)<input required inputMode="decimal" value={share.amount} onInput={e => change("shares", draft.shares.map(s => s.entity_id === entity.id ? { ...s, amount: e.currentTarget.value } : s))} /></label>}
             {share && draft.split === "EQUAL" && preview.some(s => s.entity_id === entity.id) && <span>{formatMoney(preview.find(s => s.entity_id === entity.id)!.amount_cents)}</span>}
           </div>; })}
         </fieldset>
-        <p class="muted">Les centimes restants sont répartis dans un ordre stable. Une part de 0,00 € est possible pour les très petits montants.</p>
+        <p class="muted">De resterende centen worden in een vaste volgorde verdeeld. Bij heel kleine bedragen kan een aandeel € 0,00 zijn.</p>
       </>}
-      <div class="finance-actions"><button class="btn" type="submit">{busy ? "Enregistrement…" : "Enregistrer"}</button><button class="btn btn-light" type="button" onClick={onClose}>Fermer sans enregistrer</button></div>
+      <div class="finance-actions"><button class="btn" type="submit">{busy ? "Opslaan…" : "Opslaan"}</button><button class="btn btn-light" type="button" onClick={onClose}>Sluiten zonder op te slaan</button></div>
     </fieldset>
   </form>;
 }

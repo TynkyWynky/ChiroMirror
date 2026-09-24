@@ -8,8 +8,8 @@ import { formatDay, formatTime, instantToLocal } from "../../events/dates";
 import { priorityLabels, roleLabels, statusLabels, type Task, type TaskAction, type TaskActivity } from "../types";
 import { linkedEventLabel, memberName, WorkButton } from "./TaskCard";
 
-const actionLabels: Record<TaskAction, string> = { TASK_CREATED: "Tâche créée", TASK_UPDATED: "Tâche modifiée", STATUS_CHANGED: "Statut modifié", TASK_CANCELLED: "Tâche annulée",
-  MEMBER_ADDED: "Membre ajouté", MEMBER_REMOVED: "Membre retiré", MEMBER_ROLE_CHANGED: "Rôle dans la tâche modifié", MEMBER_WORK_COMPLETED: "Partie terminée", MEMBER_WORK_REOPENED: "Partie remise à faire" };
+const actionLabels: Record<TaskAction, string> = { TASK_CREATED: "Taak aangemaakt", TASK_UPDATED: "Taak gewijzigd", STATUS_CHANGED: "Status gewijzigd", TASK_CANCELLED: "Taak geannuleerd",
+  MEMBER_ADDED: "Lid toegevoegd", MEMBER_REMOVED: "Lid verwijderd", MEMBER_ROLE_CHANGED: "Rol in de taak gewijzigd", MEMBER_WORK_COMPLETED: "Deel afgerond", MEMBER_WORK_REOPENED: "Deel opnieuw opengezet" };
 export default function TaskDetail({ task, data, client, access, userId, busy, onEdit, onClose, onWork, onStatus }: {
   task: Task; data: TasksData; client: SupabaseClient; access: AppAccess; userId: string; busy: boolean;
   onEdit: () => void; onClose: () => void; onWork: (task: Task, done: boolean) => void; onStatus: (status: Task["status"]) => void;
@@ -26,25 +26,25 @@ export default function TaskDetail({ task, data, client, access, userId, busy, o
   const manage = canManageTask(task, data.assignments, access, userId), complete = canCompleteTask(task, data.assignments, access, userId);
   return <section class="admin-subpanel task-detail">
     <h2 ref={heading} tabIndex={-1}>{task.title}</h2>
-    <p>{task.scope === "PERSONAL" ? "Personnel · privé" : "Équipe"} · {statusLabels[task.status]} · Priorité {priorityLabels[task.priority].toLocaleLowerCase("fr")}</p>
-    {isOverdue(task) && <strong class="task-overdue">En retard</strong>}
-    <p>Échéance : {formatDeadline(task)}</p>{task.description && <p class="task-description">{task.description}</p>}
-    {task.event_id && <p>Événement : {linkedEventLabel(task, data)}</p>}
-    {task.scope === "TEAM" && <><p>{progress.done} / {progress.total} personnes terminées</p><ul>{data.assignments.filter(item => item.task_id === task.id).map(item => <li key={item.member_id}>{memberName(item.member_id, data)} · {roleLabels[item.role]} · {item.work_status === "DONE" ? "Partie terminée" : "À faire"}</li>)}</ul></>}
+    <p>{task.scope === "PERSONAL" ? "Persoonlijk · privé" : "Team"} · {statusLabels[task.status]} · Prioriteit {priorityLabels[task.priority].toLocaleLowerCase("nl")}</p>
+    {isOverdue(task) && <strong class="task-overdue">Te laat</strong>}
+    <p>Deadline: {formatDeadline(task)}</p>{task.description && <p class="task-description">{task.description}</p>}
+    {task.event_id && <p>Activiteit: {linkedEventLabel(task, data)}</p>}
+    {task.scope === "TEAM" && <><p>{progress.done} / {progress.total} personen klaar</p><ul>{data.assignments.filter(item => item.task_id === task.id).map(item => <li key={item.member_id}>{memberName(item.member_id, data)} · {roleLabels[item.role]} · {item.work_status === "DONE" ? "Deel afgerond" : "Te doen"}</li>)}</ul></>}
     <div class="task-actions"><WorkButton task={task} own={own} busy={busy} onWork={onWork} />
-      {manage && <button class="btn" type="button" disabled={busy} onClick={onEdit}>Modifier</button>}
-      {complete && task.status !== "DONE" && task.status !== "CANCELLED" && <button class="btn" type="button" disabled={busy} onClick={() => onStatus("DONE")}>Terminer la tâche</button>}
-      {manage && task.status !== "CANCELLED" && <button class="btn btn-light" type="button" disabled={busy} onClick={() => onStatus("CANCELLED")}>Annuler la tâche</button>}
-      <button class="btn btn-light" type="button" disabled={busy} onClick={onClose}>Fermer la fiche</button>
+      {manage && <button class="btn" type="button" disabled={busy} onClick={onEdit}>Bewerken</button>}
+      {complete && task.status !== "DONE" && task.status !== "CANCELLED" && <button class="btn" type="button" disabled={busy} onClick={() => onStatus("DONE")}>Taak afronden</button>}
+      {manage && task.status !== "CANCELLED" && <button class="btn btn-light" type="button" disabled={busy} onClick={() => onStatus("CANCELLED")}>Taak annuleren</button>}
+      <button class="btn btn-light" type="button" disabled={busy} onClick={onClose}>Details sluiten</button>
     </div>
-    <h3>Historique récent</h3>
-    {loading ? <p role="status">Chargement de l’historique…</p> : error ? <p role="alert">{error} <button type="button" onClick={() => setAttempt(value => value + 1)}>Réessayer</button></p> : <ol class="task-audit">{activity.map(row => {
+    <h3>Recente geschiedenis</h3>
+    {loading ? <p role="status">Geschiedenis laden…</p> : error ? <p role="alert">{error} <button type="button" onClick={() => setAttempt(value => value + 1)}>Opnieuw proberen</button></p> : <ol class="task-audit">{activity.map(row => {
       const actor = data.members.find(member => member.user_id === row.actor_id);
-      return <li key={row.id}><strong>{actionLabels[row.action]}</strong> · {formatDay(instantToLocal(row.created_at).slice(0, 10), false)} à {formatTime(row.created_at)}
-        <span> · {row.actor_id === userId ? "Vous" : actor ? `${actor.first_name} ${actor.last_name}` : "Compte authentifié (identité indisponible)"}</span>
+      return <li key={row.id}><strong>{actionLabels[row.action]}</strong> · {formatDay(instantToLocal(row.created_at).slice(0, 10), false)} om {formatTime(row.created_at)}
+        <span> · {row.actor_id === userId ? "Jij" : actor ? `${actor.first_name} ${actor.last_name}` : "Aangemeld account (identiteit niet beschikbaar)"}</span>
         {row.metadata.member_id && <span> · {memberName(row.metadata.member_id, data)}</span>}
       </li>;
     })}</ol>}
-    <p class="muted">Les 100 dernières actions sont affichées. Le statut individuel ne clôture pas la tâche globale.</p>
+    <p class="muted">De laatste 100 acties worden getoond. Een individuele afronding sluit de volledige taak niet af.</p>
   </section>;
 }

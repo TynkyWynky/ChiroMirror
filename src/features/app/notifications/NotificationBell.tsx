@@ -39,23 +39,23 @@ export default function NotificationBell({ client, userId, onTarget, centerOpen,
     void client.from("notifications").select("*").eq("id", id).maybeSingle().then(({ data, error: cause }) => {
       if (!active) return;
       const url = new URL(location.href); url.searchParams.delete("notification"); history.replaceState(null, "", url);
-      if (cause || !data) { dialog.current?.showModal(); setError("Cette notification n’est pas accessible avec votre compte."); }
+      if (cause || !data) { dialog.current?.showModal(); setError("Deze melding is niet toegankelijk met jouw account."); }
       else void openNotification(data as AppNotification);
     });
     return () => { active = false; };
   }, [client, userId, notificationId]);
   const close = () => { dialog.current?.close(); trigger.current?.focus(); onCloseCenter?.(); };
   return <>
-    <button ref={trigger} class="admin-icon-button notification-bell" type="button" aria-label={`Notifications${count === null ? "" : ` : ${count} non lues`}`} onClick={() => { if(onOpenCenter)onOpenCenter();dialog.current?.showModal(); void load(0); }}>
+    <button ref={trigger} class="admin-icon-button notification-bell" type="button" aria-label={`Meldingen${count === null ? "" : `: ${count} ongelezen`}`} onClick={() => { if(onOpenCenter)onOpenCenter();dialog.current?.showModal(); void load(0); }}>
       <AdminIcon name="notifications" />{Boolean(count) && <span class="notification-badge" aria-hidden="true">{count! > 99 ? "99+" : count}</span>}
     </button>
-    <dialog class="notification-dialog" ref={dialog} aria-labelledby="notification-center-title" lang="fr" onCancel={e=>{e.preventDefault();close();}} onClick={e => { if (e.target === e.currentTarget) close(); }}>
-      <section class="notification-center"><div class="notification-actions"><h2 id="notification-center-title">Notifications</h2><button class="btn btn-light" type="button" onClick={close}>Fermer</button></div>
-        <div class="notification-actions"><button class="btn btn-light" type="button" disabled={loading || !count} onClick={() => { void notificationRpc(client, "mark_notifications_read", { target_id: null }).then(() => load()).catch(cause => setError(notificationError(cause))); }}>Tout marquer comme lu</button><button class="btn btn-light" type="button" disabled={loading} onClick={() => void load()}>Actualiser</button></div>
-        {error && <p role="alert">{error}</p>}{loading ? <p role="status">Chargement…</p> : <>
-          {!rows.length && !error && <p>Aucune notification sur cette page.</p>}
-          <ul class="notification-list">{rows.map(row => <li key={row.id}><button class="notification-item" type="button" onClick={() => void openNotification(row)}><span>{row.read_at ? "Lue" : "Non lue"}</span><strong>{row.title}</strong><span>{row.body}</span><small>{formatDay(instantToLocal(row.created_at).slice(0, 10), false)} à {formatTime(row.created_at)}</small></button></li>)}</ul>
-          <div class="notification-actions"><button class="btn btn-light" type="button" disabled={!page} onClick={() => void load(page - 1)}>Précédentes</button><span>Page {page + 1}</span><button class="btn btn-light" type="button" disabled={rows.length < 30} onClick={() => void load(page + 1)}>Suivantes</button></div>
+    <dialog class="notification-dialog" ref={dialog} aria-labelledby="notification-center-title" lang="nl" onCancel={e=>{e.preventDefault();close();}} onClick={e => { if (e.target === e.currentTarget) close(); }}>
+      <section class="notification-center"><div class="notification-actions"><h2 id="notification-center-title">Meldingen</h2><button class="btn btn-light" type="button" onClick={close}>Sluiten</button></div>
+        <div class="notification-actions"><button class="btn btn-light" type="button" disabled={loading || !count} onClick={() => { void notificationRpc(client, "mark_notifications_read", { target_id: null }).then(() => load()).catch(cause => setError(notificationError(cause))); }}>Alles als gelezen markeren</button><button class="btn btn-light" type="button" disabled={loading} onClick={() => void load()}>Verversen</button></div>
+        {error && <p role="alert">{error}</p>}{loading ? <p role="status">Laden…</p> : <>
+          {!rows.length && !error && <p>Geen meldingen op deze pagina.</p>}
+          <ul class="notification-list">{rows.map(row => <li key={row.id}><button class="notification-item" type="button" onClick={() => void openNotification(row)}><span>{row.read_at ? "Gelezen" : "Ongelezen"}</span><strong>{row.title}</strong><span>{row.body}</span><small>{formatDay(instantToLocal(row.created_at).slice(0, 10), false)} om {formatTime(row.created_at)}</small></button></li>)}</ul>
+          <div class="notification-actions"><button class="btn btn-light" type="button" disabled={!page} onClick={() => void load(page - 1)}>Vorige</button><span>Pagina {page + 1}</span><button class="btn btn-light" type="button" disabled={rows.length < 30} onClick={() => void load(page + 1)}>Volgende</button></div>
         </>}
       </section>
     </dialog>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { database, fixtureId as id, sqlFile, notificationsMarker } from "./helpers/database.ts";
+import { database, fixtureId as id, sqlFile, notificationsMarker, dutchMarker } from "./helpers/database.ts";
 import { planSource, type PlanSource } from "../src/server/notifications/planner.ts";
 import { runNotificationTick, type Delivery } from "../src/server/notifications/dispatcher.ts";
 
@@ -28,7 +28,8 @@ async function fixture() {
   const task=(scope="TEAM")=>actor(3,()=>value<string>("select public.save_task_with_reminders(null,null,$1,$2,$3) v",[{scope,title:"Commander",description:"",status:"TODO",priority:"NORMAL",deadline_date:day,deadline_at:null,timezone:"Europe/Brussels",event_id:null,event_occurrence_date:null},scope==="TEAM"?[{member_id:id(103),role:"LEAD"},{member_id:id(101),role:"CONTRIBUTOR"},{member_id:id(102),role:"CONTRIBUTOR"}]:[],[{kind:"LOCAL_TIME",days_before:1,local_time:"19:00"}]]));
   return {db,value,actor,worker,server,prefs,subscribe,event,task,now,details};
 }
-test("Notifications migration mirrors bootstrap",()=>assert.equal(sqlFile("schema.sql").split(notificationsMarker)[1].trim(),sqlFile("migrations/20260923000400_app_notifications.sql").trim()));
+test("Notifications migration mirrors bootstrap",()=>assert.equal(sqlFile("schema.sql").split(notificationsMarker)[1].split(dutchMarker)[0].trim(),sqlFile("migrations/20260923000400_app_notifications.sql").trim()));
+test("Dutch migration mirrors bootstrap",()=>assert.equal(sqlFile("schema.sql").split(dutchMarker)[1].trim(),sqlFile("migrations/20260924000100_app_dutch.sql").trim()));
 
 test("Notifications PostgreSQL owner privacy, protected RPCs, self-only subscriptions and atomic reminder saves",async()=>{
   const f=await fixture(); const {db,actor,value,prefs,subscribe}=f;
@@ -53,6 +54,7 @@ test("Notifications PostgreSQL owner privacy, protected RPCs, self-only subscrip
       await value("select public.mark_notifications_read(null) v");
     });
     assert.equal(await value("select count(*)::int v from public.notifications where read_at is null"),0);
+    assert.deepEqual(await value("select jsonb_build_object('title',title,'body',body) v from public.notification_jobs where source_type='SYSTEM' and user_id=$1 order by created_at desc limit 1",[id(1)]), { title: "Testmelding", body: "Chiro-meldingen zijn klaar voor gebruik." });
     const event=await f.event();
     await actor(3,()=>assert.rejects(value("select public.save_agenda_event_with_reminders($1,1,$2,'{}',$3) v",[event,{...f.details,title:"Rollback"},[{kind:"OFFSET",offset_minutes:-1}]])));
     assert.equal(await value("select title v from public.events where id=$1",[event]),"Activité");
@@ -69,7 +71,7 @@ test("Notifications worker twice: one internal reminder per recipient, multidevi
     await f.event(); let sends:Delivery[]=[];
     const sender=async(d:Delivery)=>{sends.push(d); if(d.subscription_id===expired)throw{statusCode:410,body:"sensitive secret"};if(d.subscription_id===live&&sends.filter(x=>x.subscription_id===live).length===1)throw{statusCode:503};};
     const first=await runNotificationTick(worker,sender,now); assert.equal(first.internal,3); assert.equal(sends.length,2);
-    assert.ok(sends.every(d=>!d.payload.body.includes("Locaux"))); assert.equal(await value("select active v from public.push_subscriptions where id=$1",[expired]),false);
+    assert.ok(sends.every(d=>d.payload.body === "Er staat een herinnering voor je klaar in de app.")); assert.equal(await value("select active v from public.push_subscriptions where id=$1",[expired]),false);
     const retry=await value<any>("select to_jsonb(d) v from public.notification_deliveries d where subscription_id=$1",[live]); assert.equal(retry.status,"PENDING");assert.equal(retry.attempts,1);
     await prefs(2,{push_enabled:false,event_notifications_enabled:false});
     assert.equal(await value("select status v from public.notification_deliveries where subscription_id=$1",[live]),"PENDING","another user's preference must not cancel this device's retry");

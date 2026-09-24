@@ -25,7 +25,7 @@ const adminAuthActionPath = getAdminAuthActionPath();
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>{isValidAdminRoute ? "Chiro Negenmanneke — Espace interne" : "Pagina niet gevonden"}</title>
+    <title>{isValidAdminRoute ? "Chiro Negenmanneke — Interne omgeving" : "Pagina niet gevonden"}</title>
     <meta name="robots" content={isValidAdminRoute ? "noindex, nofollow" : "noindex, nofollow, noarchive"} />
     <link rel="icon" type="image/png" href="/assets/Chirologo_700px.png" />
     {isValidAdminRoute && <link rel="manifest" href={`${getAdminBasePath()}manifest.webmanifest`} />}

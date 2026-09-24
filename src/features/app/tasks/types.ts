@@ -25,6 +25,6 @@ export interface TaskDraft {
   deadline_kind: "NONE" | "DATE" | "TIMED"; deadline: string;
   event_id: string; event_occurrence_date: string; assignments: TaskAssignment[];
 }
-export const statusLabels: Record<TaskStatus, string> = { TODO: "À faire", IN_PROGRESS: "En cours", DONE: "Terminée", CANCELLED: "Annulée" };
-export const priorityLabels: Record<TaskPriority, string> = { LOW: "Basse", NORMAL: "Normale", HIGH: "Haute", URGENT: "Urgente" };
-export const roleLabels: Record<TaskRole, string> = { LEAD: "Responsable", CONTRIBUTOR: "Participant" };
+export const statusLabels: Record<TaskStatus, string> = { TODO: "Te doen", IN_PROGRESS: "Bezig", DONE: "Afgerond", CANCELLED: "Geannuleerd" };
+export const priorityLabels: Record<TaskPriority, string> = { LOW: "Laag", NORMAL: "Normaal", HIGH: "Hoog", URGENT: "Dringend" };
+export const roleLabels: Record<TaskRole, string> = { LEAD: "Verantwoordelijke", CONTRIBUTOR: "Deelnemer" };

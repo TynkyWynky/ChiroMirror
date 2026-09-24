@@ -9,7 +9,7 @@ import type { AppPermission } from "../src/features/app/types.ts";
 
 const categories = [{ key: "ACTIVITY", label: "Activité" }];
 function event(patch: Partial<CalendarEvent> = {}): CalendarEvent {
-  return { id: "test", title: "Dimanche", description: "", location: "Locaux", category: "ACTIVITY", timezone: EVENT_ZONE,
+  return { id: "test", title: "Zondag", description: "", location: "Locaux", category: "ACTIVITY", timezone: EVENT_ZONE,
     all_day: false, start_date: null, end_date: null, starts_at: "2026-03-22T13:00:00Z", ends_at: "2026-03-22T17:00:00Z",
     audience_type: "ALL", status: "SCHEDULED", created_by: null, updated_by: null, created_at: "", updated_at: "", revision: 1,
     frequency: "WEEKLY", recurrence_interval: 1, weekdays: [7], until_date: null, occurrence_count: null, ...patch };
@@ -22,8 +22,8 @@ test("Brussels timed conversion, all-day and multi-day dates remain distinct", (
   const input = validateEvent(draft, categories);
   assert.equal(input.start_date, "2026-07-16"); assert.equal(input.end_date, "2026-07-30");
   assert.equal(input.starts_at, null); assert.equal(input.ends_at, null);
-  assert.match(formatTiming(input), /16 juillet 2026.*30 juillet 2026.*Toute la journée/);
-  assert.throws(() => validateEvent({ ...draft, end: "2026-07-15" }, categories), /fin/);
+  assert.match(formatTiming(input), /16 juli 2026.*30 juli 2026.*Hele dag/);
+  assert.throws(() => validateEvent({ ...draft, end: "2026-07-15" }, categories), /einde/);
   assert.throws(() => validateEvent({ ...draft, start: "2026-02-30" }, categories));
   assert.throws(() => validateEvent({ ...draft, title: " " }, categories));
   assert.throws(() => validateEvent({ ...draft, category: "UNKNOWN" }, categories));
@@ -31,8 +31,8 @@ test("Brussels timed conversion, all-day and multi-day dates remain distinct", (
 });
 
 test("explicit DST gap and overlap inputs are rejected", () => {
-  assert.throws(() => localToInstant("2026-03-29T02:30"), /inexistante ou doublée/);
-  assert.throws(() => localToInstant("2026-10-25T02:30"), /inexistante ou doublée/);
+  assert.throws(() => localToInstant("2026-03-29T02:30"), /niet-bestaande of dubbele/);
+  assert.throws(() => localToInstant("2026-10-25T02:30"), /niet-bestaande of dubbele/);
   assert.equal(localToInstant("2026-03-29T03:30"), "2026-03-29T01:30:00Z");
   assert.equal(localToInstant("2026-10-25T03:30"), "2026-10-25T02:30:00Z");
 });
@@ -76,11 +76,11 @@ test("overrides move in/out of windows, cancel one occurrence, and leave the ser
   const override: EventOverride = { ...original, event_id: original.id, occurrence_date: "2026-04-05",
     starts_at: "2026-03-27T18:00:00Z", ends_at: "2026-03-27T20:00:00Z", title: "Déplacé", updated_at: "", updated_by: null };
   const movedIn = expandEvents([original], [override], "2026-03-23", "2026-03-29");
-  assert.deepEqual(movedIn.map(item => item.title), ["Déplacé", "Dimanche"]);
+  assert.deepEqual(movedIn.map(item => item.title), ["Déplacé", "Zondag"]);
   assert.equal(expandEvents([original], [override], "2026-04-05", "2026-04-05").length, 0);
   const cancelled = { ...override, status: "CANCELLED" as const };
   assert.equal(expandEvents([original], [cancelled], "2026-03-27", "2026-03-27")[0].status, "CANCELLED");
-  assert.equal(original.title, "Dimanche"); assert.equal(original.status, "SCHEDULED");
+  assert.equal(original.title, "Zondag"); assert.equal(original.status, "SCHEDULED");
   const renamed = { ...original, title: "Nouvelle série" };
   assert.equal(expandEvents([renamed], [override], "2026-03-29", "2026-03-29")[0].title, "Nouvelle série");
   assert.equal(expandEvents([{ ...original, status: "CANCELLED" }], [override], "2026-03-27", "2026-03-27")[0].status, "CANCELLED");

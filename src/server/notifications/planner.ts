@@ -48,7 +48,7 @@ export function planSource(input: PlanSource, now = Temporal.Now.instant().toStr
     const day = task.deadline_date ?? instantToLocal(task.deadline_at!).slice(0, 10);
     // Date-only deadlines include the complete day; timed offsets use its final millisecond.
     const anchor = task.deadline_at ?? localInstant(Temporal.PlainDate.from(day).add({ days: 1 }).toString(), "00:00").subtract({ milliseconds: 1 }).toString();
-    add(day, anchor, "", task.title, `Échéance : ${formatDay(day)}${task.deadline_at ? ` à ${formatTime(task.deadline_at)} (Bruxelles)` : " (fin de journée)"}.`);
+    add(day, anchor, "", task.title, `Deadline: ${formatDay(day)}${task.deadline_at ? ` om ${formatTime(task.deadline_at)} (Brussel)` : " (einde van de dag)"}.`);
   } else {
     const event = input.source as CalendarEvent;
     if (event.status === "CANCELLED") return [];
@@ -59,7 +59,7 @@ export function planSource(input: PlanSource, now = Temporal.Now.instant().toStr
     for (const occurrence of expandEvents([event], input.overrides, start, through)) {
       if (occurrence.status === "CANCELLED") continue;
       const day = startDay(occurrence), anchor = occurrence.starts_at ?? localInstant(day, "00:00").toString();
-      add(day, anchor, occurrence.occurrence_date, occurrence.title, `${formatDay(day)}${occurrence.starts_at ? ` à ${formatTime(occurrence.starts_at)} (Bruxelles)` : " · toute la journée"}${occurrence.location ? ` · ${occurrence.location}` : ""}.`, occurrence.category);
+      add(day, anchor, occurrence.occurrence_date, occurrence.title, `${formatDay(day)}${occurrence.starts_at ? ` om ${formatTime(occurrence.starts_at)} (Brussel)` : " · hele dag"}${occurrence.location ? ` · ${occurrence.location}` : ""}.`, occurrence.category);
     }
   }
   return jobs;

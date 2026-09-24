@@ -43,9 +43,9 @@ export async function setMyWorkStatus(client: SupabaseClient, task: Task, status
 export function taskError(error: unknown): string {
   const network = networkError(error); if(network)return network;
   if (typeof error === "object" && error !== null && "code" in error) {
-    if (error.code === "40001") return "Cette tâche a été modifiée ailleurs. Fermez le formulaire, actualisez puis reprenez votre modification.";
-    if (error.code === "42501") return "Vous n’avez pas les droits nécessaires pour cette action. Vérifiez votre lien membre et actualisez vos accès.";
-    if (["22023", "23514", "23503", "23502", "23505", "22P02"].includes(String(error.code))) return "Vérifiez les données : responsable obligatoire, membres actifs sans doublon, échéance et événement valides.";
+    if (error.code === "40001") return "Deze taak is elders gewijzigd. Sluit het formulier, ververs en probeer opnieuw.";
+    if (error.code === "42501") return "Je hebt niet de vereiste rechten voor deze actie. Controleer je lidkoppeling en ververs je toegangsrechten.";
+    if (["22023", "23514", "23503", "23502", "23505", "22P02"].includes(String(error.code))) return "Controleer de gegevens: minstens één verantwoordelijke, actieve leden zonder dubbels, een geldige deadline en activiteit.";
   }
-  return error instanceof Error ? error.message : "Impossible de charger ou d’enregistrer les tâches. Réessayez.";
+  return error instanceof Error ? error.message : "De taken konden niet worden geladen of opgeslagen. Probeer opnieuw.";
 }

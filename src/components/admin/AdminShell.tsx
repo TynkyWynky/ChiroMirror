@@ -29,8 +29,8 @@ interface Props {
 export default function AdminShell(props: Props) {
   const [offlineAttempt,setOfflineAttempt] = useState(false);
   const app = props.activeTab.domain === "app";
-  const refreshLabel = app ? "Actualiser les données" : "Gegevens verversen";
-  return <div class={`admin-app ${app ? "is-app" : ""}`} lang={app ? "fr" : "nl"} onSubmitCapture={event=>{
+  const refreshLabel = app ? "Gegevens verversen" : "Gegevens verversen";
+  return <div class={`admin-app ${app ? "is-app" : ""}`} lang="nl" onSubmitCapture={event=>{
     if(app && navigator.onLine===false){event.preventDefault();event.stopPropagation();setOfflineAttempt(true);}
   }}>
     <AdminNavigation groups={props.groups} activeTab={props.activeTab.id} badges={props.badges}
@@ -41,15 +41,15 @@ export default function AdminShell(props: Props) {
         <div class="admin-topbar-actions">
           {app && props.notificationControl}
           <button class="admin-icon-button" type="button" aria-label={refreshLabel} title={refreshLabel} disabled={props.refreshDisabled} onClick={props.onRefresh}><AdminIcon name="refresh" /></button>
-          <a class="admin-text-button" href="/" target="_blank" rel="noopener noreferrer">{app ? "Voir le site" : "Bekijk site"}<AdminIcon name="external" /></a>
+          <a class="admin-text-button" href="/" target="_blank" rel="noopener noreferrer">{app ? "Bekijk site" : "Bekijk site"}<AdminIcon name="external" /></a>
         </div>
       </header>
       <div class={"admin-main-shell " + (props.activeTab.id === "finance" ? "is-finance" : "")}>
         {app && props.applicationControl}
         {props.notice && <div class={"admin-notice admin-notice-" + props.notice.type} role={props.notice.type === "error" ? "alert" : "status"}>{props.notice.message}</div>}
-        {props.loading && <div class="admin-loading-inline" role="status">{app ? "Actualisation des données…" : "Gegevens worden ververst…"}</div>}
+        {props.loading && <div class="admin-loading-inline" role="status">{app ? "Gegevens worden ververst…" : "Gegevens worden ververst…"}</div>}
         {props.children}
-        {offlineAttempt && <p role="alert">{offlineMessage} <button class="btn btn-light" type="button" onClick={()=>setOfflineAttempt(false)}>Fermer</button></p>}
+        {offlineAttempt && <p role="alert">{offlineMessage} <button class="btn btn-light" type="button" onClick={()=>setOfflineAttempt(false)}>Sluiten</button></p>}
       </div>
     </main>
   </div>;

@@ -48,7 +48,7 @@ export default function AgendaPage({ client, access, openTarget, onTargetHandled
     const override = data.overrides.find(o => o.event_id === openTarget.id && o.occurrence_date === date);
     const day = override ? startDay(override) : date;
     const found = event && expandEvents([event], data.overrides.filter(o => o.event_id === event.id), day, day).find(o => o.occurrence_date === date);
-    if (found) { setMonth(monthStart(day)); setSelected(found); } else setError("Cet événement ou cette occurrence n’est plus accessible.");
+    if (found) { setMonth(monthStart(day)); setSelected(found); } else setError("Deze activiteit of dit exemplaar is niet meer toegankelijk.");
     onTargetHandled?.();
   }, [loading, openTarget?.id, openTarget?.occurrence, data]);
   function close() {
@@ -78,35 +78,35 @@ export default function AgendaPage({ client, access, openTarget, onTargetHandled
   }
   async function submit(input: EventInput) {
     if (!editing) return;
-    await mutate(() => saveEvent(client, editing.event, input, editing.occurrenceDate), "Événement enregistré.");
+    await mutate(() => saveEvent(client, editing.event, input, editing.occurrenceDate), "Activiteit opgeslagen.");
   }
-  return <section class="admin-panel agenda" lang="fr" aria-busy={loading || busy}>
-    <header class="admin-page-heading"><div><p class="admin-eyebrow">APP</p><h1>Agenda</h1><p>Activités, réunions et moments de la Chiro.</p></div>
-      {canCreate && <button class="btn" type="button" disabled={loading || busy || Boolean(editing)} onClick={create}>+ Nouvel événement</button>}
+  return <section class="admin-panel agenda" lang="nl" aria-busy={loading || busy}>
+    <header class="admin-page-heading"><div><p class="admin-eyebrow">APP</p><h1>Agenda</h1><p>Activiteiten, vergaderingen en Chiro-momenten.</p></div>
+      {canCreate && <button class="btn" type="button" disabled={loading || busy || Boolean(editing)} onClick={create}>+ Nieuwe activiteit</button>}
     </header>
     {feedback && <p role="status" class="agenda-feedback">{feedback}</p>}
-    {error && !editing && <p class="agenda-error" role="alert">{error} <button class="btn btn-light" type="button" disabled={busy} onClick={() => { setSelected(null); void reload(); }}>Réessayer</button></p>}
+    {error && !editing && <p class="agenda-error" role="alert">{error} <button class="btn btn-light" type="button" disabled={busy} onClick={() => { setSelected(null); void reload(); }}>Opnieuw proberen</button></p>}
     {editing ? <EventForm initial={editing.draft} initialReminders={editing.event ? data.reminders.filter(r => r.event_id === editing.event!.id) : undefined} categories={data.categories} members={data.members} occurrenceOnly={Boolean(editing.occurrenceDate)} editing={Boolean(editing.event)} busy={busy} error={error} onSave={submit} onClose={close} />
       : selected ? <EventDetail occurrence={selected} data={data} canUpdate={canUpdate} canCancel={canCancel} busy={busy} onClose={close}
         onEdit={occurrenceOnly => {
           const ids = data.participants.filter(item => item.event_id === selected.event.id).map(item => item.member_id);
           setEditing({ event: selected.event, occurrenceDate: occurrenceOnly ? selected.occurrence_date : undefined, draft: makeDraft(occurrenceOnly ? selected : selected.event, ids) });
         }} onCancel={occurrenceOnly => {
-          const scope = occurrenceOnly ? "uniquement cette occurrence" : selected.event.frequency !== "NONE" ? "toute la série, y compris ses exceptions" : "cet événement";
-          if (window.confirm(`Annuler ${scope} ? L’historique sera conservé.`)) void mutate(() => cancelEvent(client, selected.event, occurrenceOnly ? selected.occurrence_date : null), "Annulation enregistrée.");
+          const scope = occurrenceOnly ? "alleen dit exemplaar" : selected.event.frequency !== "NONE" ? "de hele reeks, inclusief uitzonderingen" : "deze activiteit";
+          if (window.confirm(`Annuleren ${scope} ? De geschiedenis blijft bewaard.`)) void mutate(() => cancelEvent(client, selected.event, occurrenceOnly ? selected.occurrence_date : null), "Annulering opgeslagen.");
         }} /> : <>
         <div class="agenda-toolbar">
-          <div class="agenda-actions"><button class="btn btn-light" type="button" disabled={month <= monthStart(MIN_DATE)} aria-label="Mois précédent" onClick={() => setMonth(shiftMonth(month, -1))}>←</button>
-            <h2 aria-live="polite">{formatMonth(month)}</h2><button class="btn btn-light" type="button" disabled={month >= monthStart(MAX_DATE)} aria-label="Mois suivant" onClick={() => setMonth(shiftMonth(month, 1))}>→</button>
-            <button class="btn btn-light" type="button" onClick={() => setMonth(monthStart(today()))}>Aujourd’hui</button></div>
-          <div class="agenda-actions" role="group" aria-label="Vue de l’agenda"><button type="button" class="btn btn-light" aria-pressed={view === "month"} onClick={() => setView("month")}>Mois</button><button type="button" class="btn btn-light" aria-pressed={view === "list"} onClick={() => setView("list")}>Liste</button></div>
+          <div class="agenda-actions"><button class="btn btn-light" type="button" disabled={month <= monthStart(MIN_DATE)} aria-label="Vorige maand" onClick={() => setMonth(shiftMonth(month, -1))}>←</button>
+            <h2 aria-live="polite">{formatMonth(month)}</h2><button class="btn btn-light" type="button" disabled={month >= monthStart(MAX_DATE)} aria-label="Volgende maand" onClick={() => setMonth(shiftMonth(month, 1))}>→</button>
+            <button class="btn btn-light" type="button" onClick={() => setMonth(monthStart(today()))}>Vandaag</button></div>
+          <div class="agenda-actions" role="group" aria-label="Agendaweergave"><button type="button" class="btn btn-light" aria-pressed={view === "month"} onClick={() => setView("month")}>Maand</button><button type="button" class="btn btn-light" aria-pressed={view === "list"} onClick={() => setView("list")}>Lijst</button></div>
         </div>
-        <div class="agenda-fields agenda-filters"><label>Type d’événement<select value={category} onChange={e => setCategory(e.currentTarget.value)}><option value="">Tous les types</option>{data.categories.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
-          <label class="agenda-check"><input type="checkbox" checked={showCancelled} onChange={e => setShowCancelled(e.currentTarget.checked)} />Afficher les événements annulés</label>
-          <button class="btn btn-light" disabled={loading || busy} type="button" onClick={() => void reload()}>Actualiser</button>
+        <div class="agenda-fields agenda-filters"><label>Type activiteit<select value={category} onChange={e => setCategory(e.currentTarget.value)}><option value="">Alle types</option>{data.categories.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
+          <label class="agenda-check"><input type="checkbox" checked={showCancelled} onChange={e => setShowCancelled(e.currentTarget.checked)} />Geannuleerde activiteiten tonen</label>
+          <button class="btn btn-light" disabled={loading || busy} type="button" onClick={() => void reload()}>Verversen</button>
         </div>
-        {loading ? <p role="status">Chargement de l’agenda…</p> : !error && <>
-          {!occurrences.length && <div class="admin-subpanel"><p>Aucun événement prévu.</p>{canCreate && <button class="btn" type="button" onClick={create}>Créer le premier événement</button>}</div>}
+        {loading ? <p role="status">Agenda laden…</p> : !error && <>
+          {!occurrences.length && <div class="admin-subpanel"><p>Geen activiteiten gepland.</p>{canCreate && <button class="btn" type="button" onClick={create}>Eerste activiteit aanmaken</button>}</div>}
           {view === "month" ? <MonthView days={days} month={month} occurrences={occurrences} categories={data.categories} onSelect={select} />
             : <ListView from={from} occurrences={occurrences} categories={data.categories} onSelect={select} />}
         </>}

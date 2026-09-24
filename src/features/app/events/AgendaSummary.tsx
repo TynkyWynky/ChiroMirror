@@ -14,8 +14,8 @@ export default function AgendaSummary({ client, onOpen }: { client: SupabaseClie
     }).catch(cause => { if (active) setError(agendaError(cause)); });
     return () => { active = false; };
   }, [client, attempt]);
-  return <section class="admin-subpanel" lang="fr"><h2>Prochains événements</h2>
-    {error ? <p role="alert">{error} <button type="button" onClick={() => setAttempt(n => n + 1)}>Réessayer</button></p> : events ? events.length ? <ul>{events.map(event => <li key={`${event.event.id}:${event.occurrence_date}`}><strong>{event.title}</strong> — {formatDay(startDay(event), false)}{event.starts_at ? ` à ${formatTime(event.starts_at)}` : " · toute la journée"}</li>)}</ul> : <p>Aucun événement prévu dans les 30 prochains jours.</p> : <p role="status">Chargement de l’agenda…</p>}
-    <button class="btn btn-light" type="button" onClick={onOpen}>Ouvrir l’agenda</button>
+  return <section class="admin-subpanel" lang="nl"><h2>Komende activiteiten</h2>
+    {error ? <p role="alert">{error} <button type="button" onClick={() => setAttempt(n => n + 1)}>Opnieuw proberen</button></p> : events ? events.length ? <ul>{events.map(event => <li key={`${event.event.id}:${event.occurrence_date}`}><strong>{event.title}</strong> — {formatDay(startDay(event), false)}{event.starts_at ? ` om ${formatTime(event.starts_at)}` : " · hele dag"}</li>)}</ul> : <p>Geen activiteiten gepland in de komende 30 dagen.</p> : <p role="status">Agenda laden…</p>}
+    <button class="btn btn-light" type="button" onClick={onOpen}>Agenda openen</button>
   </section>;
 }

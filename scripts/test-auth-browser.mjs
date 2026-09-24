@@ -66,7 +66,7 @@ try {
       await page.getByLabel("Wachtwoord", { exact: true }).fill("fixture-password");
       await page.getByRole("button", { name: "Inloggen", exact: true }).click();
     };
-    const home = () => page.getByRole("heading", { name: "Bienvenue, Test member", exact: true }).waitFor();
+    const home = () => page.getByRole("heading", { name: "Welkom, Test member", exact: true }).waitFor();
     await page.goto(base + "/fixture-app/?app=home");
     return { context, page, state, login, home };
   }
@@ -81,7 +81,7 @@ try {
     await f.login(); await f.home();
     assert.equal(await f.page.getByRole("button", { name: "Team & toegang", exact: true }).count(), 0);
     await f.page.reload(); await f.home();
-    await f.page.getByRole("button", { name: "Se déconnecter", exact: true }).first().click();
+    await f.page.getByRole("button", { name: "Uitloggen", exact: true }).first().click();
     await f.page.getByRole("heading", { name: "Leiding login" }).waitFor();
     await f.page.reload(); await f.page.getByRole("heading", { name: "Leiding login" }).waitFor();
     await f.context.close();
@@ -112,7 +112,7 @@ try {
   {
     const f = await fixture({ siteRole: "admin", missingApp: true });
     await f.login();
-    await f.page.getByRole("alert").filter({ hasText: "L’espace APP n’est pas encore configuré" }).waitFor();
+    await f.page.getByRole("alert").filter({ hasText: "De APP-omgeving is nog niet ingesteld" }).waitFor();
     await f.page.getByRole("button", { name: "Team & toegang", exact: true }).first().waitFor();
     await f.context.close();
     console.log("Auth: missing APP migration is visible while SITE remains available.");
@@ -120,7 +120,7 @@ try {
   {
     const f = await fixture({ blockedStorage: true });
     await f.login(); await f.home();
-    await f.page.getByRole("button", { name: "Se déconnecter", exact: true }).first().click();
+    await f.page.getByRole("button", { name: "Uitloggen", exact: true }).first().click();
     await f.page.getByRole("heading", { name: "Leiding login" }).waitFor();
     await f.context.close();
     console.log("Auth: blocked browser storage still permits login and logout.");

@@ -31,7 +31,7 @@ export default function TasksPage({ client, access, userId, openTaskId, onTarget
   useEffect(() => {
     if (loading) return;
     if (!openTaskId) { if(onResourceClose){setSelected(null);setEditing(null);} return; }
-    if (data.tasks.some(t => t.id === openTaskId)) setSelected(openTaskId); else setError("Cette tâche n’est plus accessible avec votre compte.");
+    if (data.tasks.some(t => t.id === openTaskId)) setSelected(openTaskId); else setError("Deze taak is niet meer toegankelijk met jouw account.");
     onTargetHandled?.();
   }, [loading, openTaskId, data]);
   const visible = useMemo(() => sortTasks(data.tasks.filter(task => {
@@ -42,7 +42,7 @@ export default function TasksPage({ client, access, userId, openTaskId, onTarget
     if (view !== "closed" && (status === "active" ? closed : status && task.status !== status)) return false;
     if (priority && task.priority !== priority || eventId && task.event_id !== eventId) return false;
     if (deadline === "overdue" && !isOverdue(task) || deadline === "today" && deadlineDay(task) !== today() || deadline === "none" && deadlineDay(task)) return false;
-    return `${task.title} ${task.description ?? ""}`.toLocaleLowerCase("fr").includes(search.trim().toLocaleLowerCase("fr"));
+    return `${task.title} ${task.description ?? ""}`.toLocaleLowerCase("nl").includes(search.trim().toLocaleLowerCase("nl"));
   })), [data, access, userId, view, readAll, search, priority, status, deadline, eventId]);
   function restoreFocus() { requestAnimationFrame(() => returnFocus.current?.isConnected && returnFocus.current.focus()); }
   function close() { onResourceClose?.(); setSelected(null); setEditing(null); setError(""); restoreFocus(); }
@@ -56,43 +56,43 @@ export default function TasksPage({ client, access, userId, openTaskId, onTarget
   }
   function newTask(scope: TaskScope) { returnFocus.current = document.activeElement as HTMLElement; setSelected(null); setEditing({ task: null, scope }); setError(""); setFeedback(""); }
   const selectedTask = data.tasks.find(task => task.id === selected);
-  function work(task: Task, done: boolean) { void mutate(() => setMyWorkStatus(client, task, done ? "DONE" : "TODO"), done ? "Votre partie est terminée. Le statut global reste inchangé." : "Votre partie est remise à faire."); }
+  function work(task: Task, done: boolean) { void mutate(() => setMyWorkStatus(client, task, done ? "DONE" : "TODO"), done ? "Jouw deel is afgerond. De algemene status blijft ongewijzigd." : "Jouw deel staat opnieuw open."); }
   async function submit(details: TaskInput, assignments: TaskAssignment[]) {
-    if (editing) await mutate(() => saveTask(client, editing.task, details, assignments), "Tâche enregistrée.", true);
+    if (editing) await mutate(() => saveTask(client, editing.task, details, assignments), "Taak opgeslagen.", true);
   }
   function changeStatus(next: Task["status"]) {
     if (!selectedTask) return;
     const progress = taskProgress(selectedTask.id, data.assignments), pending = progress.total - progress.done;
-    const question = next === "CANCELLED" ? "Annuler cette tâche ? Son historique sera conservé." : pending ? `${pending} personne(s) n’ont pas encore terminé leur partie. Terminer quand même la tâche ?` : "Marquer cette tâche comme terminée ?";
+    const question = next === "CANCELLED" ? "Deze taak annuleren? De geschiedenis blijft bewaard." : pending ? `${pending} personen hebben hun deel nog niet afgerond. De taak toch afronden?` : "Deze taak als afgerond markeren?";
     if (!window.confirm(question)) return;
     const { scope, title, description, priority, deadline_date, deadline_at, timezone, event_id, event_occurrence_date } = selectedTask;
     void mutate(() => saveTask(client, selectedTask, { scope, title, description: description ?? "", priority, deadline_date, deadline_at, timezone, event_id, event_occurrence_date, status: next },
-      data.assignments.filter(item => item.task_id === selectedTask.id).map(({ member_id, role }) => ({ member_id, role }))), next === "DONE" ? "Tâche terminée." : "Tâche annulée.");
+      data.assignments.filter(item => item.task_id === selectedTask.id).map(({ member_id, role }) => ({ member_id, role }))), next === "DONE" ? "Taak afgerond." : "Taak geannuleerd.");
   }
-  return <section class="admin-panel tasks" lang="fr" aria-busy={loading || busy}>
-    <header class="admin-page-heading"><div><p class="admin-eyebrow">APP</p><h1>Tâches</h1><p>Vos actions, vos responsabilités et le travail de l’équipe.</p></div>
-      <div class="task-actions"><button class="btn" type="button" disabled={loading || busy || Boolean(editing) || !access.member?.active} onClick={() => newTask("PERSONAL")}>+ Tâche personnelle</button>
-        {createTeam && <button class="btn" type="button" disabled={loading || busy || Boolean(editing)} onClick={() => newTask("TEAM")}>+ Tâche d’équipe</button>}</div>
+  return <section class="admin-panel tasks" lang="nl" aria-busy={loading || busy}>
+    <header class="admin-page-heading"><div><p class="admin-eyebrow">APP</p><h1>Taken</h1><p>Je acties, verantwoordelijkheden en het werk van je team.</p></div>
+      <div class="task-actions"><button class="btn" type="button" disabled={loading || busy || Boolean(editing) || !access.member?.active} onClick={() => newTask("PERSONAL")}>+ Persoonlijke taak</button>
+        {createTeam && <button class="btn" type="button" disabled={loading || busy || Boolean(editing)} onClick={() => newTask("TEAM")}>+ Teamtaak</button>}</div>
     </header>
-    {!access.member && <p>Votre compte n’est pas lié à un membre. Un membre actif est nécessaire pour créer vos tâches personnelles et recevoir des affectations.</p>}
+    {!access.member && <p>Je account is niet gekoppeld aan een lid. Een actief lid is vereist om persoonlijke taken aan te maken en toewijzingen te ontvangen.</p>}
     {feedback && <p role="status" class="task-feedback">{feedback}</p>}
-    {error && !editing && <p role="alert" class="task-error">{error} <button type="button" class="btn btn-light" disabled={busy} onClick={() => void reload()}>Réessayer</button></p>}
+    {error && !editing && <p role="alert" class="task-error">{error} <button type="button" class="btn btn-light" disabled={busy} onClick={() => void reload()}>Opnieuw proberen</button></p>}
     {editing ? <TaskForm key={editing.task?.id ?? editing.scope} task={editing.task} scope={editing.scope} data={data} busy={busy} error={error}
       canComplete={editing.task ? canCompleteTask(editing.task, data.assignments, access, userId) : editing.scope === "PERSONAL" || hasAppPermission(access.permissions, "tasks.manage_all")}
       onSave={submit} onClose={close} />
       : selectedTask ? <TaskDetail task={selectedTask} data={data} client={client} access={access} userId={userId} busy={busy} onEdit={() => setEditing({ task: selectedTask, scope: selectedTask.scope })} onClose={close} onWork={work} onStatus={changeStatus} />
       : <>
-        <div class="task-actions" role="group" aria-label="Vue des tâches">{[["mine", "Mes tâches"], ["leads", "Je supervise"], ...(readAll ? [["all", "Toutes"]] : []), ["closed", "Terminées / annulées"]].map(([key, label]) => <button class="btn btn-light" type="button" key={key} aria-pressed={view === key} onClick={() => { setView(key); setSelected(null); }}>{label}</button>)}</div>
-        <details class="task-filter-panel" open={filtersOpen} onToggle={e => setFiltersOpen(e.currentTarget.open)}><summary>Recherche et filtres</summary>
-        <div class="task-fields task-filters"><label>Recherche<input type="search" value={search} onInput={e => setSearch(e.currentTarget.value)} /></label>
-          <label>Filtrer le statut<select aria-label="Filtrer le statut" value={status} disabled={view === "closed"} onChange={e => setStatus(e.currentTarget.value)}><option value="active">Actives</option><option value="">Tous</option>{Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-          <label>Filtrer la priorité<select aria-label="Filtrer la priorité" value={priority} onChange={e => setPriority(e.currentTarget.value)}><option value="">Toutes</option>{Object.entries(priorityLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-          <label>Filtrer l’échéance<select aria-label="Filtrer l’échéance" value={deadline} onChange={e => setDeadline(e.currentTarget.value)}><option value="">Toutes</option><option value="overdue">En retard</option><option value="today">Aujourd’hui</option><option value="none">Sans échéance</option></select></label>
-          <label>Filtrer l’événement<select aria-label="Filtrer l’événement" value={eventId} onChange={e => setEventId(e.currentTarget.value)}><option value="">Tous</option>{data.events.map(event => <option key={event.id} value={event.id}>{event.title}</option>)}</select></label>
+        <div class="task-actions" role="group" aria-label="Takenweergave">{[["mine", "Mijn taken"], ["leads", "Onder mijn toezicht"], ...(readAll ? [["all", "Alle"]] : []), ["closed", "Afgerond / geannuleerd"]].map(([key, label]) => <button class="btn btn-light" type="button" key={key} aria-pressed={view === key} onClick={() => { setView(key); setSelected(null); }}>{label}</button>)}</div>
+        <details class="task-filter-panel" open={filtersOpen} onToggle={e => setFiltersOpen(e.currentTarget.open)}><summary>Zoeken en filteren</summary>
+        <div class="task-fields task-filters"><label>Zoeken<input type="search" value={search} onInput={e => setSearch(e.currentTarget.value)} /></label>
+          <label>Filter op status<select aria-label="Filter op status" value={status} disabled={view === "closed"} onChange={e => setStatus(e.currentTarget.value)}><option value="active">Actief</option><option value="">Alle</option>{Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+          <label>Filter op prioriteit<select aria-label="Filter op prioriteit" value={priority} onChange={e => setPriority(e.currentTarget.value)}><option value="">Alle</option>{Object.entries(priorityLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+          <label>Filter op deadline<select aria-label="Filter op deadline" value={deadline} onChange={e => setDeadline(e.currentTarget.value)}><option value="">Alle</option><option value="overdue">Te laat</option><option value="today">Vandaag</option><option value="none">Zonder deadline</option></select></label>
+          <label>Filter op activiteit<select aria-label="Filter op activiteit" value={eventId} onChange={e => setEventId(e.currentTarget.value)}><option value="">Alle</option>{data.events.map(event => <option key={event.id} value={event.id}>{event.title}</option>)}</select></label>
         </div></details>
-        <button class="btn btn-light" type="button" disabled={loading || busy} onClick={() => { setSelected(null); void reload(); }}>Actualiser les tâches</button>
-        {loading ? <p role="status">Chargement des tâches…</p> : !error && <>
-          {!visible.length && <p>Aucune tâche pour cette vue. Modifiez vos filtres ou créez une tâche.</p>}
+        <button class="btn btn-light" type="button" disabled={loading || busy} onClick={() => { setSelected(null); void reload(); }}>Taken verversen</button>
+        {loading ? <p role="status">Taken laden…</p> : !error && <>
+          {!visible.length && <p>Geen taken in deze weergave. Pas je filters aan of maak een taak aan.</p>}
           <ul class="task-list">{visible.map(task => <TaskCard key={task.id} task={task} data={data} access={access} busy={busy} onSelect={open} onWork={work} />)}</ul>
         </>}
       </>}

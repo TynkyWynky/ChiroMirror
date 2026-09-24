@@ -49,12 +49,12 @@ export function expandEvents(events: CalendarEvent[], overrides: EventOverride[]
     }
   }
   return result.sort((a, b) => startDay(a).localeCompare(startDay(b)) || Number(b.all_day) - Number(a.all_day)
-    || (a.starts_at ?? "").localeCompare(b.starts_at ?? "") || a.title.localeCompare(b.title, "fr"));
+    || (a.starts_at ?? "").localeCompare(b.starts_at ?? "") || a.title.localeCompare(b.title, "nl"));
 }
 
 export function recurrenceLabel(rule: Recurrence) {
-  if (rule.frequency === "NONE") return "Sans répétition";
-  const cadence = rule.frequency === "MONTHLY" ? `Tous les ${rule.recurrence_interval} mois (même jour du mois)`
-    : `Toutes les ${rule.recurrence_interval} semaine(s) · ${rule.weekdays.map(day => weekdays[day - 1]).join(", ")}`;
-  return `${cadence}${rule.until_date ? ` · jusqu’au ${rule.until_date}` : ""}${rule.occurrence_count ? ` · ${rule.occurrence_count} occurrence(s)` : ""}`;
+  if (rule.frequency === "NONE") return "Zonder herhaling";
+  const cadence = rule.frequency === "MONTHLY" ? `Om de ${rule.recurrence_interval} maanden (dezelfde dag van de maand)`
+    : `Om de ${rule.recurrence_interval} week/weken · ${rule.weekdays.map(day => weekdays[day - 1]).join(", ")}`;
+  return `${cadence}${rule.until_date ? ` · tot en met ${rule.until_date}` : ""}${rule.occurrence_count ? ` · ${rule.occurrence_count} keer` : ""}`;
 }

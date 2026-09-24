@@ -2,9 +2,9 @@ import { Temporal } from "@js-temporal/polyfill";
 import { EVENT_ZONE, type EventTiming } from "./types.ts";
 
 export const MIN_DATE = "2000-01-01", MAX_DATE = "2100-12-31";
-export const weekdays = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+export const weekdays = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"];
 export function civil(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value < MIN_DATE || value > MAX_DATE) throw new Error("Choisissez une date entre 2000 et 2100.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value < MIN_DATE || value > MAX_DATE) throw new Error("Kies een datum tussen 2000 en 2100.");
   return Temporal.PlainDate.from(value, { overflow: "reject" });
 }
 export function today() { return Temporal.Now.plainDateISO(EVENT_ZONE).toString(); }
@@ -12,11 +12,11 @@ export function addDays(date: string, days: number) { return Temporal.PlainDate.
 export function monthStart(date: string) { return Temporal.PlainDate.from(date).with({ day: 1 }).toString(); }
 export function shiftMonth(date: string, months: number) { return Temporal.PlainDate.from(monthStart(date)).add({ months }).toString(); }
 export function localToInstant(value: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error("Date et heure invalides.");
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error("Ongeldige datum en tijd.");
   civil(value.slice(0, 10));
   try {
     return Temporal.PlainDateTime.from(value, { overflow: "reject" }).toZonedDateTime(EVENT_ZONE, { disambiguation: "reject" }).toInstant().toString();
-  } catch { throw new Error("Heure invalide, inexistante ou doublée lors du changement d’heure à Bruxelles. Choisissez une autre heure."); }
+  } catch { throw new Error("Ongeldige, niet-bestaande of dubbele tijd bij de uurwisseling in Brussel. Kies een andere tijd."); }
 }
 export function instantToLocal(value: string) {
   return Temporal.Instant.from(value).toZonedDateTimeISO(EVENT_ZONE).toPlainDateTime().toString({ smallestUnit: "minute" });
@@ -44,18 +44,18 @@ export function overlaps(timing: EventTiming, from: string, to: string) {
   return startDay(timing) <= to && endDay(timing) >= from;
 }
 export function formatDay(date: string, full = true) {
-  return Temporal.PlainDate.from(date).toLocaleString("fr-BE", full
+  return Temporal.PlainDate.from(date).toLocaleString("nl-BE", full
     ? { weekday: "long", day: "numeric", month: "long", year: "numeric" }
     : { day: "numeric", month: "short" });
 }
-export function formatMonth(date: string) { return Temporal.PlainDate.from(date).toLocaleString("fr-BE", { month: "long", year: "numeric" }); }
+export function formatMonth(date: string) { return Temporal.PlainDate.from(date).toLocaleString("nl-BE", { month: "long", year: "numeric" }); }
 export function formatTime(instant: string) {
-  return Temporal.Instant.from(instant).toZonedDateTimeISO(EVENT_ZONE).toLocaleString("fr-BE", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  return Temporal.Instant.from(instant).toZonedDateTimeISO(EVENT_ZONE).toLocaleString("nl-BE", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 }
 export function formatTiming(timing: EventTiming) {
   const start = startDay(timing), end = endDay(timing);
-  if (timing.all_day) return `${formatDay(start)}${end !== start ? ` → ${formatDay(end)}` : ""} · Toute la journée`;
-  return `${formatDay(start)} à ${formatTime(timing.starts_at!)} → ${start !== end ? `${formatDay(end)} à ` : ""}${formatTime(timing.ends_at!)} (Bruxelles)`;
+  if (timing.all_day) return `${formatDay(start)}${end !== start ? ` → ${formatDay(end)}` : ""} · Hele dag`;
+  return `${formatDay(start)} om ${formatTime(timing.starts_at!)} → ${start !== end ? `${formatDay(end)} om ` : ""}${formatTime(timing.ends_at!)} (Brussel)`;
 }
 export function monthDays(date: string) {
   const first = Temporal.PlainDate.from(monthStart(date));

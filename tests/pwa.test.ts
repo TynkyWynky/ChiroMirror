@@ -22,9 +22,9 @@ test("PWA URLs round-trip screens/resources, validate input and never accept ext
 });
 test("PWA network guards block mutations without pretending navigator.online proves connectivity",()=>{
  const old=Object.getOwnPropertyDescriptor(globalThis,'navigator');Object.defineProperty(globalThis,'navigator',{value:{onLine:false},configurable:true});
- try{assert.throws(requireOnline,/Impossible d’enregistrer/);assert.match(networkError(new TypeError('Failed to fetch'))!,/pas confirmé/);}
+ try{assert.throws(requireOnline,/Opslaan kan niet/);assert.match(networkError(new TypeError('Failed to fetch'))!,/niet bevestigd/);}
  finally{if(old)Object.defineProperty(globalThis,'navigator',old);else Reflect.deleteProperty(globalThis,'navigator');}
- assert.match(networkError({code:'PGRST301'})!,/Session expirée/);
+ assert.match(networkError({code:'PGRST301'})!,/sessie is verlopen/);
 });
 test("PWA worker caches only generic fallback, bypasses APIs/public/Auth and waits for consent to update",async()=>{
  const handlers:Record<string,(e:any)=>void>={},storage=new Map<string,Map<string,Response>>();let offline=false,skip=0;

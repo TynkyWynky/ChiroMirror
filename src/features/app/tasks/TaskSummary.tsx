@@ -16,8 +16,8 @@ export default function TaskSummary({ client, access, userId, onOpen }: { client
     }).catch(cause => { if (active) setError(taskError(cause)); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [client, access, userId, attempt]);
-  return <section class="admin-subpanel" lang="fr"><h2>Mes prochaines tâches</h2>
-    {loading ? <p role="status">Chargement…</p> : error ? <p role="alert">{error} <button type="button" onClick={() => setAttempt(value => value + 1)}>Réessayer</button></p> : tasks.length ? <ul>{tasks.map(task => <li key={task.id}><strong>{task.title}</strong> — {formatDeadline(task)}{isOverdue(task) ? " · En retard" : ""}</li>)}</ul> : <p>Aucune tâche active pour vous.</p>}
-    <button class="btn btn-light" type="button" onClick={onOpen}>Voir mes tâches</button>
+  return <section class="admin-subpanel" lang="nl"><h2>Mijn komende taken</h2>
+    {loading ? <p role="status">Laden…</p> : error ? <p role="alert">{error} <button type="button" onClick={() => setAttempt(value => value + 1)}>Opnieuw proberen</button></p> : tasks.length ? <ul>{tasks.map(task => <li key={task.id}><strong>{task.title}</strong> — {formatDeadline(task)}{isOverdue(task) ? " · Te laat" : ""}</li>)}</ul> : <p>Geen actieve taken voor jou.</p>}
+    <button class="btn btn-light" type="button" onClick={onOpen}>Mijn taken bekijken</button>
   </section>;
 }

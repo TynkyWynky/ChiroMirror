@@ -1793,8 +1793,8 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       setAppAccess(emptyAppAccess);
       const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
       setAppAccessError(["PGRST202", "PGRST205", "42883", "42P01"].includes(code)
-        ? "L’espace APP n’est pas encore configuré sur le serveur. Demandez à l’administrateur de terminer son installation."
-        : "Impossible de charger vos accès APP. Vérifiez votre connexion et actualisez la page. Si le problème persiste, contactez l’administrateur.");
+        ? "De APP-omgeving is nog niet ingesteld op de server. Vraag de beheerder om de installatie te voltooien."
+        : "Je APP-toegang kon niet worden geladen. Controleer je verbinding en ververs de pagina. Neem contact op met de beheerder als het probleem blijft bestaan.");
     }
   }
 
@@ -2035,7 +2035,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       window.clearTimeout(timeoutId);
       setAuthStalled(false);
       if (!currentSession && currentUser.current && !explicitLogout.current) {
-        setNotice({type:"error",message:"Session expirée. Reconnectez-vous pour continuer."});
+        setNotice({type:"error",message:"Je sessie is verlopen. Meld je opnieuw aan om verder te gaan."});
         void import("@/features/app/pwa/device").then(({setPushDevice})=>setPushDevice(true)).catch(()=>{});
       }
       if(currentUser.current !== (currentSession?.user.id ?? null)) {
@@ -2782,7 +2782,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     setLoginPassword("");
     setSession(null); setProfile(null); setAppAccess(emptyAppAccess);
     navigateApp("app-home",undefined,true);
-    setNotice(pushCleanupFailed ? { type:"error",message:"Vous êtes déconnecté. Le nettoyage Push n’a pas pu être confirmé partout. Sur un appareil partagé, désactivez aussi les notifications dans les réglages du navigateur avant de le confier. Réessayez la désactivation depuis votre compte une fois en ligne." } : { type:"success",message:"Vous êtes déconnecté de cet appareil." });
+    setNotice(pushCleanupFailed ? { type:"error",message:"Je bent uitgelogd. Het uitschakelen van pushmeldingen kon niet overal worden bevestigd. Schakel op een gedeeld apparaat ook de meldingen uit in de browserinstellingen voordat je het doorgeeft. Probeer het uitschakelen via je account opnieuw zodra je online bent." } : { type:"success",message:"Je bent uitgelogd op dit apparaat." });
     setFinanceTransactions([]);
     setFinanceDraft(null);
     setFinanceEditingId(null);
@@ -3748,24 +3748,24 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       refreshDisabled={dataLoading || postsBusy} onNavigate={setActiveTab}
       applicationControl={<Suspense fallback={null}><PwaExperience settings={visibleTab === "app-settings"} home={visibleTab === "app-home"} onNotifications={()=>document.getElementById("notification-settings")?.scrollIntoView({behavior:"smooth"})} /></Suspense>}
       notificationControl={supabase && appAccess.permissions.includes("app.access") && <Suspense fallback={null}><NotificationBell client={supabase} userId={session.user.id} centerOpen={visibleTab === "app-notifications"} onOpenCenter={()=>setActiveTab("app-notifications")} onCloseCenter={()=>setActiveTab("app-home")} notificationId={appRoute?.notification} onTarget={target => {
-        if (target.type === "EVENT" && !appAccess.permissions.includes("events.read")) { setNotice({ type: "error", message: "Cet événement n’est plus accessible." }); return; }
+        if (target.type === "EVENT" && !appAccess.permissions.includes("events.read")) { setNotice({ type: "error", message: "Deze activiteit is niet meer toegankelijk." }); return; }
         openNotificationTarget(target);
       }} /></Suspense>}
       onSignOut={() => void signOut()} onRefresh={() => void loadDashboard()}>
-      {visibleTab === "app-settings" && supabase && <div id="notification-settings"><Suspense fallback={<p role="status">Chargement des paramètres…</p>}><NotificationSettings client={supabase} userId={session.user.id} /></Suspense></div>}
-      {visibleTab === "app-notifications" && <section class="admin-panel"><h1>Notifications</h1><p>Vos rappels sont affichés dans le centre de notifications. Utilisez la cloche pour le rouvrir.</p></section>}
+      {visibleTab === "app-settings" && supabase && <div id="notification-settings"><Suspense fallback={<p role="status">Instellingen laden…</p>}><NotificationSettings client={supabase} userId={session.user.id} /></Suspense></div>}
+      {visibleTab === "app-notifications" && <section class="admin-panel"><h1>Meldingen</h1><p>Je herinneringen staan in het meldingencentrum. Gebruik het belletje om het opnieuw te openen.</p></section>}
       {appAccessError && <p role="alert">{appAccessError}</p>}
       {!dataLoading && !appAccessError && !appAccess.permissions.includes("app.access") && <p role="status">
-        Votre compte a accès au SITE. Pour ouvrir l’espace APP sur cet ordinateur, demandez à un administrateur APP de vous attribuer un rôle APP.
+        Je account heeft SITE-toegang. Vraag een APP-beheerder om je een APP-rol toe te kennen om de APP-omgeving op deze computer te openen.
       </p>}
       {visibleTab === "app-home" && <><AppHome userName={adminUserLabel} access={appAccess} />{supabase && <>
-        {appAccess.permissions.includes("events.read") && <Suspense fallback={<p role="status">Chargement de l’agenda…</p>}><AgendaSummary client={supabase} onOpen={() => setActiveTab("app-agenda")} /></Suspense>}
-        <Suspense fallback={<p role="status">Chargement des tâches…</p>}><TaskSummary client={supabase} access={appAccess} userId={session.user.id} onOpen={() => setActiveTab("app-tasks")} /></Suspense>
-        {appAccess.permissions.includes("finance.access") && <Suspense fallback={<p role="status">Chargement des comptes…</p>}><FinanceSummary client={supabase} access={appAccess} onOpen={() => setActiveTab("app-finance")} /></Suspense>}
+        {appAccess.permissions.includes("events.read") && <Suspense fallback={<p role="status">Agenda laden…</p>}><AgendaSummary client={supabase} onOpen={() => setActiveTab("app-agenda")} /></Suspense>}
+        <Suspense fallback={<p role="status">Taken laden…</p>}><TaskSummary client={supabase} access={appAccess} userId={session.user.id} onOpen={() => setActiveTab("app-tasks")} /></Suspense>
+        {appAccess.permissions.includes("finance.access") && <Suspense fallback={<p role="status">Rekeningen laden…</p>}><FinanceSummary client={supabase} access={appAccess} onOpen={() => setActiveTab("app-finance")} /></Suspense>}
       </>}</>}
-      {visibleTab === "app-finance" && supabase && <Suspense fallback={<p role="status">Chargement des comptes…</p>}><FinancePage client={supabase} access={appAccess} userId={session.user.id} /></Suspense>}
-      {visibleTab === "app-tasks" && supabase && <Suspense fallback={<p role="status">Chargement des tâches…</p>}><TasksPage client={supabase} access={appAccess} userId={session.user.id} openTaskId={appRoute?.task} onResourceOpen={id=>openNotificationTarget({type:"TASK",id})} onResourceClose={()=>setActiveTab("app-tasks")} /></Suspense>}
-      {visibleTab === "app-agenda" && supabase && <Suspense fallback={<p role="status">Chargement de l’agenda…</p>}><AgendaPage client={supabase} access={appAccess} openTarget={appRoute?.event ? {id:appRoute.event,occurrence:appRoute.occurrence} : undefined} onResourceOpen={(id,occurrence)=>openNotificationTarget({type:"EVENT",id,occurrence})} onResourceClose={()=>setActiveTab("app-agenda")} /></Suspense>}
+      {visibleTab === "app-finance" && supabase && <Suspense fallback={<p role="status">Rekeningen laden…</p>}><FinancePage client={supabase} access={appAccess} userId={session.user.id} /></Suspense>}
+      {visibleTab === "app-tasks" && supabase && <Suspense fallback={<p role="status">Taken laden…</p>}><TasksPage client={supabase} access={appAccess} userId={session.user.id} openTaskId={appRoute?.task} onResourceOpen={id=>openNotificationTarget({type:"TASK",id})} onResourceClose={()=>setActiveTab("app-tasks")} /></Suspense>}
+      {visibleTab === "app-agenda" && supabase && <Suspense fallback={<p role="status">Agenda laden…</p>}><AgendaPage client={supabase} access={appAccess} openTarget={appRoute?.event ? {id:appRoute.event,occurrence:appRoute.occurrence} : undefined} onResourceOpen={(id,occurrence)=>openNotificationTarget({type:"EVENT",id,occurrence})} onResourceClose={()=>setActiveTab("app-agenda")} /></Suspense>}
       {visibleTab === "app-members" && supabase && <MembersPage client={supabase} access={appAccess} onAccessChanged={refreshAppAccess} />}
       {hasPermission(profile, "site.manage") && activeAdminTab.domain === "site" && <>
           {activeTab === "overview" && <AdminOverview userName={adminUserLabel} date={adminDateLabel} posts={posts} messages={overviewRecentMessages} groupCount={groups.length} pendingCount={financePendingTransactions.length} canUseFinance={canUseFinance} warnings={overviewWarningItems} onNavigate={tab => setActiveTab(tab as TabId)} onNewPost={newPost} onEditPost={id => { setSelectedPostId(id); setActiveTab("posts"); }} />}
@@ -5788,7 +5788,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                   <TextField label="Slug" value={pages.activities.slug} onInput={(value) => setPages((current) => ({ ...current, activities: { ...current.activities, slug: value } }))} />
                   <TextField label="Titel" value={pages.activities.title} onInput={(value) => setPages((current) => ({ ...current, activities: { ...current.activities, title: value } }))} />
                   <TextAreaField label="Lead" value={pages.activities.lead} onInput={(value) => setPages((current) => ({ ...current, activities: { ...current.activities, lead: value } }))} />
-                  <TextAreaField label="Description" value={pages.activities.description} onInput={(value) => setPages((current) => ({ ...current, activities: { ...current.activities, description: value } }))} />
+                  <TextAreaField label="Beschrijving" value={pages.activities.description} onInput={(value) => setPages((current) => ({ ...current, activities: { ...current.activities, description: value } }))} />
                   <TextField label="Posts titel" value={pages.activities.postsTitle} onInput={(value) => setPages((current) => ({ ...current, activities: { ...current.activities, postsTitle: value } }))} />
                   <TextAreaField label="Leegstaat tekst" value={pages.activities.postsEmptyText} onInput={(value) => setPages((current) => ({ ...current, activities: { ...current.activities, postsEmptyText: value } }))} />
                 </div>
@@ -5833,7 +5833,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                     <TextField label="Slug" value={pages[key].slug} onInput={(value) => setPages((current) => ({ ...current, [key]: { ...current[key], slug: value } }))} />
                     <TextField label="Titel" value={pages[key].title} onInput={(value) => setPages((current) => ({ ...current, [key]: { ...current[key], title: value } }))} />
                     <TextAreaField label="Lead" value={pages[key].lead} onInput={(value) => setPages((current) => ({ ...current, [key]: { ...current[key], lead: value } }))} />
-                    <TextAreaField label="Description" value={pages[key].description} onInput={(value) => setPages((current) => ({ ...current, [key]: { ...current[key], description: value } }))} />
+                    <TextAreaField label="Beschrijving" value={pages[key].description} onInput={(value) => setPages((current) => ({ ...current, [key]: { ...current[key], description: value } }))} />
                   </div>
                   <CardsEditor title="Kaarten" cards={pages[key].cards} onChange={(cards) => setPages((current) => ({ ...current, [key]: { ...current[key], cards } }))} />
                 </section>

@@ -3,13 +3,13 @@ import { requireOnline, networkError } from "./pwa/network.ts";
 import { hasAppPermission } from "./access.ts";
 import type { AppAccess, AppAccount, AppPermission, AppRole, AppRoleKey, AppUserRole, Member, MemberInput } from "./types.ts";
 
-const roleLabels: Record<AppRoleKey, string> = { APP_ADMIN: "Administrateur APP", RESPONSIBLE: "Responsable", TREASURER: "Trésorier", MEMBER: "Membre" };
+const roleLabels: Record<AppRoleKey, string> = { APP_ADMIN: "APP-beheerder", RESPONSIBLE: "Verantwoordelijke", TREASURER: "Penningmeester", MEMBER: "Lid" };
 const localizedRole = (role: AppRole): AppRole => ({ ...role, label: roleLabels[role.key] ?? role.label });
 
 export async function loadAppAccess(client: SupabaseClient): Promise<AppAccess> {
   const { data, error } = await client.rpc("get_my_app_access");
   if (error) throw error;
-  if (!data || !Array.isArray(data.permissions) || !Array.isArray(data.roles)) throw new Error("Impossible de charger les accès APP.");
+  if (!data || !Array.isArray(data.permissions) || !Array.isArray(data.roles)) throw new Error("Je APP-toegang kon niet worden geladen.");
   return { ...data, roles: (data.roles as AppRole[]).map(localizedRole) } as AppAccess;
 }
 
@@ -39,12 +39,12 @@ export async function loadMembersData(client: SupabaseClient, permissions: AppPe
 export function validateMember(input: MemberInput): MemberInput {
   const first_name = input.first_name.trim(), last_name = input.last_name.trim();
   if (!first_name || !last_name || [...first_name].length > 100 || [...last_name].length > 100) {
-    throw new Error("Saisissez un prénom et un nom (100 caractères maximum).");
+    throw new Error("Vul een voornaam en achternaam in (maximaal 100 tekens).");
   }
   if (input.user_id !== null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.user_id)) {
-    throw new Error("Choisissez un compte valide.");
+    throw new Error("Kies een geldig account.");
   }
-  if (typeof input.active !== "boolean") throw new Error("Statut invalide.");
+  if (typeof input.active !== "boolean") throw new Error("Ongeldige status.");
   return { first_name, last_name, user_id: input.user_id, active: input.active };
 }
 
@@ -69,9 +69,9 @@ export async function saveAccountRoles(client: SupabaseClient, userId: string, r
 export function appError(error: unknown): string {
   const network = networkError(error); if(network)return network;
   if (typeof error === "object" && error !== null && "code" in error) {
-    if (error.code === "23505") return "Ce compte est déjà lié à un autre membre. Actualisez la liste.";
-    if (error.code === "23514") return "Vérifiez les données. Il faut conserver au moins un administrateur APP.";
-    if (error.code === "42501" || error.code === "PGRST116") return "Accès refusé ou données modifiées. Actualisez vos accès.";
+    if (error.code === "23505") return "Dit account is al gekoppeld aan een ander lid. Ververs de lijst.";
+    if (error.code === "23514") return "Controleer de gegevens. Er moet minstens één APP-beheerder blijven.";
+    if (error.code === "42501" || error.code === "PGRST116") return "Geen toegang of gewijzigde gegevens. Ververs je toegangsrechten.";
   }
-  return error instanceof Error ? error.message : "L’opération a échoué. Actualisez les données et réessayez.";
+  return error instanceof Error ? error.message : "De actie is mislukt. Ververs de gegevens en probeer opnieuw.";
 }

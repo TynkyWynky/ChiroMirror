@@ -11,7 +11,7 @@ export const POST: APIRoute = async ({ request }) => {
   const service = createServiceClient();
   const url = import.meta.env.PUBLIC_SUPABASE_URL;
   const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-  if (!service || !url || !key) return Response.json({ message: "Configuration serveur Supabase manquante." }, { status: 503 });
+  if (!service || !url || !key) return Response.json({ message: "De Supabase-serverconfiguratie ontbreekt." }, { status: 503 });
   const actorClient = (token: string) => createClient(url, key, {
     global: { headers: { Authorization: `Bearer ${token}` }, fetch: createTimedFetch(globalThis.fetch, 10000) },
     auth: { persistSession: false, autoRefreshToken: false }

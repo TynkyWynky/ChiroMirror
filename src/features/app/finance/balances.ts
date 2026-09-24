@@ -5,7 +5,7 @@ export function obligationAmounts(obligation: Obligation, data: FinancialRows) {
   const original = cents(obligation.original_amount_cents);
   const activePayments = new Set(data.payments.filter(p => p.status === "ACTIVE").map(p => p.id));
   const paid = data.allocations.filter(a => a.obligation_id === obligation.id && activePayments.has(a.payment_id)).reduce((sum, a) => sum + cents(a.amount_cents), 0n);
-  if (paid > original) throw new Error("Données financières incohérentes : remboursements supérieurs à la dette. Actualisez.");
+  if (paid > original) throw new Error("Inconsistente financiële gegevens: de terugbetalingen zijn hoger dan de schuld. Ververs de gegevens.");
   const cancelled = data.transactions.find(t => t.id === obligation.transaction_id)?.status === "CANCELLED";
   return { original, paid, remaining: cancelled ? 0n : original - paid, cancelled };
 }

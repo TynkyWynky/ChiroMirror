@@ -59,7 +59,7 @@ async function receivePush(event) {
   if (id && (await self.registration.getNotifications({ tag })).length) return;
   if (!await reserveReceipt(id)) return;
   const title = valid && typeof value.title === "string" ? value.title.slice(0, 120) : "Chiro Negenmanneke";
-  const body = valid && typeof value.body === "string" ? value.body.slice(0, 240) : "Un rappel vous attend dans l’application.";
+  const body = valid && typeof value.body === "string" ? value.body.slice(0, 240) : "Er staat een herinnering voor je klaar in de app.";
   try { await self.registration.showNotification(title, { body, tag, renotify: false, data: { notificationId }, icon: "/assets/Chirologo_700px.png" }); }
   catch { if (id) await forgetReceipt(id); }
 }
@@ -95,7 +95,7 @@ self.addEventListener("fetch", event => {
     || ![scopePath, scopePath.replace(/\/$/, "")].includes(url.pathname)) return;
   event.respondWith((async () => {
     try { return await fetch(request, { cache: "no-store" }); } // Successful private HTML is NEVER stored.
-    catch { return await (await caches.open(cacheName)).match(offlineUrl) ?? new Response("Connexion indisponible. Réessayez en ligne.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }); }
+    catch { return await (await caches.open(cacheName)).match(offlineUrl) ?? new Response("Geen verbinding. Probeer opnieuw wanneer je online bent.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }); }
   })());
 });
 self.addEventListener("message", event => {

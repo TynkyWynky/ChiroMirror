@@ -7,7 +7,7 @@ import "./notifications.css";
 export default function NotificationSettings({ client, userId, publicKey = import.meta.env.PUBLIC_VAPID_PUBLIC_KEY ?? "" }: { client: SupabaseClient; userId: string; publicKey?: string }) {
   const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences), [categories, setCategories] = useState<CategoryPreference[]>([]), [choices, setChoices] = useState<{ key: string; label: string }[]>([]), [devices, setDevices] = useState<PushDevice[]>([]);
   const [currentDevice, setCurrentDevice] = useState<string | null>(null), [support, setSupport] = useState<ReturnType<typeof pushSupport> | null>(null);
-  const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(""), [feedback, setFeedback] = useState(""), [label, setLabel] = useState("Cet appareil");
+  const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(""), [feedback, setFeedback] = useState(""), [label, setLabel] = useState("Dit apparaat");
   async function load() {
     setLoading(true); setError("");
     try {
@@ -25,32 +25,32 @@ export default function NotificationSettings({ client, userId, publicKey = impor
     finally { setBusy(false); }
   }
   const savePreferences = (next = preferences) => notificationRpc(client, "save_notification_preferences", { details: next, categories });
-  return <section class="admin-panel notification-settings" lang="fr"><h1>Paramètres</h1><h2>Notifications et rappels</h2>
-    {loading && <p role="status">Chargement des réglages…</p>}{error && <p role="alert">{error} <button class="btn btn-light" type="button" disabled={busy} onClick={() => void load()}>Réessayer</button></p>}{feedback && <p role="status">{feedback}</p>}
-    <form class="admin-subpanel" onSubmit={e => { e.preventDefault(); void action(async () => { await savePreferences(); }, "Préférences enregistrées."); }}><fieldset disabled={busy || loading}>
-      <legend>Vos rappels</legend>
-      {([["event_notifications_enabled", "Rappels Agenda"], ["task_notifications_enabled", "Rappels Tâches"], ["push_enabled", "Envoi Push sur mes appareils inscrits"], ["push_details", "Afficher les détails sur l’écran verrouillé"]] as const).map(([key, text]) => <label class="notification-check" key={key}><input type="checkbox" checked={preferences[key]} onChange={e => setPreferences(p => ({ ...p, [key]: e.currentTarget.checked }))} />{text}</label>)}
-      <p>Le centre interne fonctionne sans Push. Désactiver Agenda ou Tâches désactive les rappels de ce module sur les deux canaux. Les détails Push sont masqués par défaut ; aucune notification Finance n’est envoyée.</p>
-      <fieldset><legend>Catégories Agenda</legend>{choices.map(category => <label class="notification-check" key={category.key}><input type="checkbox" checked={categories.find(c => c.category_key === category.key)?.enabled ?? true} onChange={e => setCategories(current => [...current.filter(c => c.category_key !== category.key), { category_key: category.key, enabled: e.currentTarget.checked }])} />{category.label}</label>)}</fieldset>
-      <button class="btn" type="submit">Enregistrer les préférences</button>
+  return <section class="admin-panel notification-settings" lang="nl"><h1>Instellingen</h1><h2>Meldingen en herinneringen</h2>
+    {loading && <p role="status">Instellingen laden…</p>}{error && <p role="alert">{error} <button class="btn btn-light" type="button" disabled={busy} onClick={() => void load()}>Opnieuw proberen</button></p>}{feedback && <p role="status">{feedback}</p>}
+    <form class="admin-subpanel" onSubmit={e => { e.preventDefault(); void action(async () => { await savePreferences(); }, "Voorkeuren opgeslagen."); }}><fieldset disabled={busy || loading}>
+      <legend>Je herinneringen</legend>
+      {([["event_notifications_enabled", "Agendaherinneringen"], ["task_notifications_enabled", "Taakherinneringen"], ["push_enabled", "Pushmeldingen op mijn geregistreerde apparaten"], ["push_details", "Details tonen op het vergrendelscherm"]] as const).map(([key, text]) => <label class="notification-check" key={key}><input type="checkbox" checked={preferences[key]} onChange={e => setPreferences(p => ({ ...p, [key]: e.currentTarget.checked }))} />{text}</label>)}
+      <p>Het interne meldingencentrum werkt zonder pushmeldingen. Agenda of Taken uitschakelen schakelt de herinneringen van die module op beide kanalen uit. Pushdetails zijn standaard verborgen; er worden geen financiële meldingen verstuurd.</p>
+      <fieldset><legend>Agendacategorieën</legend>{choices.map(category => <label class="notification-check" key={category.key}><input type="checkbox" checked={categories.find(c => c.category_key === category.key)?.enabled ?? true} onChange={e => setCategories(current => [...current.filter(c => c.category_key !== category.key), { category_key: category.key, enabled: e.currentTarget.checked }])} />{category.label}</label>)}</fieldset>
+      <button class="btn" type="submit">Voorkeuren opslaan</button>
     </fieldset></form>
-    <section class="admin-subpanel"><h2>Push sur cet appareil</h2>
-      <p>État : {!publicKey ? "Non configuré" : !support?.supported ? "Non disponible" : support.permission === "denied" ? "Refusé" : support.permission === "granted" ? "Autorisé" : "Autorisation non demandée"} · {currentDevice ? "Appareil inscrit" : "Appareil non inscrit"}</p>
-      {!publicKey && <p>La clé publique Push n’est pas configurée. Le centre de notifications interne reste disponible.</p>}
-      {support?.ios && !support.installed && <p>Sur iPhone/iPad, ajoutez cette application à l’écran d’accueil depuis le menu de partage. Ouvrez-la depuis son icône, puis revenez ici pour activer les notifications.</p>}
-      {support && !support.supported && <p>Les notifications Push ne sont pas disponibles sur cet appareil. Le centre interne reste accessible.</p>}
-      {support?.permission === "denied" && <p>Les notifications sont refusées. Vous pouvez modifier cette autorisation dans les réglages du navigateur ou du système ; aucune nouvelle demande automatique ne sera faite.</p>}
-      <label>Nom de cet appareil<input maxLength={80} value={label} onInput={e => setLabel(e.currentTarget.value)} /></label>
+    <section class="admin-subpanel"><h2>Pushmeldingen op dit apparaat</h2>
+      <p>Status: {!publicKey ? "Niet ingesteld" : !support?.supported ? "Niet beschikbaar" : support.permission === "denied" ? "Geweigerd" : support.permission === "granted" ? "Toegestaan" : "Toestemming nog niet gevraagd"} · {currentDevice ? "Apparaat geregistreerd" : "Apparaat niet geregistreerd"}</p>
+      {!publicKey && <p>De openbare pushsleutel is niet ingesteld. Het interne meldingencentrum blijft beschikbaar.</p>}
+      {support?.ios && !support.installed && <p>Voeg op je iPhone/iPad deze app toe aan het beginscherm via het deelmenu. Open de app via het pictogram en kom hier terug om meldingen in te schakelen.</p>}
+      {support && !support.supported && <p>Pushmeldingen zijn niet beschikbaar op dit apparaat. Het interne meldingencentrum blijft toegankelijk.</p>}
+      {support?.permission === "denied" && <p>Meldingen zijn geweigerd. Je kunt dit wijzigen in de browser- of systeeminstellingen. Er wordt niet automatisch opnieuw om toestemming gevraagd.</p>}
+      <label>Naam van dit apparaat<input maxLength={80} value={label} onInput={e => setLabel(e.currentTarget.value)} /></label>
       <div class="notification-actions"><button class="btn" type="button" disabled={busy || loading || !publicKey || !support?.supported || support.permission === "denied" || support.ios && !support.installed} onClick={() => {
         // enablePush is called synchronously from this user gesture before any unrelated await.
         const enabled = enablePush(client, userId, publicKey, label);
-        void action(async () => { await enabled; await savePreferences({ ...preferences, push_enabled: true }); }, "Appareil inscrit. Les notifications Push sont activées.");
-      }}>Activer les notifications</button>
-      <button class="btn btn-light" type="button" disabled={busy || loading || !currentDevice} onClick={() => void action(() => disableCurrentPush(client, userId), "Notifications désactivées sur cet appareil.")}>Désactiver sur cet appareil</button>
-      <button class="btn btn-light" type="button" disabled={busy || loading || !currentDevice || support?.permission !== "granted" || !preferences.push_enabled} onClick={() => void action(async () => { await notificationRpc(client, "enqueue_my_notification_test", { subscription_id: currentDevice }); }, "Test mis en file. Il sera envoyé lors du prochain passage du serveur de notifications.")}>Envoyer une notification de test</button></div>
+        void action(async () => { await enabled; await savePreferences({ ...preferences, push_enabled: true }); }, "Apparaat geregistreerd. Pushmeldingen zijn ingeschakeld.");
+      }}>Meldingen inschakelen</button>
+      <button class="btn btn-light" type="button" disabled={busy || loading || !currentDevice} onClick={() => void action(() => disableCurrentPush(client, userId), "Meldingen uitgeschakeld op dit apparaat.")}>Uitschakelen op dit apparaat</button>
+      <button class="btn btn-light" type="button" disabled={busy || loading || !currentDevice || support?.permission !== "granted" || !preferences.push_enabled} onClick={() => void action(async () => { await notificationRpc(client, "enqueue_my_notification_test", { subscription_id: currentDevice }); }, "Test ingepland. De melding wordt bij de volgende verwerking door de meldingenserver verstuurd.")}>Testmelding versturen</button></div>
     </section>
-    <section class="admin-subpanel"><h2>Mes appareils</h2><ul class="notification-list">{devices.map(device => <li key={device.id}><strong>{device.device_label}</strong> · {device.active ? "Inscrit" : "Désactivé"}{device.id === currentDevice ? " · cet appareil" : ""}
-      {device.active && <button class="btn btn-light" type="button" disabled={busy} onClick={() => void action(async () => { if (device.id === currentDevice) await disableCurrentPush(client, userId); else await notificationRpc(client, "disable_push_subscription", { target_id: device.id }); }, "Appareil désactivé.")}>Désactiver {device.device_label}</button>}
-    </li>)}</ul>{!devices.length && <p>Aucun appareil inscrit.</p>}</section>
+    <section class="admin-subpanel"><h2>Mijn apparaten</h2><ul class="notification-list">{devices.map(device => <li key={device.id}><strong>{device.device_label}</strong> · {device.active ? "Geregistreerd" : "Uitgeschakeld"}{device.id === currentDevice ? " · dit apparaat" : ""}
+      {device.active && <button class="btn btn-light" type="button" disabled={busy} onClick={() => void action(async () => { if (device.id === currentDevice) await disableCurrentPush(client, userId); else await notificationRpc(client, "disable_push_subscription", { target_id: device.id }); }, "Apparaat uitgeschakeld.")}>Uitschakelen {device.device_label}</button>}
+    </li>)}</ul>{!devices.length && <p>Geen apparaten geregistreerd.</p>}</section>
   </section>;
 }

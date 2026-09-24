@@ -49,50 +49,50 @@ export default function FinancePage({ client, access, userId }: { client: Supaba
     if (filter === "PAYABLE" && !obligations.some(o => o.debtor_entity_id === balanceEntity && obligationAmounts(o, data).remaining > 0n)
       || filter === "RECEIVABLE" && !obligations.some(o => o.creditor_entity_id === balanceEntity && obligationAmounts(o, data).remaining > 0n)) return false;
     if (filter === "PRIVATE" && t.visibility !== "PRIVATE" || filter === "TREASURY" && t.visibility !== "TREASURY") return false;
-    return `${t.title} ${t.description ?? ""}`.toLocaleLowerCase("fr").includes(search.trim().toLocaleLowerCase("fr"));
+    return `${t.title} ${t.description ?? ""}`.toLocaleLowerCase("nl").includes(search.trim().toLocaleLowerCase("nl"));
   });
-  return <section class="admin-panel finance" lang="fr" aria-busy={busy || loading}>
-    <header class="admin-page-heading"><div><p class="admin-eyebrow">APP</p><h1>Comptes</h1><p>Dettes, dépenses partagées et remboursements internes · EUR.</p></div></header>
+  return <section class="admin-panel finance" lang="nl" aria-busy={busy || loading}>
+    <header class="admin-page-heading"><div><p class="admin-eyebrow">APP</p><h1>Rekeningen</h1><p>Schulden, gedeelde uitgaven en interne terugbetalingen · EUR.</p></div></header>
     {feedback && <p role="status" class="finance-feedback">{feedback}</p>}
-    {error && !editing && !paying && <p role="alert" class="finance-error">{error} <button class="btn btn-light" type="button" disabled={busy} onClick={() => void reload()}>Actualiser les comptes</button></p>}
+    {error && !editing && !paying && <p role="alert" class="finance-error">{error} <button class="btn btn-light" type="button" disabled={busy} onClick={() => void reload()}>Rekeningen verversen</button></p>}
     {editing ? <FinanceForm key={editing.transaction?.id ?? editing.kind} {...editing} data={data} access={access} busy={busy} error={error} onClose={close}
-      onSave={async values => { await mutate(() => financeRpc(client, "save_app_finance", { target_id: editing.transaction?.id ?? null, expected_revision: editing.transaction?.revision ?? null, ...values }), "Opération enregistrée.", true); }} />
+      onSave={async values => { await mutate(() => financeRpc(client, "save_app_finance", { target_id: editing.transaction?.id ?? null, expected_revision: editing.transaction?.revision ?? null, ...values }), "Transactie opgeslagen.", true); }} />
       : paying ? <PaymentForm data={data} access={access} initialId={paying.id} busy={busy} error={error} onClose={close} onSave={async (o, details) => {
         const tx = data.transactions.find(t => t.id === o.transaction_id)!;
-        await mutate(() => financeRpc(client, "record_app_finance_payment", { obligation_id: o.id, expected_revision: tx.revision, details }), "Remboursement enregistré.", true);
+        await mutate(() => financeRpc(client, "record_app_finance_payment", { obligation_id: o.id, expected_revision: tx.revision, details }), "Terugbetaling opgeslagen.", true);
       }} />
       : selectedTx ? <FinanceDetail key={selectedTx.id} transaction={selectedTx} data={data} access={access} userId={userId} client={client} busy={busy} onClose={close}
         onEdit={() => setEditing({ kind: selectedTx.kind, transaction: selectedTx })} onPay={id => setPaying({ id })}
-        onCancel={(kind, id, reason) => mutate(() => financeRpc(client, kind === "payment" ? "cancel_app_finance_payment" : "cancel_app_finance_transaction", { target_id: id, expected_revision: selectedTx.revision, reason }), "Annulation enregistrée ; historique conservé.")} />
+        onCancel={(kind, id, reason) => mutate(() => financeRpc(client, kind === "payment" ? "cancel_app_finance_payment" : "cancel_app_finance_transaction", { target_id: id, expected_revision: selectedTx.revision, reason }), "Annulering opgeslagen; geschiedenis bewaard.")} />
       : <>
-        <div class="finance-actions" role="group" aria-label="Vue des comptes">{[["mine", "Mes comptes"], ...(treasury ? [["treasury", "Trésorerie"]] : []), ["history", "Historique"]].map(([key, label]) => <button key={key} class="btn btn-light" aria-pressed={view === key} type="button" onClick={() => { setView(key); setFilter(key === "history" ? "ALL" : "OPEN"); }}>{label}</button>)}</div>
-        {loading ? <p role="status">Chargement des comptes…</p> : !error && <>
-          {!own && <p>Votre compte n’est pas lié à un membre. Les comptes personnels seront disponibles après cette liaison.</p>}
-          <div class="finance-balances" aria-label={view === "treasury" ? "Soldes de la Chiro" : "Soldes personnels"}>
-            <div class="admin-subpanel"><h2>À payer{view === "treasury" ? " par la Chiro" : ""}</h2><strong class="finance-total" data-testid="payable">{formatMoney(balances.payable)}</strong></div>
-            <div class="admin-subpanel"><h2>À recevoir{view === "treasury" ? " pour la Chiro" : ""}</h2><strong class="finance-total" data-testid="receivable">{formatMoney(balances.receivable)}</strong></div>
+        <div class="finance-actions" role="group" aria-label="Rekeningenweergave">{[["mine", "Mijn rekeningen"], ...(treasury ? [["treasury", "Chirokas"]] : []), ["history", "Geschiedenis"]].map(([key, label]) => <button key={key} class="btn btn-light" aria-pressed={view === key} type="button" onClick={() => { setView(key); setFilter(key === "history" ? "ALL" : "OPEN"); }}>{label}</button>)}</div>
+        {loading ? <p role="status">Rekeningen laden…</p> : !error && <>
+          {!own && <p>Je account is niet gekoppeld aan een lid. Persoonlijke rekeningen zijn beschikbaar na het koppelen.</p>}
+          <div class="finance-balances" aria-label={view === "treasury" ? "Saldi van de Chiro" : "Persoonlijke saldi"}>
+            <div class="admin-subpanel"><h2>Te betalen{view === "treasury" ? " door de Chiro" : ""}</h2><strong class="finance-total" data-testid="payable">{formatMoney(balances.payable)}</strong></div>
+            <div class="admin-subpanel"><h2>Te ontvangen{view === "treasury" ? " voor de Chiro" : ""}</h2><strong class="finance-total" data-testid="receivable">{formatMoney(balances.receivable)}</strong></div>
           </div>
           <div class="finance-actions">
-            <button class="btn" disabled={!canCreate || busy} type="button" onClick={() => { rememberFocus(); setEditing({ kind: "EXPENSE" }); }}>+ Nouvelle dépense</button>
-            <button class="btn" disabled={!canCreate || busy} type="button" onClick={() => { rememberFocus(); setEditing({ kind: "DIRECT_DEBT" }); }}>+ Nouvelle dette</button>
-            <button class="btn btn-light" disabled={!canPay || busy} type="button" onClick={() => { rememberFocus(); setPaying({}); }}>+ Remboursement</button>
+            <button class="btn" disabled={!canCreate || busy} type="button" onClick={() => { rememberFocus(); setEditing({ kind: "EXPENSE" }); }}>+ Nieuwe uitgave</button>
+            <button class="btn" disabled={!canCreate || busy} type="button" onClick={() => { rememberFocus(); setEditing({ kind: "DIRECT_DEBT" }); }}>+ Nieuwe schuld</button>
+            <button class="btn btn-light" disabled={!canPay || busy} type="button" onClick={() => { rememberFocus(); setPaying({}); }}>+ Terugbetaling</button>
           </div>
           <ul class="finance-list finance-counterparties">{[...balances.counterparties].filter(([, totals]) => totals.payable > 0n || totals.receivable > 0n).map(([id, totals]) => <li key={id} class="admin-subpanel"><strong>{entityName(id, data)}</strong>
-            {totals.payable > 0n && <p>{view === "treasury" ? "La Chiro doit payer" : "Vous devez payer"} : {formatMoney(totals.payable)}</p>}
-            {totals.receivable > 0n && <p>{view === "treasury" ? "La Chiro doit recevoir" : "Vous devez recevoir"} : {formatMoney(totals.receivable)}</p>}
+            {totals.payable > 0n && <p>{view === "treasury" ? "De Chiro moet betalen" : "Je moet betalen"} : {formatMoney(totals.payable)}</p>}
+            {totals.receivable > 0n && <p>{view === "treasury" ? "De Chiro moet ontvangen" : "Je moet ontvangen"} : {formatMoney(totals.receivable)}</p>}
           </li>)}</ul>
-          <div class="finance-fields"><label>Rechercher une opération<input type="search" value={search} onInput={e => setSearch(e.currentTarget.value)} /></label>
-            <label>Filtrer les opérations<select aria-label="Filtrer les opérations" value={filter} onChange={e => setFilter(e.currentTarget.value)}>{[["OPEN", "Restant à régler"], ["ALL", "Toutes"], ["PAYABLE", "À payer"], ["RECEIVABLE", "À recevoir"], ["SETTLED", "Soldées"], ["TREASURY", "Chiro"], ["PRIVATE", "Privées"], ["CANCELLED", "Annulées"]].map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+          <div class="finance-fields"><label>Transactie zoeken<input type="search" value={search} onInput={e => setSearch(e.currentTarget.value)} /></label>
+            <label>Transacties filteren<select aria-label="Transacties filteren" value={filter} onChange={e => setFilter(e.currentTarget.value)}>{[["OPEN", "Nog te vereffenen"], ["ALL", "Alle"], ["PAYABLE", "Te betalen"], ["RECEIVABLE", "Te ontvangen"], ["SETTLED", "Vereffend"], ["TREASURY", "Chiro"], ["PRIVATE", "Privé"], ["CANCELLED", "Geannuleerd"]].map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
           </div>
-          <button class="btn btn-light" type="button" disabled={busy} onClick={() => void reload()}>Actualiser les comptes</button>
-          {!visible.length && <p>Aucune opération pour cette vue.</p>}
+          <button class="btn btn-light" type="button" disabled={busy} onClick={() => void reload()}>Rekeningen verversen</button>
+          {!visible.length && <p>Geen transacties in deze weergave.</p>}
           <ul class="finance-list">{visible.map(t => {
             const remaining = data.obligations.filter(o => o.transaction_id === t.id).reduce((sum, o) => sum + obligationAmounts(o, data).remaining, 0n);
             return <li class="admin-subpanel finance-card" key={t.id}>
-              <p class="finance-tags">{t.visibility === "PRIVATE" ? "Privée" : "Trésorerie"} · {t.status === "CANCELLED" ? "Annulée" : remaining === 0n ? "Soldée" : "À régler"}</p>
+              <p class="finance-tags">{t.visibility === "PRIVATE" ? "Privé" : "Chirokas"} · {t.status === "CANCELLED" ? "Geannuleerd" : remaining === 0n ? "Vereffend" : "Te vereffenen"}</p>
               <h2><button class="finance-title" type="button" onClick={() => { rememberFocus(); setSelected(t.id); }}>{t.title}</button></h2>
-              <p>{t.kind === "DIRECT_DEBT" ? `${entityName(t.debtor_entity_id, data)} doit à ${entityName(t.creditor_entity_id, data)}` : `Dépense payée par ${entityName(t.paid_by_entity_id, data)}`}</p>
-              <p>Montant d’origine : {formatMoney(t.amount_cents)} · {formatDay(t.expense_date)}</p><p>Restant à rembourser : <strong>{formatMoney(remaining)}</strong></p>
+              <p>{t.kind === "DIRECT_DEBT" ? `${entityName(t.debtor_entity_id, data)} is verschuldigd aan ${entityName(t.creditor_entity_id, data)}` : `Uitgave betaald door ${entityName(t.paid_by_entity_id, data)}`}</p>
+              <p>Oorspronkelijk bedrag: {formatMoney(t.amount_cents)} · {formatDay(t.expense_date)}</p><p>Nog terug te betalen: <strong>{formatMoney(remaining)}</strong></p>
             </li>;
           })}</ul>
         </>}

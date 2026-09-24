@@ -8,7 +8,7 @@ const root=fileURLToPath(new URL('..',import.meta.url)),db=await database(true,t
 let server,browser;
 try{
  await db.exec(`insert into auth.users(id,email) values('${id(1)}','push@example.test'); insert into public.app_user_roles(user_id,role_key) values('${id(1)}','MEMBER');`);
- for(let n=1;n<=31;n++)await db.query("insert into public.notifications(id,user_id,kind,title,body,source_type,source_id) values($1,$2,'TASK_REMINDER',$3,'Une échéance approche','TASK',$4)",[id(1000+n),id(1),`Rappel ${n}`,id(900)]);
+ for(let n=1;n<=31;n++)await db.query("insert into public.notifications(id,user_id,kind,title,body,source_type,source_id) values($1,$2,'TASK_REMINDER',$3,'Une échéance approche','TASK',$4)",[id(1000+n),id(1),`Herinnering ${n}`,id(900)]);
  const tables=['notifications','notification_preferences','notification_category_preferences','event_categories','push_subscriptions'];
  server=await createServer({configFile:false,root:`${root}/tests/fixtures/notifications`,esbuild:{jsx:'automatic',jsxImportSource:'preact'},server:{host:'127.0.0.1',port:0,fs:{allow:[root]}},plugins:[{name:'notification-db',configureServer(vite){vite.middlewares.use(async(req,res,next)=>{
   if(!req.url?.startsWith('/fixture-api'))return next();res.setHeader('Content-Type','application/json');
@@ -41,20 +41,20 @@ try{
    const sub={endpoint:'https://fcm.googleapis.com/fcm/send/browser',toJSON:()=>({endpoint:sub.endpoint,keys:{p256dh:'A'.repeat(87),auth:'B'.repeat(22)}}),unsubscribe:async()=>{window.pushFixture.subscription=null;return true;}};window.pushFixture.subscription=sub;return sub;
   }}};Object.defineProperty(navigator,'serviceWorker',{value:{register:async()=>reg,getRegistration:async()=>reg,ready:Promise.resolve(reg)},configurable:true});
  });
- await page.goto(base);await page.getByRole('heading',{name:'Notifications et rappels'}).waitFor();
- await page.getByRole('button',{name:'Activer les notifications',exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.pushFixture.requests),0);
- await page.getByRole('button',{name:'Notifications : 31 non lues',exact:true}).click();await page.getByText('Page 1',{exact:true}).waitFor();await page.waitForFunction(()=>document.querySelectorAll('.notification-item').length===30);
- await page.getByRole('button',{name:'Suivantes',exact:true}).click();await page.getByText('Page 2',{exact:true}).waitFor();assert.equal(await page.locator('.notification-item').count(),1);
- await page.getByRole('button',{name:'Tout marquer comme lu'}).click();await page.getByRole('button',{name:'Notifications : 0 non lues',exact:true}).waitFor();
+ await page.goto(base);await page.getByRole('heading',{name:'Meldingen en herinneringen'}).waitFor();
+ await page.getByRole('button',{name:'Meldingen inschakelen',exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.pushFixture.requests),0);
+ await page.getByRole('button',{name:'Meldingen: 31 ongelezen',exact:true}).click();await page.getByText('Pagina 1',{exact:true}).waitFor();await page.waitForFunction(()=>document.querySelectorAll('.notification-item').length===30);
+ await page.getByRole('button',{name:'Volgende',exact:true}).click();await page.getByText('Pagina 2',{exact:true}).waitFor();assert.equal(await page.locator('.notification-item').count(),1);
+ await page.getByRole('button',{name:'Alles als gelezen markeren'}).click();await page.getByRole('button',{name:'Meldingen: 0 ongelezen',exact:true}).waitFor();
  await page.locator('.notification-item').click();await page.getByTestId('target').filter({hasText:`TASK:${id(900)}`}).waitFor();
- await page.getByLabel('Rappels Tâches',{exact:true}).uncheck();await page.getByRole('button',{name:'Enregistrer les préférences'}).click();await page.getByText('Préférences enregistrées.',{exact:true}).waitFor();
+ await page.getByLabel('Taakherinneringen',{exact:true}).uncheck();await page.getByRole('button',{name:'Voorkeuren opslaan'}).click();await page.getByText('Voorkeuren opgeslagen.',{exact:true}).waitFor();
  assert.equal((await db.query('select task_notifications_enabled v from public.notification_preferences')).rows[0].v,false);
- await page.getByRole('button',{name:'Activer les notifications',exact:true}).click();await page.getByText('Appareil inscrit. Les notifications Push sont activées.',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.pushFixture.requests),1);
- await page.getByRole('button',{name:'Envoyer une notification de test'}).click();await page.getByText(/Test mis en file/).waitFor();assert.equal((await db.query("select count(*)::int n from public.notification_jobs where source_type='SYSTEM'")).rows[0].n,1);
- await page.getByRole('button',{name:'Désactiver sur cet appareil',exact:true}).click();await page.getByText('Notifications désactivées sur cet appareil.',{exact:true}).waitFor();assert.equal((await db.query('select active v from public.push_subscriptions')).rows[0].v,false);
- await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Notifications : 0 non lues',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.notification-item').length===30);
- assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));mkdirSync(`${root}/.test-artifacts`,{recursive:true});await page.screenshot({path:`${root}/.test-artifacts/notifications-mobile.png`});await page.getByRole('button',{name:'Fermer',exact:true}).click();
+ await page.getByRole('button',{name:'Meldingen inschakelen',exact:true}).click();await page.getByText('Apparaat geregistreerd. Pushmeldingen zijn ingeschakeld.',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.pushFixture.requests),1);
+ await page.getByRole('button',{name:'Testmelding versturen'}).click();await page.getByText(/Test ingepland/).waitFor();assert.equal((await db.query("select count(*)::int n from public.notification_jobs where source_type='SYSTEM'")).rows[0].n,1);
+ await page.getByRole('button',{name:'Uitschakelen op dit apparaat',exact:true}).click();await page.getByText('Meldingen uitgeschakeld op dit apparaat.',{exact:true}).waitFor();assert.equal((await db.query('select active v from public.push_subscriptions')).rows[0].v,false);
+ await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Meldingen: 0 ongelezen',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.notification-item').length===30);
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));mkdirSync(`${root}/.test-artifacts`,{recursive:true});await page.screenshot({path:`${root}/.test-artifacts/notifications-mobile.png`});await page.getByRole('button',{name:'Sluiten',exact:true}).click();
  await page.goto(`${base}/?notification=${id(1001)}`);await page.getByTestId('target').filter({hasText:`TASK:${id(900)}`}).waitFor();assert.ok(!page.url().includes('notification='));
- await page.evaluate(()=>{Notification.permission='denied';window.dispatchEvent(new Event('focus'));});await page.getByRole('button',{name:'Enregistrer les préférences'}).click();await page.getByText(/État : Refusé/).waitFor();assert.ok(await page.getByRole('button',{name:'Activer les notifications',exact:true}).isDisabled());assert.equal(await page.evaluate(()=>window.pushFixture.requests),0);
- assert.deepEqual(errors,[]);console.log('Notifications browser passed: real SQL/RLS, 30-row pagination, read/all-read, target, preferences, explicit permission, mocked subscription/test/unsubscribe, denied state, desktop/mobile. No real Web Push sent.');
+ await page.evaluate(()=>{Notification.permission='denied';window.dispatchEvent(new Event('focus'));});await page.getByRole('button',{name:'Voorkeuren opslaan'}).click();await page.getByText(/Status: Geweigerd/).waitFor();assert.ok(await page.getByRole('button',{name:'Meldingen inschakelen',exact:true}).isDisabled());assert.equal(await page.evaluate(()=>window.pushFixture.requests),0);
+ assert.deepEqual(errors,[]);console.log('Meldingen browser passed: real SQL/RLS, 30-row pagination, read/all-read, target, preferences, explicit permission, mocked subscription/test/unsubscribe, denied state, desktop/mobile. No real Web Push sent.');
 }finally{await browser?.close();await server?.close();await db.close();}

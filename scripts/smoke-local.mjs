@@ -80,7 +80,7 @@ try {
   const manifestData=await manifest.json();assert.equal(manifestData.scope, "/leiding-login/");assert.equal(manifestData.start_url,"/leiding-login/?app=home");assert.equal(manifestData.id,"/chiro-negenmanneke-app");
   assert.equal((await fetch(base + "/wrong-admin/push-sw.js")).status, 404);
   assert.equal((await fetch(base + "/wrong-admin/manifest.webmanifest")).status, 404);
-  const offline=await fetch(base+"/leiding-login/offline.html");assert.equal(offline.status,200);assert.equal(offline.headers.get("X-Chiro-Offline"),"1");assert.match(await offline.text(),/Pas de connexion Internet/);
+  const offline=await fetch(base+"/leiding-login/offline.html");assert.equal(offline.status,200);assert.equal(offline.headers.get("X-Chiro-Offline"),"1");assert.match(await offline.text(),/Geen internetverbinding/);
   assert.equal((await fetch(base+"/wrong-admin/offline.html")).status,404);
   for(const icon of [...manifestData.icons.map(icon=>icon.src),"/assets/app/apple-touch-icon.png"]){const response=await fetch(base+icon);assert.equal(response.status,200);assert.match(response.headers.get("content-type"),/image\/png/);}
   const publicHtml=await(await fetch(base+"/")).text();assert.ok(!/rel=["']manifest/.test(publicHtml));

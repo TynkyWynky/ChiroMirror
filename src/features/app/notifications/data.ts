@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireOnline, networkError } from "../pwa/network.ts";
+import { localizeCategories } from "../events/categories.ts";
 import type { AppNotification, CategoryPreference, NotificationPreferences, PushDevice } from "./types.ts";
 import { defaultPreferences } from "./types.ts";
 export async function notificationsPage(client: SupabaseClient, page: number) {
@@ -26,15 +27,15 @@ export async function loadNotificationSettings(client: SupabaseClient) {
     client.from("push_subscriptions").select("id,device_label,active,last_seen_at").order("last_seen_at", { ascending: false }).limit(50)
   ]);
   for (const result of [preferences, categories, choices, devices]) if (result.error) throw result.error;
-  return { preferences: { ...defaultPreferences, ...preferences.data } as NotificationPreferences, categories: (categories.data ?? []) as CategoryPreference[], choices: (choices.data ?? []) as { key: string; label: string }[], devices: (devices.data ?? []) as PushDevice[] };
+  return { preferences: { ...defaultPreferences, ...preferences.data } as NotificationPreferences, categories: (categories.data ?? []) as CategoryPreference[], choices: localizeCategories((choices.data ?? []) as { key: string; label: string }[]), devices: (devices.data ?? []) as PushDevice[] };
 }
 export function notificationError(cause: unknown) {
   const network = networkError(cause); if(network)return network;
   if (typeof cause === "object" && cause !== null && "code" in cause) {
-    if (cause.code === "42501") return "Action non autorisée. Pour un appareil partagé, désactivez son abonnement puis réactivez-le avec votre compte.";
-    if (cause.code === "22023") return "Vérifiez les réglages. Attendez une minute entre deux notifications de test.";
-    if (cause.code === "40001") return "La source a changé. Actualisez puis recommencez.";
+    if (cause.code === "42501") return "Actie niet toegestaan. Schakel op een gedeeld apparaat het abonnement uit en activeer het daarna opnieuw met je eigen account.";
+    if (cause.code === "22023") return "Controleer de instellingen. Wacht één minuut tussen twee testmeldingen.";
+    if (cause.code === "40001") return "De bron is gewijzigd. Ververs en probeer opnieuw.";
   }
   // Do not echo arbitrary transport exceptions: they may contain endpoint/key material.
-  return "Impossible de terminer cette action. Actualisez puis réessayez.";
+  return "Deze actie kon niet worden voltooid. Ververs en probeer opnieuw.";
 }
