@@ -188,7 +188,7 @@
 .admin-field input:focus, .admin-field textarea:focus, .admin-field select:focus { outline: none; border-color: #a9afb9; box-shadow: 0 0 0 2px #f0f1f3; }
 .admin-field input[type="file"] { font-size: 12px; }
 .admin-checkbox { display: flex; align-items: center; gap: 8px; margin: 8px 0; color: #555d69; font-size: 12px; font-weight: 500; }
-.admin-checkbox input { accent-color: #bd3037; }
+.admin-checkbox input { width: 16px; height: 16px; flex: 0 0 16px; margin: 0; padding: 0; accent-color: #bd3037; }
 .admin-card-editor { min-width: 0; margin: 18px 0 0; padding: 20px; border: 1px solid #e3e5e9; border-radius: 5px; background: #fff; box-shadow: none; }
 .admin-card-editor + .admin-card-editor { margin-top: 18px; }
 .admin-remove { border: 0; padding: 6px 0; background: transparent; color: #b84e56; font-size: 12px; font-weight: 500; }

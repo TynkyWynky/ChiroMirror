@@ -61,7 +61,7 @@ try {
     assert.match(response.headers.get("content-type"), /application\/json/);
   }
   const wrongFormat = await fetch(base + "/api/contact", {
-    method: "POST", headers: { "Content-Type": "text/plain" }, body: "{}"
+    method: "POST", headers: { "Content-Type": "text/plain", Origin: base }, body: "{}"
   });
   assert.equal(wrongFormat.status, 415);
   const foreignOrigin = await fetch(base + "/api/contact", {

@@ -19,7 +19,9 @@ const bundleSanitizerPlugin = {
   config() {
     return { ssr: { noExternal: [
       "sanitize-html", "htmlparser2", "is-plain-object",
-      "domhandler", "domutils", "domelementtype", "dom-serializer", "entities"
+      "domhandler", "domutils", "domelementtype", "dom-serializer", "entities",
+      "deepmerge", "escape-string-regexp", "parse-srcset", "postcss", "launder",
+      "picocolors", "source-map-js", "nanoid"
     ] } };
   }
 };

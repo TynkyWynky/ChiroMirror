@@ -92,7 +92,7 @@ export default function AdminAuthAction(props: { adminBasePath: string }) {
             persistSession: true,
             detectSessionInUrl: false,
             storageKey: getSupabaseStorageKey(publicSupabaseUrl),
-            storage
+            storage: storage ?? undefined
           }
         });
         const url = new URL(window.location.href);

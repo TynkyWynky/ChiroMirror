@@ -21,7 +21,9 @@
     "test:pwa:browser": "node --experimental-strip-types ./scripts/test-pwa-browser.mjs",
     "dev:app": "node ./scripts/start-app.mjs",
     "doctor:app": "node ./scripts/check-app-setup.mjs",
-    "test:auth:browser": "node --experimental-strip-types ./scripts/test-auth-browser.mjs"
+    "test:auth:browser": "node --experimental-strip-types ./scripts/test-auth-browser.mjs",
+    "test:build:browser": "node --no-experimental-require-module ./scripts/test-built-browser.mjs",
+    "prepare:app-install": "node ./scripts/prepare-app-install.mjs"
   },
   "dependencies": {
     "@astrojs/netlify": "^8.2.6",

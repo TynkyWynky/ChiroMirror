@@ -1,5 +1,10 @@
 # Hydratation AdminApp : import dynamique invalide
 
+> Historique de l'incident Astro 6.1.6. Le checkup du 24 septembre 2026 passe à
+> Astro 7.3.5 et à l'intégration Preact 6.0.5, qui contiennent les corrections
+> officielles. Les scripts modifiant `node_modules` ont été retirés. Le test des
+> imports Netlify et le contrôle syntaxique de tous les chunks restent exécutés.
+
 Incident observé sur le déploiement `6ab451ba1488fb00085b70ba`.
 Le module d'entrée `AdminApp.lcrTngkg.js` est valide, mais réexporte
 `AdminApp.D8ozOfTL.js`, dont la ligne 2176 contient :

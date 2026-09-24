@@ -45,6 +45,7 @@ export default function ContactForm({
 
   async function handleSubmit(event: Event) {
     event.preventDefault();
+    if (status === "loading") return;
     setStatusMessage("");
     setStatus("loading");
 
@@ -82,6 +83,7 @@ export default function ContactForm({
 
       const [netlifyResult, adminResult] = await Promise.allSettled([
         fetch(NETLIFY_FORM_ENDPOINT, {
+          signal: AbortSignal.timeout(15000),
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded"
@@ -89,6 +91,7 @@ export default function ContactForm({
           body: encodeForm(netlifyPayload)
         }),
         fetch("/api/contact", {
+          signal: AbortSignal.timeout(15000),
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -268,10 +271,10 @@ export default function ContactForm({
       </div>
 
       {status === "success" && (
-        <div class="contact-status contact-status-success">{statusMessage || successMessage}</div>
+        <div class="contact-status contact-status-success" role="status">{statusMessage || successMessage}</div>
       )}
       {status === "error" && (
-        <div class="contact-status contact-status-error">{statusMessage || errorMessage}</div>
+        <div class="contact-status contact-status-error" role="alert">{statusMessage || errorMessage}</div>
       )}
     </form>
   );

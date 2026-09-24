@@ -1,5 +1,23 @@
 # Chiro Negenmanneke Website
 
+## Accès APP sur PC et diagnostic
+
+Ouvrir `https://www.chironegenmanneke.be/leiding-login/?app=home` pour accéder à
+l'APP dans le navigateur. Les comptes autorisés aux deux espaces disposent de
+boutons **SITE / APP** en tête du menu. Les rôles APP sont distincts des droits SITE.
+
+Pour démarrer la version locale sous Windows : double-cliquer sur
+`Demarrer-Chiro.cmd`, ou exécuter `npm.cmd run dev:app`. Le navigateur s'ouvre sur
+`http://127.0.0.1:4321/leiding-login/?app=home`. Garder le terminal ouvert.
+Le serveur écoute uniquement sur ce PC. Node.js >= 22.12 et `npm.cmd ci` sont
+nécessaires au premier démarrage; configurer les clés publiques dans `.env.local`.
+
+`npm.cmd run doctor:app` vérifie la connexion et la disponibilité du schéma APP
+sans lire les données métier ni attribuer de droits. Si l'installation manque,
+suivre [la procédure et le rapport de vérification](docs/checkup-2026-09-24.md).
+La clé serveur est nécessaire aux invitations et au stockage des contacts via
+les API locales; elle n'est pas nécessaire à la connexion et à la navigation APP.
+
 Nieuwe Astro/Supabase-versie van de site met:
 
 - gewone login voor de leiding via een verborgen admin-pad

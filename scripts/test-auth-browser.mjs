@@ -79,7 +79,7 @@ try {
     assert.equal(await f.page.getByRole("button", { name: "Inloggen", exact: true }).isEnabled(), true);
     f.state.badPassword = false;
     await f.login(); await f.home();
-    assert.equal(await f.page.getByRole("button", { name: "Teambeheer", exact: true }).count(), 0);
+    assert.equal(await f.page.getByRole("button", { name: "Team & toegang", exact: true }).count(), 0);
     await f.page.reload(); await f.home();
     await f.page.getByRole("button", { name: "Se déconnecter", exact: true }).first().click();
     await f.page.getByRole("heading", { name: "Leiding login" }).waitFor();
@@ -113,7 +113,7 @@ try {
     const f = await fixture({ siteRole: "admin", missingApp: true });
     await f.login();
     await f.page.getByRole("alert").filter({ hasText: "L’espace APP n’est pas encore configuré" }).waitFor();
-    await f.page.getByRole("button", { name: "Team", exact: true }).first().waitFor();
+    await f.page.getByRole("button", { name: "Team & toegang", exact: true }).first().waitFor();
     await f.context.close();
     console.log("Auth: missing APP migration is visible while SITE remains available.");
   }
