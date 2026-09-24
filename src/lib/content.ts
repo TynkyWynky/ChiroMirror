@@ -109,7 +109,15 @@ function mapPost(row: Record<string, unknown>): Post {
 }
 
 export async function loadSiteContent(): Promise<SiteContent> {
-  const supabase = createServerSupabaseClient();
+  let supabase: ReturnType<typeof createServerSupabaseClient>;
+  try {
+    // A malformed or missing deployment variable must never take the public
+    // site down; the bundled content is a safe rendering fallback.
+    supabase = createServerSupabaseClient();
+  } catch (error) {
+    console.error("Falling back to local content because Supabase configuration is invalid.", error);
+    return defaultContent;
+  }
 
   if (!supabase) {
     return defaultContent;

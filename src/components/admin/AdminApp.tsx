@@ -356,102 +356,15 @@ function AdminLoadingScreen(props: {
   stalled?: boolean;
   steps: AdminLoadingStep[];
 }) {
-  const [elapsedMs, setElapsedMs] = useState(0);
-
-  useEffect(() => {
-    const startedAt = Date.now();
-    const intervalId = window.setInterval(() => {
-      setElapsedMs(Date.now() - startedAt);
-    }, 160);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [props.title, props.body]);
-
-  const steps = props.steps.length
-    ? props.steps
-    : [{ label: "Voorbereiden", detail: props.body }];
-  const elapsedSeconds = Math.max(1, Math.ceil(elapsedMs / 1000));
-  const stepDurationMs = 1800;
-  const rawStep = elapsedMs / stepDurationMs;
-  const activeIndex = Math.min(steps.length - 1, Math.floor(rawStep));
-  const segmentStart = 16 + activeIndex * (68 / steps.length);
-  const segmentEnd =
-    activeIndex === steps.length - 1
-      ? props.stalled
-        ? 96
-        : 92
-      : 16 + (activeIndex + 1) * (68 / steps.length);
-  const segmentProgress = Math.min(rawStep - activeIndex, activeIndex === steps.length - 1 ? 0.28 : 1);
-  const progress = Math.round(
-    segmentStart + (segmentEnd - segmentStart) * Math.max(0, segmentProgress)
-  );
-  const currentStep = steps[activeIndex];
-  const currentDetail = props.stalled
-    ? currentStep.delayedDetail ?? props.hint ?? currentStep.detail
-    : currentStep.detail;
-
   return (
-    <div class="admin-app admin-shell">
-      <div class="admin-splash">
-        <div class="admin-splash-mark" aria-hidden="true">
-          9M
-        </div>
+    <div class="admin-app admin-shell" aria-busy="true">
+      <div class="admin-splash admin-splash-simple" role="status" aria-live="polite">
+        <div class="admin-splash-mark" aria-hidden="true">9M</div>
         <p class="admin-kicker">{props.eyebrow}</p>
         <h1>{props.title}</h1>
-        <p class="muted">{props.body}</p>
-        <div class="admin-loader-meta" aria-live="polite">
-          <span>{props.stalled ? "Verbinding reageert traag" : "Live voortgang"}</span>
-          <strong>{progress}%</strong>
-        </div>
-        <div
-          class="admin-loader"
-          role="progressbar"
-          aria-label="Laadstatus admin"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={progress}
-        >
-          <span class="admin-loader-bar" style={{ width: `${progress}%` }} />
-        </div>
-        <div class="admin-loader-status" aria-live="polite">
-          <strong>{currentStep.label}</strong>
-          <span>{currentDetail}</span>
-        </div>
-        <ul class="admin-loader-steps">
-          {steps.map((step, index) => {
-            const stateClass =
-              index < activeIndex
-                ? "is-complete"
-                : index === activeIndex
-                  ? "is-active"
-                  : "is-pending";
-            const stateLabel =
-              index < activeIndex
-                ? "Klaar"
-                : index === activeIndex
-                  ? props.stalled
-                    ? "Wachten"
-                    : "Actief"
-                  : "Straks";
-
-            return (
-              <li class={`admin-loader-step ${stateClass}`} key={step.label}>
-                <span class="admin-loader-step-dot" aria-hidden="true" />
-                <div class="admin-loader-step-copy">
-                  <strong>{step.label}</strong>
-                  <span>{step.detail}</span>
-                </div>
-                <span class="admin-loader-step-state">{stateLabel}</span>
-              </li>
-            );
-          })}
-        </ul>
-        <div class="admin-loader-foot">
-          {props.hint && <p class="admin-loading-hint">{props.hint}</p>}
-          <p class="admin-loader-elapsed">Bezig sinds {elapsedSeconds}s</p>
-        </div>
+        <div class="admin-loader-spinner" aria-hidden="true" />
+        <p class="admin-loader-message">Even geduld…</p>
+        {props.stalled && <p class="admin-loading-hint">{props.hint ?? "De verbinding reageert wat traag."}</p>}
       </div>
     </div>
   );
