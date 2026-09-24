@@ -52,6 +52,9 @@ try {
     assert.doesNotMatch(html, /Pagina niet gevonden|rel=["']manifest["']/);
     console.log(`SSR 200 ${path}`);
   }
+  const favicon = await request("/favicon.ico");
+  assert.equal(favicon.status, 404, "An absent favicon must remain a normal SSR 404");
+  assert.doesNotMatch(await favicon.text(), /ERR_REQUIRE_ESM|web-push|node_modules/);
   for (const path of [`/${slug}/`, `/${slug}/auth-action/`, ...["home", "agenda", "tasks", "finance", "members", "settings", "notifications"].map(screen => `/${slug}/?app=${screen}`)]) {
     const response = await request(path);
     assert.equal(response.status, 200, "Admin/Auth/APP route");

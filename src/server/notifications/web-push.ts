@@ -1,4 +1,3 @@
-import webpush from "web-push";
 import { createHash } from "node:crypto";
 import type { Delivery } from "./dispatcher.ts";
 export function validPushEndpoint(value: string): boolean {
@@ -13,6 +12,9 @@ export function createPushSender(env: Record<string, string | undefined>) {
   if (!publicKey || !privateKey || !subject) return null;
   return async (delivery: Delivery) => {
     if (!validPushEndpoint(delivery.subscription.endpoint)) throw { statusCode: 400 };
+    // Keep the optional Push provider out of the public SSR module graph. A
+    // missing VAPID setup must disable Push, never break the public site.
+    const { default: webpush } = await import("web-push");
     const deviceKey = createHash("sha256").update(delivery.subscription.endpoint).digest("hex");
     return webpush.sendNotification(delivery.subscription, JSON.stringify({ ...delivery.payload, deviceKey }), {
       vapidDetails: { subject, publicKey, privateKey }, TTL: 60, urgency: "normal", timeout: 3000,

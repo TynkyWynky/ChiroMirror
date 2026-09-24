@@ -20,7 +20,7 @@ const bundleSanitizerPlugin = {
     return { ssr: { noExternal: [
       "sanitize-html", "htmlparser2", "is-plain-object",
       "domhandler", "domutils", "domelementtype", "dom-serializer", "entities",
-      "deepmerge", "escape-string-regexp", "parse-srcset", "postcss", "launder",
+      "deepmerge", "escape-string-regexp", "parse-srcset", "postcss", "launder", "dayjs",
       "picocolors", "source-map-js", "nanoid"
     ] } };
   }

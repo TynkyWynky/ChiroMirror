@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import { runNotificationTick } from "../../src/server/notifications/dispatcher";
-import { createPushSender } from "../../src/server/notifications/web-push";
+import { runNotificationTick } from "../../src/server/notifications/dispatcher.ts";
+import { createPushSender } from "../../src/server/notifications/web-push.ts";
 
 export default async function notificationsTick() {
   const env = process.env;
