@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "node ./scripts/patch-preact-client.mjs && astro dev",
-    "build": "node ./scripts/patch-preact-client.mjs && astro build && npm run test:netlify",
+    "build": "node ./scripts/patch-preact-client.mjs && node ./scripts/patch-astro-chunk-imports.mjs && astro build && npm run test:netlify",
     "check": "node ./scripts/patch-preact-client.mjs && astro check",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test": "node ./scripts/patch-astro-chunk-imports.mjs && node --experimental-strip-types --test tests/*.test.ts",
     "test:smoke": "node ./scripts/smoke-local.mjs",
-    "test:netlify": "node --no-experimental-require-module ./scripts/smoke-netlify-build.mjs",
+    "test:netlify": "node ./scripts/check-client-syntax.mjs && node --no-experimental-require-module ./scripts/smoke-netlify-build.mjs",
     "test:agenda:browser": "node --experimental-strip-types ./scripts/test-agenda-browser.mjs",
     "test:tasks:browser": "node --experimental-strip-types ./scripts/test-tasks-browser.mjs",
     "test:finance:browser": "node --experimental-strip-types ./scripts/test-finance-browser.mjs",
@@ -17,7 +17,7 @@
     "preview": "astro preview",
     "import:legacy": "node ./scripts/extract-legacy-content.mjs",
     "seed": "node ./scripts/seed-supabase.mjs",
-    "postinstall": "node ./scripts/patch-preact-client.mjs",
+    "postinstall": "node ./scripts/patch-preact-client.mjs && node ./scripts/patch-astro-chunk-imports.mjs",
     "test:notifications:browser": "node --experimental-strip-types ./scripts/test-notifications-browser.mjs",
     "test:pwa:browser": "node --experimental-strip-types ./scripts/test-pwa-browser.mjs"
   },
