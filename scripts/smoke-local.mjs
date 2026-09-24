@@ -51,6 +51,27 @@ try {
   }
   assert.equal((await fetch(base + "/wrong-admin/")).status, 404);
   assert.equal((await fetch(base + "/api/booklet")).status, 404);
+  for (const body of ["null", "[]", "true", '"text"', "{}", "{invalid"]) {
+    const response = await fetch(base + "/api/contact", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body,
+      signal: AbortSignal.timeout(10000)
+    });
+    assert.equal(response.status, 400, `Contact rejects malformed payload: ${body}`);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.match(response.headers.get("content-type"), /application\/json/);
+  }
+  const wrongFormat = await fetch(base + "/api/contact", {
+    method: "POST", headers: { "Content-Type": "text/plain" }, body: "{}"
+  });
+  assert.equal(wrongFormat.status, 415);
+  const foreignOrigin = await fetch(base + "/api/contact", {
+    method: "POST", headers: { "Content-Type": "application/json", Origin: "https://other.example" }, body: "{}"
+  });
+  assert.equal(foreignOrigin.status, 403);
+  const honeypot = await fetch(base + "/api/contact", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ website: "spam" })
+  });
+  assert.equal(honeypot.status, 200, "Honeypot succeeds without sending or storing anything");
   const sw = await fetch(base + "/leiding-login/push-sw.js");
   assert.equal(sw.status, 200); assert.match(sw.headers.get("content-type"), /javascript/);
   assert.equal(sw.headers.get("service-worker-allowed"), "/leiding-login/"); assert.equal(sw.headers.get("cache-control"), "no-store");
@@ -63,7 +84,7 @@ try {
   assert.equal((await fetch(base+"/wrong-admin/offline.html")).status,404);
   for(const icon of [...manifestData.icons.map(icon=>icon.src),"/assets/app/apple-touch-icon.png"]){const response=await fetch(base+icon);assert.equal(response.status,200);assert.match(response.headers.get("content-type"),/image\/png/);}
   const publicHtml=await(await fetch(base+"/")).text();assert.ok(!/rel=["']manifest/.test(publicHtml));
-  console.log("25 local HTTP checks passed (public site, APP manifest/icons, scoped worker and offline fallback, no Supabase connection).");
+  console.log("Local HTTP checks passed (public site, APP manifest/icons, scoped worker, offline fallback and invalid contact requests; no Supabase connection).");
 } catch (error) {
   console.error(output);
   throw error;

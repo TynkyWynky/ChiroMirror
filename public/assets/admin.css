@@ -59,6 +59,10 @@
 .admin-brand strong, .admin-brand div > span { display: block; }
 .admin-brand strong { font-size: 13px; font-weight: 650; letter-spacing: -.02em; }
 .admin-brand div > span { color: #858a92; font-size: 11px; margin-top: 1px; }
+.admin-workspace-switch { display: flex; gap: 4px; margin: 0 2px 12px; padding: 4px; border: 1px solid #dedfe2; border-radius: 7px; background: #fafafb; }
+.admin-workspace-switch button { flex: 1; min-height: 40px; border: 0; border-radius: 4px; background: transparent; color: #626770; font-size: 12px; font-weight: 650; }
+.admin-workspace-switch button:hover { background: #e9ebee; color: #2b3039; }
+.admin-workspace-switch button[aria-pressed="true"] { color: #9f2830; background: #f1e5e6; }
 .admin-nav-search { display: flex; align-items: center; gap: 7px; margin: 0 2px 19px; padding: 6px 8px; border: 1px solid #dedfe2; border-radius: 5px; background: #fafafb; color: #92969d; }
 .admin-nav-search input { width: 100%; min-width: 0; padding: 0; border: 0; background: none; color: #3b4048; font-size: 12px; }
 .admin-nav-search:focus-within { border-color: #a7aab0; }

@@ -41,12 +41,17 @@ export const POST: APIRoute = async ({ request }) => {
     return json("Deze aanvraag is niet toegelaten.", 403);
   }
 
-  let body: ContactPayload;
+  let input: unknown;
   try {
-    body = (await request.json()) as ContactPayload;
+    input = await request.json();
   } catch {
     return json("De aanvraag kon niet gelezen worden.", 400);
   }
+
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return json("Ongeldig aanvraagformaat.", 400);
+  }
+  const body = input as ContactPayload;
 
   if (clean(body.website)) {
     return json("Bericht goed ontvangen.");

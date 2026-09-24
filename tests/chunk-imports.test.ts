@@ -9,8 +9,8 @@ test("Astro keeps Netlify deploy IDs inside static and lazy import specifiers", 
   for (const deploy of ["6ab451ba1488fb00085b70ba", "local-deploy"]) {
     const options = { settings: { adapter: { client: { assetQueryParams: new URLSearchParams({ dpl: deploy }) } } } };
     const plugin = pluginChunkImports(options as unknown as Parameters<typeof pluginChunkImports>[0]);
-    assert.ok(plugin?.renderChunk);
-    const hook = typeof plugin.renderChunk === "function" ? plugin.renderChunk : plugin.renderChunk.handler;
+    assert.ok(plugin?.generateBundle);
+    const hook = typeof plugin.generateBundle === "function" ? plugin.generateBundle : plugin.generateBundle.handler;
     const source = `
       import './hooks.js';
       export { default } from './entry.js';
@@ -21,9 +21,9 @@ test("Astro keeps Netlify deploy IDs inside static and lazy import specifiers", 
       const computed = path => import(path);
     `;
     // This hook only reads code; the other Rollup context fields are unused.
-    const result = await hook.call({} as never, source, {} as never, {} as never, {} as never);
-    assert.ok(result && typeof result === "object");
-    const { code } = result;
+    const chunk = { type: "chunk", code: source };
+    await hook.call({} as never, {} as never, { "entry.js": chunk } as never, false);
+    const { code } = chunk;
     const checked = spawnSync(process.execPath, ["--input-type=module", "--check"], { input: code, encoding: "utf8", windowsHide: true });
     assert.equal(checked.status, 0, checked.stderr);
     const [imports] = parse(code);

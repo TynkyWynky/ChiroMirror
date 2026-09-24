@@ -39,6 +39,11 @@ export default function AdminNavigation(props: Props) {
         <div><strong>Negenmanneke</strong><span>{t("Espace interne", "Beheeromgeving")}</span></div>
         {mobile && <button class="admin-icon-button" type="button" aria-label={t("Fermer le menu", "Menu sluiten")} onClick={() => dialog.current?.close()}><AdminIcon name="close" /></button>}
       </div>
+      {props.groups.length > 1 && <div class="admin-workspace-switch" role="group" aria-label={t("Choisir un espace", "Kies een omgeving")}>
+        {props.groups.map(group => <button type="button" key={group.groupId} aria-pressed={group.groupId === (app ? "app" : "site")}
+          title={group.groupId === "app" ? t("Ouvrir l’application interne", "Open de interne app") : t("Gérer le site web", "Beheer de website")}
+          onClick={() => navigate(group.tabs[0].id)}>{group.label}</button>)}
+      </div>}
       <label class="admin-nav-search"><AdminIcon name="search" /><input type="search" aria-label={t("Rechercher une rubrique", "Zoek een onderdeel")} placeholder={t("Rechercher une rubrique…", "Zoek een onderdeel…")} value={query} onInput={event => setQuery(event.currentTarget.value)} /></label>
       <nav class="admin-sidebar-nav" aria-label={t("Rubriques", "Admin onderdelen")}>
         {groups.map(group => <section class="admin-sidebar-section" key={group.groupId}>

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createTimedFetch } from "./auth/client";
 
 export function getSupabasePublicConfig() {
   return {
@@ -20,6 +21,7 @@ export function createServerSupabaseClient() {
   }
 
   return createClient(url, anonKey, {
+    global: { fetch: createTimedFetch(globalThis.fetch, 8000) },
     auth: {
       autoRefreshToken: false,
       persistSession: false

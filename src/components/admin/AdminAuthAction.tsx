@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import { createClient, type EmailOtpType } from "@supabase/supabase-js";
+import { AUTH_ACTION_TIMEOUT_MS, createTimedFetch, withTimeout } from "@/lib/auth/client";
 
 type AuthActionType = "invite" | "recovery";
 
@@ -79,16 +80,21 @@ export default function AdminAuthAction(props: { adminBasePath: string }) {
       return;
     }
 
-    const supabase = createClient(publicSupabaseUrl, publicSupabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        storageKey: getSupabaseStorageKey(publicSupabaseUrl),
-        storage
-      }
-    });
+    let active = true;
 
     async function processAuthAction() {
       try {
+        // We handle each URL format below. Automatic detection would exchange
+        // the same one-time code a second time during client initialization.
+        const supabase = createClient(publicSupabaseUrl, publicSupabaseAnonKey, {
+          global: { fetch: createTimedFetch() },
+          auth: {
+            persistSession: true,
+            detectSessionInUrl: false,
+            storageKey: getSupabaseStorageKey(publicSupabaseUrl),
+            storage
+          }
+        });
         const url = new URL(window.location.href);
         const searchType = getActionType(url.searchParams.get("type"));
         const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
@@ -129,10 +135,10 @@ export default function AdminAuthAction(props: { adminBasePath: string }) {
           throw new Error("Deze link is onvolledig of verlopen. Vraag een nieuwe uitnodiging of resetmail.");
         }
 
-        window.location.replace(`${props.adminBasePath}?type=${actionType}`);
+        if (active) window.location.replace(`${props.adminBasePath}?type=${actionType}`);
       } catch (currentError) {
         console.error("Admin auth action failed.", currentError);
-        setError(
+        if (active) setError(
           currentError instanceof Error
             ? currentError.message
             : "De uitnodiging of resetlink kon niet verwerkt worden."
@@ -140,7 +146,13 @@ export default function AdminAuthAction(props: { adminBasePath: string }) {
       }
     }
 
-    void processAuthAction();
+    void withTimeout(processAuthAction(), AUTH_ACTION_TIMEOUT_MS,
+      "De verbinding reageert niet. Open je uitnodiging of resetlink opnieuw zodra je verbinding hersteld is."
+    ).catch(currentError => {
+      if (active) setError(currentError.message);
+      active = false;
+    });
+    return () => { active = false; };
   }, []);
 
   return (

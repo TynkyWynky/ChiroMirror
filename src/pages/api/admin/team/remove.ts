@@ -1,10 +1,6 @@
 import type { APIRoute } from "astro";
 import { createServiceClient } from "@/server/supabase";
 
-type RemoveTeamMemberPayload = {
-  userId?: string;
-};
-
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -38,14 +34,15 @@ export const POST: APIRoute = async ({ request }) => {
     return Response.json({ message: "Alleen admins kunnen teamleden verwijderen." }, { status: 403 });
   }
 
-  let body: RemoveTeamMemberPayload;
+  let body: unknown;
   try {
-    body = (await request.json()) as RemoveTeamMemberPayload;
+    body = await request.json();
   } catch {
     return Response.json({ message: "De aanvraag kon niet gelezen worden." }, { status: 400 });
   }
 
-  const userId = body.userId?.trim() ?? "";
+  const userId = body && typeof body === "object" && !Array.isArray(body) &&
+    "userId" in body && typeof body.userId === "string" ? body.userId.trim() : "";
 
   if (!UUID_PATTERN.test(userId)) {
     return Response.json({ message: "Ongeldige gebruiker geselecteerd." }, { status: 400 });

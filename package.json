@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ./scripts/patch-preact-client.mjs && astro dev",
-    "build": "node ./scripts/patch-preact-client.mjs && node ./scripts/patch-astro-chunk-imports.mjs && astro build && npm run test:netlify",
-    "check": "node ./scripts/patch-preact-client.mjs && astro check",
-    "test": "node ./scripts/patch-astro-chunk-imports.mjs && node --experimental-strip-types --test tests/*.test.ts",
+    "dev": "astro dev",
+    "build": "astro build && npm run test:netlify",
+    "check": "astro check",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:smoke": "node ./scripts/smoke-local.mjs",
     "test:netlify": "node ./scripts/check-client-syntax.mjs && node --no-experimental-require-module ./scripts/smoke-netlify-build.mjs",
     "test:agenda:browser": "node --experimental-strip-types ./scripts/test-agenda-browser.mjs",
@@ -17,18 +17,20 @@
     "preview": "astro preview",
     "import:legacy": "node ./scripts/extract-legacy-content.mjs",
     "seed": "node ./scripts/seed-supabase.mjs",
-    "postinstall": "node ./scripts/patch-preact-client.mjs && node ./scripts/patch-astro-chunk-imports.mjs",
     "test:notifications:browser": "node --experimental-strip-types ./scripts/test-notifications-browser.mjs",
-    "test:pwa:browser": "node --experimental-strip-types ./scripts/test-pwa-browser.mjs"
+    "test:pwa:browser": "node --experimental-strip-types ./scripts/test-pwa-browser.mjs",
+    "dev:app": "node ./scripts/start-app.mjs",
+    "doctor:app": "node ./scripts/check-app-setup.mjs",
+    "test:auth:browser": "node --experimental-strip-types ./scripts/test-auth-browser.mjs"
   },
   "dependencies": {
-    "@astrojs/netlify": "^7.0.6",
-    "@astrojs/preact": "^5.1.1",
+    "@astrojs/netlify": "^8.2.6",
+    "@astrojs/preact": "^6.0.5",
     "@js-temporal/polyfill": "^0.5.1",
-    "@supabase/supabase-js": "^2.103.0",
-    "astro": "^6.1.6",
-    "marked": "^18.0.0",
-    "preact": "^10.29.1",
+    "@supabase/supabase-js": "^2.117.1",
+    "astro": "^7.3.5",
+    "marked": "^18.0.14",
+    "preact": "^10.29.8",
     "sanitize-html": "^2.17.7",
     "web-push": "^3.6.7"
   },
@@ -41,5 +43,8 @@
     "cheerio": "^1.2.0",
     "playwright-core": "^1.63.0",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

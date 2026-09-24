@@ -5,6 +5,7 @@ import { handleAppInvite } from "@/server/app-invite";
 import { loadAppAccess } from "@/features/app/data";
 import { getAdminAuthActionPath } from "@/lib/admin-path";
 import { toPublicSiteUrl } from "@/lib/site-url";
+import { createTimedFetch } from "@/lib/auth/client";
 
 export const POST: APIRoute = async ({ request }) => {
   const service = createServiceClient();
@@ -12,7 +13,7 @@ export const POST: APIRoute = async ({ request }) => {
   const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
   if (!service || !url || !key) return Response.json({ message: "Configuration serveur Supabase manquante." }, { status: 503 });
   const actorClient = (token: string) => createClient(url, key, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
+    global: { headers: { Authorization: `Bearer ${token}` }, fetch: createTimedFetch(globalThis.fetch, 10000) },
     auth: { persistSession: false, autoRefreshToken: false }
   });
   return handleAppInvite(request, {

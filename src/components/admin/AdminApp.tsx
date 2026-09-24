@@ -7,6 +7,7 @@ import PostBodyEditor from "./PostBodyEditor";
 import AdminShell, { type Notice } from "./AdminShell";
 import { getAvailableTabs, getNavigationGroups, resolveTab, type TabId } from "./navigation";
 import { canAccessFinance, canManageFinanceGroup, hasPermission, parseSiteRole, type Profile, type SiteRole as Role } from "@/lib/auth/access";
+import { AUTH_ACTION_TIMEOUT_MS, createSafeAuthStorage, createTimedFetch, withTimeout } from "@/lib/auth/client";
 import AppHome from "@/features/app/AppHome";
 import MembersPage from "@/features/app/members/MembersPage";
 import { lazy, Suspense } from "preact/compat";
@@ -326,21 +327,11 @@ function resolveAdminAuthStorage() {
 }
 
 function createAdminAuthStorage() {
-  return {
-    getItem(key: string) {
-      return resolveAdminAuthStorage().getItem(key);
-    },
-    setItem(key: string, value: string) {
-      resolveAdminAuthStorage().setItem(key, value);
-    },
-    removeItem(key: string) {
-      resolveAdminAuthStorage().removeItem(key);
-    }
-  };
+  return createSafeAuthStorage(resolveAdminAuthStorage);
 }
 
 function clearStoredAdminAuth(storageKey: string) {
-  const storageAreas = [getBrowserStorage("local"), getBrowserStorage("session")];
+  const storageAreas = [getBrowserStorage("local"), getBrowserStorage("session"), fallbackAuthStorage];
 
   for (const storage of storageAreas) {
     if (!storage) {
@@ -355,25 +346,6 @@ function clearStoredAdminAuth(storageKey: string) {
       // Als een opslagmedium niet beschikbaar is, laten we de rest gewoon verder lopen.
     }
   }
-}
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
-  return new Promise<T>((resolve, reject) => {
-    const timeoutId = window.setTimeout(() => {
-      reject(new Error(message));
-    }, timeoutMs);
-
-    promise.then(
-      (value) => {
-        window.clearTimeout(timeoutId);
-        resolve(value);
-      },
-      (error) => {
-        window.clearTimeout(timeoutId);
-        reject(error);
-      }
-    );
-  });
 }
 
 function AdminLoadingScreen(props: {
@@ -1723,6 +1695,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const [authStalled, setAuthStalled] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const authStorage = useRef<ReturnType<typeof createAdminAuthStorage> | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [dataStalled, setDataStalled] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
@@ -1740,6 +1713,8 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const [deletedPostIds, setDeletedPostIds] = useState<string[]>([]);
   const [loginEmail, setLoginEmail] = useState(() => getRememberedLoginEmail());
   const [loginPassword, setLoginPassword] = useState("");
+  const [authBusy, setAuthBusy] = useState<"login" | "reset" | "password" | null>(null);
+  const authOperation = useRef(false);
   const [rememberLogin, setRememberLogin] = useState(() => getRememberLoginPreference());
   const [postsSaving, setPostsSaving] = useState(false);
   const [postUploading, setPostUploading] = useState(false);
@@ -1781,12 +1756,14 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
 
     try {
       setClientError(null);
+      authStorage.current = createAdminAuthStorage();
       setSupabase(
         createClient(publicSupabaseUrl, publicSupabaseAnonKey, {
+          global: { fetch: createTimedFetch() },
           auth: {
             persistSession: true,
             storageKey: supabaseStorageKey,
-            storage: createAdminAuthStorage()
+            storage: authStorage.current
           }
         })
       );
@@ -1811,10 +1788,13 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       if(currentUser.current !== userId)return;
       setAppAccess(access);
       setAppAccessError("");
-    } catch {
+    } catch (error) {
       if(currentUser.current !== userId)return;
       setAppAccess(emptyAppAccess);
-      setAppAccessError("APP-toegang kon niet geladen worden. Probeer opnieuw; laat bij een blijvend probleem de APP-migraties controleren.");
+      const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
+      setAppAccessError(["PGRST202", "PGRST205", "42883", "42P01"].includes(code)
+        ? "L’espace APP n’est pas encore configuré sur le serveur. Demandez à l’administrateur de terminer son installation."
+        : "Impossible de charger vos accès APP. Vérifiez votre connexion et actualisez la page. Si le problème persiste, contactez l’administrateur.");
     }
   }
 
@@ -1943,11 +1923,12 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       setPostFeedback(null);
 
       if (canAccessFinance(currentProfile)) {
-        const financeResult = await supabase
+        const financeResult = await withTimeout(supabase
           .from("finance_transactions")
           .select("*")
           .order("transaction_date", { ascending: false })
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false }), DASHBOARD_TIMEOUT_MS,
+          "Het laden van de financiën duurt te lang. Probeer opnieuw.");
 
         if(!current())return false;
 
@@ -2001,6 +1982,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     const authClient = supabase;
 
     let isActive = true;
+    let authRevision = 0;
     setAuthStalled(false);
     const timeoutId = window.setTimeout(() => {
       if (isActive) {
@@ -2014,19 +1996,22 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     }, AUTH_TIMEOUT_MS);
 
     async function initializeAuth() {
+      const initialRevision = authRevision;
       try {
-        const { data, error } = await authClient.auth.getSession();
+        const { data, error } = await withTimeout(authClient.auth.getSession(), AUTH_ACTION_TIMEOUT_MS,
+          "De sessiecontrole duurt te lang. Probeer opnieuw aan te melden.");
         if (error) {
           throw error;
         }
 
-        if (isActive) {
+        if (isActive && authRevision === initialRevision) {
+          currentUser.current = data.session?.user.id ?? null;
           setSession(data.session);
           setAuthMode(data.session ? detectAuthMode() : "login");
         }
       } catch (error) {
         console.error("Authenticatie kon niet worden geladen.", error);
-        if (isActive) {
+        if (isActive && authRevision === initialRevision) {
           setNotice({
             type: "error",
             message: "De login kon niet automatisch geladen worden. Probeer handmatig in te loggen."
@@ -2045,11 +2030,20 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     const {
       data: { subscription }
     } = authClient.auth.onAuthStateChange((event, currentSession) => {
+      if (!isActive) return;
+      authRevision++;
+      window.clearTimeout(timeoutId);
+      setAuthStalled(false);
       if (!currentSession && currentUser.current && !explicitLogout.current) {
         setNotice({type:"error",message:"Session expirée. Reconnectez-vous pour continuer."});
         void import("@/features/app/pwa/device").then(({setPushDevice})=>setPushDevice(true)).catch(()=>{});
       }
-      if(currentUser.current !== (currentSession?.user.id ?? null)) dashboardGeneration.current++;
+      if(currentUser.current !== (currentSession?.user.id ?? null)) {
+        dashboardGeneration.current++;
+        setProfile(null);
+        setAppAccess(emptyAppAccess);
+        setAppAccessError("");
+      }
       currentUser.current = currentSession?.user.id ?? null;
       setSession(currentSession);
       setAuthMode(
@@ -2711,7 +2705,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   }, [financeTransactions, financeSelectedTransactionId]);
 
   async function signIn() {
-    if (!supabase) {
+    if (!supabase || authOperation.current) {
       return;
     }
 
@@ -2719,39 +2713,49 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     explicitLogout.current = false;
     setNotice(null);
     syncRememberedLogin(rememberLogin, trimmedEmail);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: trimmedEmail,
-      password: loginPassword
-    });
-
-    if (error) {
-      setNotice({ type: "error", message: error.message });
-      return;
+    authOperation.current = true;
+    setAuthBusy("login");
+    try {
+      const { error } = await withTimeout(supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password: loginPassword
+      }), AUTH_ACTION_TIMEOUT_MS, "Aanmelden duurt te lang. Controleer je verbinding en probeer opnieuw.");
+      if (error) throw error;
+      setLoginEmail(trimmedEmail);
+      setLoginPassword("");
+    } catch (error) {
+      setNotice({ type: "error", message: error instanceof Error ? error.message : "Aanmelden is mislukt. Probeer opnieuw." });
+    } finally {
+      authOperation.current = false;
+      setAuthBusy(null);
     }
-
-    setLoginEmail(trimmedEmail);
-    setLoginPassword("");
   }
 
   async function sendResetLink() {
     const trimmedEmail = loginEmail.trim();
 
-    if (!supabase || !trimmedEmail) {
+    if (!supabase || authOperation.current) {
       return;
     }
-
+    if (!trimmedEmail) {
+      setNotice({ type: "error", message: "Vul je e-mailadres in om je wachtwoord te herstellen." });
+      return;
+    }
+    authOperation.current = true;
+    setAuthBusy("reset");
     setNotice(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-      redirectTo: toPublicSiteUrl(props.adminAuthActionPath)
-    });
-
-    setNotice({
-      type: error ? "error" : "success",
-      message: error
-        ? error.message
-        : "Resetmail verzonden. Check je inbox om een nieuw wachtwoord te kiezen."
-    });
+    try {
+      const { error } = await withTimeout(supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: toPublicSiteUrl(props.adminAuthActionPath)
+      }), AUTH_ACTION_TIMEOUT_MS, "De resetmail kon niet verstuurd worden. Controleer je verbinding en probeer opnieuw.");
+      if (error) throw error;
+      setNotice({ type: "success", message: "Resetmail verzonden. Check je inbox om een nieuw wachtwoord te kiezen." });
+    } catch (error) {
+      setNotice({ type: "error", message: error instanceof Error ? error.message : "De resetmail kon niet verstuurd worden." });
+    } finally {
+      authOperation.current = false;
+      setAuthBusy(null);
+    }
   }
 
   async function signOut() {
@@ -2770,6 +2774,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     }
     try { await withTimeout(supabase.auth.signOut({scope:"local"}),5000,"LOGOUT_TIMEOUT"); } catch { /* Local credentials are always removed below. */ }
     clearStoredAdminAuth(supabaseStorageKey);
+    for (const key of [supabaseStorageKey, `${supabaseStorageKey}-code-verifier`, `${supabaseStorageKey}-user`]) authStorage.current?.removeItem(key);
     clearAuthUrlState();
     setAuthMode("login");
     setNewPassword("");
@@ -2789,7 +2794,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   }
 
   async function updatePassword() {
-    if (!supabase || !session) {
+    if (!supabase || !session || authOperation.current) {
       return;
     }
 
@@ -2809,20 +2814,24 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) {
-      setNotice({ type: "error", message: error.message });
-      return;
+    authOperation.current = true;
+    setAuthBusy("password");
+    setNotice(null);
+    try {
+      const { error } = await withTimeout(supabase.auth.updateUser({ password: newPassword }),
+        AUTH_ACTION_TIMEOUT_MS, "Het wachtwoord kon niet opgeslagen worden. Controleer je verbinding en probeer opnieuw.");
+      if (error) throw error;
+      clearAuthUrlState();
+      setAuthMode("login");
+      setNewPassword("");
+      setConfirmPassword("");
+      setNotice({ type: "success", message: "Wachtwoord opgeslagen. Je kunt nu verder in het beheerpaneel." });
+    } catch (error) {
+      setNotice({ type: "error", message: error instanceof Error ? error.message : "Het wachtwoord kon niet opgeslagen worden." });
+    } finally {
+      authOperation.current = false;
+      setAuthBusy(null);
     }
-
-    clearAuthUrlState();
-    setAuthMode("login");
-    setNewPassword("");
-    setConfirmPassword("");
-    setNotice({
-      type: "success",
-      message: "Wachtwoord opgeslagen. Je kunt nu verder in het beheerpaneel."
-    });
   }
 
   async function saveSite() {
@@ -3651,11 +3660,11 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
               onChange={setRememberLogin}
             />
             <div class="admin-auth-actions">
-              <button class="btn" type="submit">
-                Inloggen
+              <button class="btn" type="submit" disabled={authBusy !== null}>
+                {authBusy === "login" ? "Aanmelden..." : "Inloggen"}
               </button>
-              <button class="btn btn-light" type="button" onClick={sendResetLink}>
-                Wachtwoord resetten
+              <button class="btn btn-light" type="button" onClick={sendResetLink} disabled={authBusy !== null}>
+                {authBusy === "reset" ? "Resetmail versturen..." : "Wachtwoord resetten"}
               </button>
             </div>
           </form>
@@ -3691,8 +3700,8 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
             autoComplete="new-password"
           />
           <div class="admin-auth-actions">
-            <button class="btn" type="button" onClick={updatePassword}>
-              Wachtwoord opslaan
+            <button class="btn" type="button" onClick={updatePassword} disabled={authBusy !== null}>
+              {authBusy === "password" ? "Wachtwoord opslaan..." : "Wachtwoord opslaan"}
             </button>
             <button class="btn btn-light" type="button" onClick={signOut}>
               Annuleren
@@ -3746,6 +3755,9 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       {visibleTab === "app-settings" && supabase && <div id="notification-settings"><Suspense fallback={<p role="status">Chargement des paramètres…</p>}><NotificationSettings client={supabase} userId={session.user.id} /></Suspense></div>}
       {visibleTab === "app-notifications" && <section class="admin-panel"><h1>Notifications</h1><p>Vos rappels sont affichés dans le centre de notifications. Utilisez la cloche pour le rouvrir.</p></section>}
       {appAccessError && <p role="alert">{appAccessError}</p>}
+      {!dataLoading && !appAccessError && !appAccess.permissions.includes("app.access") && <p role="status">
+        Votre compte a accès au SITE. Pour ouvrir l’espace APP sur cet ordinateur, demandez à un administrateur APP de vous attribuer un rôle APP.
+      </p>}
       {visibleTab === "app-home" && <><AppHome userName={adminUserLabel} access={appAccess} />{supabase && <>
         {appAccess.permissions.includes("events.read") && <Suspense fallback={<p role="status">Chargement de l’agenda…</p>}><AgendaSummary client={supabase} onOpen={() => setActiveTab("app-agenda")} /></Suspense>}
         <Suspense fallback={<p role="status">Chargement des tâches…</p>}><TaskSummary client={supabase} access={appAccess} userId={session.user.id} onOpen={() => setActiveTab("app-tasks")} /></Suspense>
