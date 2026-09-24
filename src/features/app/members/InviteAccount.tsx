@@ -1,12 +1,12 @@
 import { useState } from "preact/hooks";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { appError } from "../data";
+import { appError, roleDescriptions } from "../data";
 import { requireOnline } from "../pwa/network";
 import type { Member, AppRole, AppRoleKey } from "../types";
 
 export default function InviteAccount({ client, members, roles, onInvited }: { client: SupabaseClient; members: Member[]; roles: AppRole[]; onInvited: () => Promise<void> }) {
   const [memberId, setMemberId] = useState("");
-  const [selectedRoles, setSelectedRoles] = useState<AppRoleKey[]>(["MEMBER"]);
+  const [selectedRoles, setSelectedRoles] = useState<AppRoleKey[]>([]);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,14 +27,14 @@ export default function InviteAccount({ client, members, roles, onInvited }: { c
         throw new Error(result.message);
       }
       setMessage(result.message);
-      setEmail(""); setFullName(""); setMemberId(""); setSelectedRoles(["MEMBER"]);
+      setEmail(""); setFullName(""); setMemberId(""); setSelectedRoles([]);
       await onInvited();
     } catch (error) { setFailed(true); setMessage(appError(error)); }
     finally { setBusy(false); }
   }
   return <form class="admin-subpanel app-member-form" onSubmit={event => { event.preventDefault(); void invite(); }}>
     <h2>Account uitnodigen</h2>
-    <p>Kies een bestaand lid zonder account. De uitnodiging koppelt het nieuwe account en kent de geselecteerde APP-rollen toe. De SITE-toegang blijft ongewijzigd.</p>
+    <p>Kies een bestaand lid zonder account. Het nieuwe account krijgt automatisch basistoegang; extra APP-rollen zijn optioneel. De SITE-toegang blijft ongewijzigd.</p>
     <fieldset disabled={busy}><div class="app-member-fields">
       <label>Lid *<select required value={memberId} onChange={event => {
         const id = event.currentTarget.value; setMemberId(id);
@@ -43,8 +43,8 @@ export default function InviteAccount({ client, members, roles, onInvited }: { c
       }}><option value="">Kies een lid zonder account</option>{members.filter(member => !member.user_id).map(member => <option key={member.id} value={member.id}>{member.first_name} {member.last_name}{member.active ? "" : " (inactif)"}</option>)}</select></label>
       <label>Naam<input maxLength={120} value={fullName} onInput={event => setFullName(event.currentTarget.value)} /></label>
       <label>E-mail *<input type="email" required maxLength={254} value={email} onInput={event => setEmail(event.currentTarget.value)} /></label>
-    </div><div class="app-role-options">{roles.map(role => <label class="app-check" key={role.key}><input type="checkbox" checked={selectedRoles.includes(role.key)} onChange={event => setSelectedRoles(event.currentTarget.checked ? [...selectedRoles, role.key] : selectedRoles.filter(key => key !== role.key))} />{role.label}</label>)}</div>
-    <button class="btn" type="submit" disabled={!memberId || !selectedRoles.length}>{busy ? "Verzenden…" : "Uitnodigen en toegang geven"}</button></fieldset>
+    </div><div class="app-role-options">{roles.filter(role => role.key !== "MEMBER").map(role => <label class="app-role-option" key={role.key}><input type="checkbox" checked={selectedRoles.includes(role.key)} onChange={event => setSelectedRoles(event.currentTarget.checked ? [...selectedRoles, role.key] : selectedRoles.filter(key => key !== role.key))} /><span><strong>{role.label}</strong><small>{roleDescriptions[role.key]}</small></span></label>)}</div>
+    <button class="btn" type="submit" disabled={!memberId}>{busy ? "Verzenden…" : "Uitnodigen"}</button></fieldset>
     {message && <p role={failed ? "alert" : "status"}>{message}</p>}
   </form>;
 }

@@ -26,7 +26,7 @@ export async function handleAppInvite(request: Request, services: AppInviteServi
     const selection = body as { memberId?: unknown; roles?: unknown };
     const allowedRoles: AppRoleKey[] = ["APP_ADMIN", "RESPONSIBLE", "TREASURER", "MEMBER"];
     if (typeof selection.memberId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selection.memberId)
-      || !Array.isArray(selection.roles) || !selection.roles.length || selection.roles.length > 4
+      || !Array.isArray(selection.roles) || selection.roles.length > 4
       || !selection.roles.every(role => allowedRoles.includes(role))) {
       return Response.json({ message: "Kies een bestaand lid en minstens één geldige APP-rol." }, { status: 400 });
     }

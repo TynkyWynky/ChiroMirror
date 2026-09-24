@@ -5,6 +5,7 @@ import { PGlite } from "@electric-sql/pglite";
 
 const read = (path: string) => readFileSync(new URL(`../supabase/${path}`, import.meta.url), "utf8");
 const migration = read("migrations/20260922000200_app_members_rbac.sql");
+const defaultAccessMigration = read("migrations/20260924000200_app_default_access.sql");
 const marker = "-- BEGIN APP FOUNDATION (mirrors 20260922000200_app_members_rbac.sql)";
 
 test("PostgreSQL RLS: account/member separation, role matrix, mutations and SITE isolation", async () => {
@@ -33,6 +34,7 @@ test("PostgreSQL RLS: account/member separation, role matrix, mutations and SITE
     await db.exec("rollback");
     await db.exec(read("migrations/20260922000100_neutral_site_role.sql"));
     await db.exec(migration);
+    await db.exec(defaultAccessMigration);
     const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, "0")}`;
     for (let n = 1; n <= 7; n++) {
       await db.query("insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3)", [id(n), `test${n}@example.test`, { role: "admin" }]);
@@ -49,8 +51,9 @@ test("PostgreSQL RLS: account/member separation, role matrix, mutations and SITE
     }
     async function value(sql: string) { return (await db.query<{ v: unknown }>(sql)).rows[0].v; }
     for (const n of [1, 2]) await actor(n, async () => {
-      assert.equal(await value("select public.has_app_access() v"), false);
-      assert.equal(await value("select count(*)::int v from public.members"), 0);
+      assert.equal(await value("select public.has_app_access() v"), true);
+      assert.deepEqual((await value("select public.get_my_app_access() v") as { permissions: string[] }).permissions.sort(), ["app.access", "members.read"]);
+      assert.equal(await value("select count(*)::int v from public.members"), 1);
       assert.equal(await value("select count(*)::int v from public.app_user_roles"), 0);
       await assert.rejects(db.exec("insert into public.members(first_name,last_name) values ('No','Access')"));
       await assert.rejects(db.exec("select * from public.list_app_accounts()"));
@@ -91,13 +94,13 @@ test("PostgreSQL RLS: account/member separation, role matrix, mutations and SITE
     await actor(7, async () => {
       const access = await value("select public.get_my_app_access() v") as { permissions: string[]; roles: unknown[]; member: { first_name: string } };
       assert.deepEqual(access.permissions.sort(), ["app.access", "members.read"]);
-      assert.equal(access.roles.length, 2);
+      assert.equal(access.roles.length, 3);
       assert.equal(access.member.first_name, "Changed");
     });
     await actor(6, async () => { await db.exec(`select public.set_app_user_roles('${id(7)}', array['TREASURER'])`); });
     await actor(7, async () => { assert.equal(await value("select count(*)::int v from public.app_user_roles"), 1); });
     await actor(6, async () => { await db.exec(`select public.set_app_user_roles('${id(7)}', array[]::text[])`); });
-    await actor(7, async () => { assert.equal(await value("select public.has_app_access() v"), false); });
+    await actor(7, async () => { assert.equal(await value("select public.has_app_access() v"), true); });
     await actor(6, async () => {
       const target = await value("select id v from public.members where user_id is null limit 1") as string;
       // A unique-link failure must roll back the role grant in the same RPC.

@@ -3659,7 +3659,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     <AdminShell groups={adminSidebarGroups} activeTab={activeAdminTab} badges={adminTabBadges}
       userName={adminUserLabel} role={profile.role} notice={notice} loading={dataLoading}
       refreshDisabled={dataLoading || postsBusy} onNavigate={setActiveTab}
-      applicationControl={<Suspense fallback={null}><PwaExperience settings={visibleTab === "app-settings"} home={visibleTab === "app-home"} onNotifications={()=>document.getElementById("notification-settings")?.scrollIntoView({behavior:"smooth"})} /></Suspense>}
+      applicationControl={<Suspense fallback={null}><PwaExperience settings={visibleTab === "app-settings"} home={visibleTab === "app-home"} accountName={adminUserLabel} email={session?.user.email ?? ""} access={appAccess} onNotifications={()=>document.getElementById("notification-settings")?.scrollIntoView({behavior:"smooth"})} /></Suspense>}
       notificationControl={supabase && appAccess.permissions.includes("app.access") && <Suspense fallback={null}><NotificationBell client={supabase} userId={session.user.id} centerOpen={visibleTab === "app-notifications"} onOpenCenter={()=>setActiveTab("app-notifications")} onCloseCenter={()=>setActiveTab("app-home")} notificationId={appRoute?.notification} onTarget={target => {
         if (target.type === "EVENT" && !appAccess.permissions.includes("events.read")) { setNotice({ type: "error", message: "Deze activiteit is niet meer toegankelijk." }); return; }
         openNotificationTarget(target);

@@ -1,4 +1,14 @@
 import { appScope } from "./environment.ts";
+export function friendlyDeviceName() {
+  if (typeof navigator === "undefined") return "Dit apparaat";
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/i.test(ua)) return "iPhone/iPad";
+  if (/Android/i.test(ua)) return "Android";
+  if (/Firefox/i.test(ua)) return "Firefox op Windows";
+  if (/Macintosh|Mac OS X/i.test(ua)) return "Safari op Mac";
+  if (/Windows/i.test(ua)) return "Windows-pc";
+  return "Dit apparaat";
+}
 export async function endpointKey(endpoint: string) {
   const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(endpoint));
   return Array.from(new Uint8Array(bytes),byte=>byte.toString(16).padStart(2,"0")).join("");

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { buildAppInstallSql, appMigrationFiles } from "../scripts/prepare-app-install.mjs";
 import { legacyDatabase, fixtureId, sqlFile } from "./helpers/database.ts";
 
-test("APP install bundle preserves the legacy prerequisite and seven APP migrations in order", () => {
+test("APP install bundle preserves the legacy prerequisite and eight APP migrations in order", () => {
   const bundle = sqlFile("install-app.sql").replaceAll("\r\n", "\n");
   assert.equal(bundle, buildAppInstallSql(), "Regenerate the bundle when migrations change");
   assert.deepEqual([...bundle.matchAll(/^-- BEGIN MIGRATION (.+)$/gm)].map(match => match[1]), appMigrationFiles);
@@ -144,8 +144,13 @@ test("APP install is atomic, refuses partial/repeated installs and bootstraps on
     assert.equal(await scalar("select column_default v from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='role'"), "'editor'::text");
 
     await db.exec(bundle);
-    assert.equal(await scalar("select count(*)::int v from public.app_user_roles"), 0, "No automatic APP grants");
+    assert.equal(await scalar("select count(*)::int v from public.app_user_roles"), 0, "No automatic APP role rows");
     assert.equal(await scalar("select role v from public.profiles where email='admin@example.test'"), "admin");
+    await db.exec(`set role authenticated; set request.jwt.claim.sub='${fixtureId(2)}'`);
+    assert.equal(await scalar("select public.has_app_access() v"), true, "Every authenticated account gets baseline APP access");
+    assert.equal(await scalar("select public.has_app_permission('members.manage') v"), false, "Baseline access does not grant member management");
+    assert.equal(await scalar("select public.has_app_permission('finance.treasury.manage') v"), false, "Baseline access does not grant treasury management");
+    await db.exec("reset role; reset request.jwt.claim.sub");
     assert.equal(await scalar("select body v from public.posts where title='Existing SITE content'"), "Keep this content");
     const verification = await db.exec(sqlFile("verify-app.sql"));
     const tableRows = verification[0].rows as { installed: boolean; rls_enabled: boolean }[];

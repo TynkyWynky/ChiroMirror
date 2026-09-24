@@ -29,7 +29,7 @@ async function fixture() {
   return {db,value,actor,worker,server,prefs,subscribe,event,task,now,details};
 }
 test("Notifications migration mirrors bootstrap",()=>assert.equal(sqlFile("schema.sql").split(notificationsMarker)[1].split(dutchMarker)[0].trim(),sqlFile("migrations/20260923000400_app_notifications.sql").trim()));
-test("Dutch migration mirrors bootstrap",()=>assert.equal(sqlFile("schema.sql").split(dutchMarker)[1].trim(),sqlFile("migrations/20260924000100_app_dutch.sql").trim()));
+test("Dutch migration mirrors bootstrap",()=>assert.equal(sqlFile("schema.sql").split(dutchMarker)[1].split("-- BEGIN APP DEFAULT ACCESS")[0].trim(),sqlFile("migrations/20260924000100_app_dutch.sql").trim()));
 
 test("Notifications PostgreSQL owner privacy, protected RPCs, self-only subscriptions and atomic reminder saves",async()=>{
   const f=await fixture(); const {db,actor,value,prefs,subscribe}=f;

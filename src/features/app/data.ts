@@ -3,7 +3,13 @@ import { requireOnline, networkError } from "./pwa/network.ts";
 import { hasAppPermission } from "./access.ts";
 import type { AppAccess, AppAccount, AppPermission, AppRole, AppRoleKey, AppUserRole, Member, MemberInput } from "./types.ts";
 
-const roleLabels: Record<AppRoleKey, string> = { APP_ADMIN: "APP-beheerder", RESPONSIBLE: "Verantwoordelijke", TREASURER: "Penningmeester", MEMBER: "Lid" };
+export const roleLabels: Record<AppRoleKey, string> = { APP_ADMIN: "APP-beheerder", RESPONSIBLE: "Verantwoordelijke", TREASURER: "Penningmeester", MEMBER: "Lid" };
+export const roleDescriptions: Record<AppRoleKey, string> = {
+  MEMBER: "Normale toegang tot de Chiro-app.",
+  RESPONSIBLE: "Kan activiteiten organiseren en bepaalde taken beheren.",
+  TREASURER: "Kan financiële verrichtingen voor de Chiro beheren.",
+  APP_ADMIN: "Kan leden, APP-rollen en app-instellingen beheren."
+};
 const localizedRole = (role: AppRole): AppRole => ({ ...role, label: roleLabels[role.key] ?? role.label });
 
 export async function loadAppAccess(client: SupabaseClient): Promise<AppAccess> {

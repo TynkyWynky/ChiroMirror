@@ -92,3 +92,5 @@ Préférer une correction incrémentale. Un retour applicatif doit continuer à 
 ## État de livraison
 
 Migration préparée, **non exécutée sur une base distante**. Les tests TypeScript ne prouvent pas son application ni les policies réellement actives. Les inscriptions publiques Supabase doivent rester désactivées tant qu'une politique d'admission APP n'est pas définie ; aucun écran d'inscription n'a été ajouté.
+
+La Phase 6 ajoute 20260924000200_app_default_access.sql. Tout compte Auth authentifie peut ouvrir l APP et recoit dynamiquement les permissions du role MEMBER. Aucun enregistrement MEMBER n est cree automatiquement dans app_user_roles : les roles explicites restent reserves aux droits supplementaires. Cette strategie couvre les comptes existants et les nouveaux comptes sans ecraser RESPONSIBLE, TREASURER ou APP_ADMIN et sans creer de membre.

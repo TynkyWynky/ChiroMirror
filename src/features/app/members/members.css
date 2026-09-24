@@ -9,6 +9,15 @@
 .app-member-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
 .app-member-row h2 { margin: 0; font-size: 1.1rem; }
 .app-member-row p { margin: .4rem 0; overflow-wrap: anywhere; }
+.app-role-option { display: flex; align-items: flex-start; gap: .6rem; min-width: min(100%, 260px); padding: .7rem; border: 1px solid #dbe3ee; border-radius: .65rem; background: #f8fafc; }
+.app-role-option span { display: grid; gap: .2rem; }
+.app-role-option small { color: #526176; }
+.app-member-form h3 { margin: .3rem 0 0; font-size: 1rem; }
 .app-badge { display: inline-block; background: #edf2f7; color: #334155; border-radius: 1rem; padding: .2rem .6rem; font-size: .85rem; }
 .app-error { color: #9f1239; background: #fff1f2; padding: .8rem; border-radius: .5rem; }
 .app-members :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+@media (max-width: 640px) {
+  .app-member-row { align-items: stretch; }
+  .app-member-row .app-actions { width: 100%; }
+  .app-member-row .app-actions .btn { flex: 1 1 10rem; }
+}

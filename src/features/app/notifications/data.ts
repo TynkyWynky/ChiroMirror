@@ -31,6 +31,11 @@ export async function loadNotificationSettings(client: SupabaseClient) {
 }
 export function notificationError(cause: unknown) {
   const network = networkError(cause); if(network)return network;
+  if (cause instanceof Error) {
+    if (cause.message === "PUSH_UNAVAILABLE") return "Notificaties zijn niet beschikbaar op dit apparaat.";
+    if (cause.message === "PUSH_DENIED") return "Notificaties zijn geblokkeerd. Wijzig dit in de browser- of systeeminstellingen.";
+    if (cause.message === "UNSUBSCRIBE_FAILED") return "Dit apparaat kon niet worden uitgeschakeld. Probeer opnieuw.";
+  }
   if (typeof cause === "object" && cause !== null && "code" in cause) {
     if (cause.code === "42501") return "Actie niet toegestaan. Schakel op een gedeeld apparaat het abonnement uit en activeer het daarna opnieuw met je eigen account.";
     if (cause.code === "22023") return "Controleer de instellingen. Wacht één minuut tussen twee testmeldingen.";

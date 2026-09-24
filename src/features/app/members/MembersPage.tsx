@@ -22,6 +22,11 @@ export default function MembersPage({ client, access, onAccessChanged }: Props) 
   const manage = hasAppPermission(access.permissions, "members.manage");
   const readRoles = hasAppPermission(access.permissions, "roles.read");
   const manageRoles = hasAppPermission(access.permissions, "roles.manage");
+  const maskedEmail = (email: string) => {
+    const [local, domain] = email.split("@", 2);
+    if (!local || !domain) return "verborgen";
+    return `${local.slice(0, 2)}***@${domain}`;
+  };
 
   async function reload() {
     const id = ++requestId.current;
@@ -69,7 +74,8 @@ export default function MembersPage({ client, access, onAccessChanged }: Props) 
       <ul class="app-member-list">{visible.map(member => <li key={member.id} class="admin-subpanel app-member-row">
         <div><h2>{member.first_name} {member.last_name}</h2>
           <p><span class="app-badge">{member.active ? "Actief" : "Inactief"}</span> <span class="app-badge">{member.user_id ? "Gekoppeld account" : "Geen account"}</span></p>
-          {readRoles && member.user_id && <p>APP-rollen: {data.assignments.filter(row => row.user_id === member.user_id).map(row => data.roles.find(role => role.key === row.role_key)?.label ?? row.role_key).join(", ") || "Geen"}</p>}
+          {member.user_id && <p>Account: {(() => { const account = data.accounts.find(item => item.user_id === member.user_id); return account ? maskedEmail(account.email) : "gekoppeld"; })()}</p>}
+          {readRoles && member.user_id && <p>APP-rollen: Lid{data.assignments.filter(row => row.user_id === member.user_id && row.role_key !== "MEMBER").map(row => data.roles.find(role => role.key === row.role_key)?.label ?? row.role_key).length ? `, ${data.assignments.filter(row => row.user_id === member.user_id && row.role_key !== "MEMBER").map(row => data.roles.find(role => role.key === row.role_key)?.label ?? row.role_key).join(", ")}` : ""}</p>}
         </div>
         {manage && <div class="app-actions"><button class="btn btn-light" type="button" disabled={busy} onClick={() => setEditing(member)}>Bewerken</button>
           <button class="btn btn-light" type="button" disabled={busy} onClick={() => {

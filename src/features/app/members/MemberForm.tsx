@@ -18,6 +18,7 @@ export default function MemberForm({ member, accounts, busy, onSave, onCancel }:
   return <form class="admin-subpanel app-member-form" onSubmit={event => { event.preventDefault(); void onSave(draft); }}>
     <h2>{member ? "Lid bewerken" : "Nieuw lid"}</h2>
     <fieldset disabled={busy}>
+      <h3>Identiteit</h3>
       <div class="app-member-fields">
         <label>Voornaam *<input required maxLength={100} value={draft.first_name} onInput={event => setDraft({ ...draft, first_name: event.currentTarget.value })} /></label>
         <label>Achternaam *<input required maxLength={100} value={draft.last_name} onInput={event => setDraft({ ...draft, last_name: event.currentTarget.value })} /></label>
@@ -26,8 +27,11 @@ export default function MemberForm({ member, accounts, busy, onSave, onCancel }:
           {accounts.filter(account => !account.member_id || account.member_id === member?.id).map(account => <option key={account.user_id} value={account.user_id}>{account.full_name || account.email} — {account.email}</option>)}
         </select></label>
       </div>
+      <h3>Account</h3>
+      <p class="muted">Een account koppelen verbindt de identiteit met dit lid. De APP-basistoegang komt van het account en vereist geen handmatige rol.</p>
+      <h3>Status</h3>
       <label class="app-check"><input type="checkbox" checked={draft.active} onChange={event => setDraft({ ...draft, active: event.currentTarget.checked })} /> Actief lid</label>
-      <p class="muted">Een account koppelen kent geen APP-rollen toe. Archiveren trekt de toegang niet in.</p>
+      <p class="muted">Archiveren verwijdert geen account of extra APP-rollen.</p>
       <div class="app-actions"><button class="btn" type="submit">{busy ? "Opslaan…" : "Opslaan"}</button><button class="btn btn-light" type="button" onClick={onCancel}>Annuleren</button></div>
     </fieldset>
   </form>;
