@@ -94,3 +94,7 @@ Préférer une correction incrémentale. Un retour applicatif doit continuer à 
 Migration préparée, **non exécutée sur une base distante**. Les tests TypeScript ne prouvent pas son application ni les policies réellement actives. Les inscriptions publiques Supabase doivent rester désactivées tant qu'une politique d'admission APP n'est pas définie ; aucun écran d'inscription n'a été ajouté.
 
 La Phase 6 ajoute 20260924000200_app_default_access.sql. Tout compte Auth authentifie peut ouvrir l APP et recoit dynamiquement les permissions du role MEMBER. Aucun enregistrement MEMBER n est cree automatiquement dans app_user_roles : les roles explicites restent reserves aux droits supplementaires. Cette strategie couvre les comptes existants et les nouveaux comptes sans ecraser RESPONSIBLE, TREASURER ou APP_ADMIN et sans creer de membre.
+
+## Admission des comptes
+
+Le repository ne contient aucun `auth.signUp`, aucun endpoint public de création de compte et aucun écran d'inscription APP. Les comptes APP passent par l'invitation authentifiée d'un beheerder/APP-beheerder. Le réglage Supabase Auth qui autorise ou refuse l'inscription directe est une configuration de projet et ne peut pas être vérifié depuis ce dépôt : dans le Dashboard, ouvrez **Authentication → Providers → Email** et vérifiez que **Allow new users / Nieuwe gebruikers toestaan** est désactivé. Gardez également les autres providers d'inscription désactivés si l'équipe ne les utilise pas.

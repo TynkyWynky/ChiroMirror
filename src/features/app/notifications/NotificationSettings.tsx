@@ -1,18 +1,19 @@
 import { useEffect, useState } from "preact/hooks";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadNotificationSettings, notificationError, notificationRpc } from "./data";
-import { disableCurrentPush, enablePush, pushSupport, reconcilePush } from "./push";
+import { disableCurrentPush, enablePush, inspectPushCapabilities, pushState, reconcilePush } from "./push";
+import type { PushCapabilities } from "./push";
 import { friendlyDeviceName } from "../pwa/device";
 import { defaultPreferences, type CategoryPreference, type NotificationPreferences, type PushDevice } from "./types";
 import "./notifications.css";
 export default function NotificationSettings({ client, userId, publicKey = import.meta.env.PUBLIC_VAPID_PUBLIC_KEY ?? "" }: { client: SupabaseClient; userId: string; publicKey?: string }) {
   const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences), [categories, setCategories] = useState<CategoryPreference[]>([]), [choices, setChoices] = useState<{ key: string; label: string }[]>([]), [devices, setDevices] = useState<PushDevice[]>([]);
-  const [currentDevice, setCurrentDevice] = useState<string | null>(null), [support, setSupport] = useState<ReturnType<typeof pushSupport> | null>(null);
+  const [currentDevice, setCurrentDevice] = useState<string | null>(null), [support, setSupport] = useState<PushCapabilities | null>(null);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(""), [feedback, setFeedback] = useState(""), [label, setLabel] = useState(() => friendlyDeviceName());
   async function load() {
     setLoading(true); setError("");
     try {
-      setSupport(pushSupport());
+      setSupport(await inspectPushCapabilities(publicKey));
       const result = await loadNotificationSettings(client);
       setPreferences(result.preferences); setCategories(result.categories); setChoices(result.choices); setDevices(result.devices);
       setCurrentDevice(await reconcilePush(client, userId));
@@ -22,10 +23,12 @@ export default function NotificationSettings({ client, userId, publicKey = impor
   async function action(run: () => Promise<void>, success: string) {
     if (busy) return; setBusy(true); setError(""); setFeedback("");
     try { await run(); setFeedback(success); await load(); }
-    catch (cause) { setSupport(pushSupport()); setError(notificationError(cause)); }
+    catch (cause) { setSupport(await inspectPushCapabilities(publicKey)); setError(notificationError(cause)); }
     finally { setBusy(false); }
   }
   const savePreferences = (next = preferences) => notificationRpc(client, "save_notification_preferences", { details: next, categories });
+  const state = pushState(support, Boolean(currentDevice));
+  const deviceStatus = state === "CHECKING" ? "Notificaties worden gecontroleerd…" : state === "SUBSCRIBED" ? "Notificaties zijn ingeschakeld op dit apparaat." : state === "DEVICE_UNSUPPORTED" ? "Pushmeldingen worden niet ondersteund op dit apparaat." : state === "PUSH_NOT_CONFIGURED" ? "Pushmeldingen zijn tijdelijk niet geconfigureerd." : state === "PERMISSION_DENIED" ? "Notificaties zijn geblokkeerd. Je kunt ze opnieuw toestaan via de instellingen van je browser of toestel." : state === "SERVICE_WORKER_ERROR" ? "De notificatieservice kon niet worden gestart. Vernieuw de app en probeer opnieuw." : "Notificaties zijn nog niet ingeschakeld op dit apparaat.";
   return <section class="admin-panel notification-settings" lang="nl"><h2>Notificaties</h2><h3>Meldingen en herinneringen</h3>
     {loading && <p role="status">Instellingen laden…</p>}{error && <p role="alert">{error} <button class="btn btn-light" type="button" disabled={busy} onClick={() => void load()}>Opnieuw proberen</button></p>}{feedback && <p role="status">{feedback}</p>}
     <form class="admin-subpanel" onSubmit={e => { e.preventDefault(); void action(async () => { await savePreferences(); }, "Voorkeuren opgeslagen."); }}><fieldset disabled={busy || loading}>
@@ -36,13 +39,11 @@ export default function NotificationSettings({ client, userId, publicKey = impor
       <button class="btn" type="submit">Voorkeuren opslaan</button>
     </fieldset></form>
     <section class="admin-subpanel"><h2>Notificaties</h2>
-      <p>Notificaties op dit apparaat: {!publicKey || !support?.supported ? "Niet beschikbaar" : currentDevice && support.permission === "granted" ? "Ingeschakeld" : support.permission === "denied" ? "Geblokkeerd" : "Uitgeschakeld"}</p>
-      {!publicKey && <p>Notificaties zijn momenteel niet beschikbaar op dit apparaat.</p>}
+      <p>Notificaties op dit apparaat: {deviceStatus}</p>
+      {state === "PUSH_NOT_CONFIGURED" && <p>Het interne meldingencentrum blijft toegankelijk.</p>}
       {support?.ios && !support.installed && <p>Voeg op je iPhone/iPad deze app toe aan het beginscherm via het deelmenu. Open de app via het pictogram en kom hier terug om meldingen in te schakelen.</p>}
-      {support && !support.supported && <p>Pushmeldingen zijn niet beschikbaar op dit apparaat. Het interne meldingencentrum blijft toegankelijk.</p>}
-      {support?.permission === "denied" && <p>Meldingen zijn geweigerd. Je kunt dit wijzigen in de browser- of systeeminstellingen. Er wordt niet automatisch opnieuw om toestemming gevraagd.</p>}
       <label>Naam van dit apparaat<input maxLength={80} value={label} onInput={e => setLabel(e.currentTarget.value)} /></label>
-      <div class="notification-actions"><button class="btn" type="button" disabled={busy || loading || !publicKey || !support?.supported || support.permission === "denied" || support.ios && !support.installed} onClick={() => {
+      <div class="notification-actions"><button class="btn" type="button" disabled={busy || loading || state !== "READY_TO_SUBSCRIBE" && state !== "PERMISSION_DEFAULT" || support?.ios && !support.installed} onClick={() => {
         // enablePush is called synchronously from this user gesture before any unrelated await.
         const enabled = enablePush(client, userId, publicKey, label);
         void action(async () => { await enabled; await savePreferences({ ...preferences, push_enabled: true }); }, "Apparaat geregistreerd. Pushmeldingen zijn ingeschakeld.");

@@ -24,7 +24,7 @@ export default function MemberForm({ member, accounts, busy, onSave, onCancel }:
         <label>Achternaam *<input required maxLength={100} value={draft.last_name} onInput={event => setDraft({ ...draft, last_name: event.currentTarget.value })} /></label>
         <label>Gekoppeld account (optioneel)<select value={draft.user_id ?? ""} onChange={event => setDraft({ ...draft, user_id: event.currentTarget.value || null })}>
           <option value="">Geen account</option>
-          {accounts.filter(account => !account.member_id || account.member_id === member?.id).map(account => <option key={account.user_id} value={account.user_id}>{account.full_name || account.email} — {account.email}</option>)}
+          {accounts.filter(account => !account.member_id || account.member_id === member?.id).map(account => <option key={account.user_id} value={account.user_id}>{account.full_name || account.email_masked || "Account"} — {account.email_masked || "verborgen"}</option>)}
         </select></label>
       </div>
       <h3>Account</h3>

@@ -1732,8 +1732,20 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
         DASHBOARD_TIMEOUT_MS, "Je profiel kon niet geladen worden."
       );
       if(!current())return false;
-      if (actorError || !actorRow) throw new Error("Je profiel kon niet geladen worden.");
-      const actor = mapProfile(actorRow);
+      if (actorError) throw actorError;
+      // SITE identity is optional for APP access. A missing profile is treated
+      // as a neutral in-memory SITE profile; it grants no SITE permission and
+      // never creates a database row or a linked member automatically.
+      const actor = actorRow
+        ? mapProfile(actorRow)
+        : {
+            user_id: session.user.id,
+            email: session.user.email ?? "",
+            full_name: String(session.user.user_metadata?.full_name ?? ""),
+            role: "none" as const,
+            managedGroupSlugs: [],
+            created_at: session.user.created_at ?? ""
+          };
       setProfile(actor);
       await refreshAppAccess();
       if(!current())return false;
@@ -1791,15 +1803,22 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       );
       const currentProfile = profileRows.find((item) => item.user_id === session.user.id) ?? null;
 
-      if (!currentProfile) {
-        throw new Error("Je profiel kon niet geladen worden.");
-      }
+      // A profile can be missing unexpectedly. Keep the account usable in APP
+      // while preserving the neutral SITE boundary.
+      const safeCurrentProfile = currentProfile ?? {
+        user_id: session.user.id,
+        email: session.user.email ?? "",
+        full_name: String(session.user.user_metadata?.full_name ?? ""),
+        role: "none" as const,
+        managedGroupSlugs: [],
+        created_at: session.user.created_at ?? ""
+      };
 
       const pageMap = Object.fromEntries(
         (pageContentResult.data ?? []).map((row) => [String(row.slug), row.data ?? {}])
       );
 
-      setProfile(currentProfile);
+      setProfile(safeCurrentProfile);
       setProfiles(profileRows);
       setSiteSettings(mapSiteSettings(siteSettingsResult.data as Record<string, unknown> | null));
       setPages({
@@ -1835,7 +1854,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       setDeletedPostIds([]);
       setPostFeedback(null);
 
-      if (canAccessFinance(currentProfile)) {
+      if (canAccessFinance(safeCurrentProfile)) {
         const financeResult = await withTimeout(supabase
           .from("finance_transactions")
           .select("*")

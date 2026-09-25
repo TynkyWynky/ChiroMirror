@@ -2041,3 +2041,93 @@ where key = 'TREASURER';
 
 commit;
 -- END APP ROLE LABELS
+
+
+-- BEGIN APP ROLE LABELS LEIDING (mirrors 20260925000200_app_role_labels_leiding.sql)
+-- Keep all user-facing APP role labels in Dutch.
+begin;
+
+update public.app_roles set label = 'Leiding' where key = 'MEMBER';
+update public.app_roles set label = 'Financiën' where key = 'TREASURER';
+
+commit;
+-- END APP ROLE LABELS LEIDING
+
+
+-- BEGIN APP BASELINE PERMISSION GUARD (mirrors 20260925000300_app_baseline_permission_guard.sql)
+-- Baseline APP access must remain read-only and non-administrative.
+begin;
+
+create or replace function public.guard_app_baseline_permission()
+returns trigger language plpgsql security definer set search_path = public
+as $$
+begin
+  if new.role_key = 'MEMBER' and new.permission_key in (
+    'members.manage', 'roles.manage', 'finance.treasury.manage',
+    'tasks.manage_all', 'events.create', 'events.update', 'events.delete'
+  ) then
+    raise exception 'Forbidden permission for baseline APP role: %', new.permission_key using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists app_baseline_permission_guard on public.app_role_permissions;
+create constraint trigger app_baseline_permission_guard
+after insert or update on public.app_role_permissions
+deferrable initially immediate
+for each row execute function public.guard_app_baseline_permission();
+
+do $$
+begin
+  if exists (
+    select 1 from public.app_role_permissions
+    where role_key = 'MEMBER' and permission_key in (
+      'members.manage', 'roles.manage', 'finance.treasury.manage',
+      'tasks.manage_all', 'events.create', 'events.update', 'events.delete'
+    )
+  ) then
+    raise exception 'Baseline APP role already has a forbidden permission';
+  end if;
+end;
+$$;
+
+commit;
+-- END APP BASELINE PERMISSION GUARD
+
+
+-- BEGIN APP MASK ACCOUNT EMAILS (mirrors 20260925000400_app_mask_account_emails.sql)
+-- Account selectors only need a stable identity and a masked email.
+begin;
+
+drop function public.list_app_accounts();
+
+create function public.list_app_accounts()
+returns table(user_id uuid, email_masked text, full_name text, member_id uuid)
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if not public.has_app_access() or not (
+    public.has_app_permission('members.manage') or public.has_app_permission('roles.manage')
+  ) then raise exception 'APP account directory forbidden' using errcode = '42501'; end if;
+  return query
+    select u.id,
+      case
+        when position('@' in coalesce(u.email, '')) > 1 then
+          left(split_part(u.email, '@', 1), 2) || '***@' || split_part(u.email, '@', 2)
+        else 'verborgen'
+      end,
+      p.full_name,
+      m.id
+    from auth.users u
+    left join public.profiles p on p.user_id = u.id
+    left join public.members m on m.user_id = u.id
+    order by coalesce(p.full_name, ''), u.id;
+end;
+$$;
+
+revoke all on function public.list_app_accounts() from public, anon;
+grant execute on function public.list_app_accounts() to authenticated;
+
+commit;
+-- END APP MASK ACCOUNT EMAILS

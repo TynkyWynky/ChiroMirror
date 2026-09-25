@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { buildAppInstallSql, appMigrationFiles } from "../scripts/prepare-app-install.mjs";
 import { legacyDatabase, fixtureId, sqlFile } from "./helpers/database.ts";
 
-test("APP install bundle preserves the legacy prerequisite and nine APP migrations in order", () => {
+test("APP install bundle preserves the legacy prerequisite and APP migrations in order", () => {
   const bundle = sqlFile("install-app.sql").replaceAll("\r\n", "\n");
   assert.equal(bundle, buildAppInstallSql(), "Regenerate the bundle when migrations change");
   assert.deepEqual([...bundle.matchAll(/^-- BEGIN MIGRATION (.+)$/gm)].map(match => match[1]), appMigrationFiles);

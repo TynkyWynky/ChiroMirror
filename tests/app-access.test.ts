@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { getAvailableTabs } from "../src/components/admin/navigation.ts";
 import { hasPermission, type Profile } from "../src/lib/auth/access.ts";
 import { hasAppPermission, emptyAppAccess } from "../src/features/app/access.ts";
-import { validateMember } from "../src/features/app/data.ts";
+import { roleDescriptions, roleLabels, validateMember } from "../src/features/app/data.ts";
 import { handleAppInvite, type AppInviteServices } from "../src/server/app-invite.ts";
 import type { AppPermission } from "../src/features/app/types.ts";
 
@@ -23,6 +23,12 @@ test("member validation trims names and rejects invalid account/status/name", ()
   for (const bad of [{ first_name: " " }, { last_name: "x".repeat(101) }, { user_id: "wrong" }, { active: null }]) {
     assert.throws(() => validateMember({ ...input, ...bad } as typeof input));
   }
+});
+
+test("APP baseline role is presented as Leiding with the safe description", () => {
+  assert.equal(roleLabels.MEMBER, "Leiding");
+  assert.equal(roleDescriptions.MEMBER, "Standaardtoegang voor een lid van de leiding.");
+  assert.equal(roleLabels.TREASURER, "Financiën");
 });
 
 test("APP invitations authenticate and authorize before any privileged side effect", async () => {

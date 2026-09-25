@@ -9,6 +9,11 @@
 .app-member-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
 .app-member-row h2 { margin: 0; font-size: 1.1rem; }
 .app-member-row p { margin: .4rem 0; overflow-wrap: anywhere; }
+.app-member-actions { position: relative; }
+.app-member-actions summary { cursor: pointer; list-style: none; }
+.app-member-actions summary::-webkit-details-marker { display: none; }
+.app-member-actions[open] .app-actions { position: absolute; z-index: 2; right: 0; top: calc(100% + .35rem); min-width: 12rem; padding: .6rem; border: 1px solid #dbe3ee; border-radius: .65rem; background: #fff; box-shadow: 0 .5rem 1.5rem rgb(15 23 42 / 15%); }
+.app-member-actions[open] .app-actions .btn { width: 100%; text-align: left; }
 .app-role-option { display: flex; align-items: flex-start; gap: .6rem; min-width: min(100%, 260px); padding: .7rem; border: 1px solid #dbe3ee; border-radius: .65rem; background: #f8fafc; }
 .app-role-option span { display: grid; gap: .2rem; }
 .app-role-option small { color: #526176; }
@@ -18,6 +23,5 @@
 .app-members :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
 @media (max-width: 640px) {
   .app-member-row { align-items: stretch; }
-  .app-member-row .app-actions { width: 100%; }
-  .app-member-row .app-actions .btn { flex: 1 1 10rem; }
+  .app-member-actions { margin-left: auto; }
 }

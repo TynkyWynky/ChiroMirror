@@ -6,6 +6,8 @@ import { PGlite } from "@electric-sql/pglite";
 const read = (path: string) => readFileSync(new URL(`../supabase/${path}`, import.meta.url), "utf8");
 const migration = read("migrations/20260922000200_app_members_rbac.sql");
 const defaultAccessMigration = read("migrations/20260924000200_app_default_access.sql");
+const baselineGuardMigration = read("migrations/20260925000300_app_baseline_permission_guard.sql");
+const maskAccountEmailsMigration = read("migrations/20260925000400_app_mask_account_emails.sql");
 const marker = "-- BEGIN APP FOUNDATION (mirrors 20260922000200_app_members_rbac.sql)";
 
 test("PostgreSQL RLS: account/member separation, role matrix, mutations and SITE isolation", async () => {
@@ -35,6 +37,8 @@ test("PostgreSQL RLS: account/member separation, role matrix, mutations and SITE
     await db.exec(read("migrations/20260922000100_neutral_site_role.sql"));
     await db.exec(migration);
     await db.exec(defaultAccessMigration);
+    await db.exec(baselineGuardMigration);
+    await db.exec(maskAccountEmailsMigration);
     const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, "0")}`;
     for (let n = 1; n <= 7; n++) {
       await db.query("insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3)", [id(n), `test${n}@example.test`, { role: "admin" }]);
@@ -72,11 +76,14 @@ test("PostgreSQL RLS: account/member separation, role matrix, mutations and SITE
       await assert.rejects(db.exec("update public.app_role_permissions set permission_key = 'roles.manage'"));
       await assert.rejects(db.exec("select * from public.list_app_accounts()"));
     });
+    await assert.rejects(db.exec("insert into public.app_role_permissions(role_key, permission_key) values ('MEMBER','members.manage')"), /Forbidden permission/);
+    await assert.rejects(db.exec("insert into public.app_role_permissions(role_key, permission_key) values ('MEMBER','roles.manage')"), /Forbidden permission/);
     await actor(6, async () => {
       assert.equal(await value("select public.is_site_editor() v"), false);
       assert.equal(await value("select public.can_manage_group('rakwi') v"), false);
       assert.equal(await value("select role v from public.profiles where user_id = auth.uid()"), "none");
       assert.equal(await value("select count(*)::int v from public.list_app_accounts()"), 7);
+      assert.equal(await value("select email_masked v from public.list_app_accounts() where user_id = '00000000-0000-0000-0000-000000000001'"), "te***@example.test");
       const member = (await db.query<{ id: string }>(`insert into public.members(first_name,last_name,user_id)
         values ('New','Member','${id(7)}') returning id`)).rows[0].id;
       await db.exec(`update public.members set first_name = 'Changed', active = false where id = '${member}'`);
@@ -96,6 +103,14 @@ test("PostgreSQL RLS: account/member separation, role matrix, mutations and SITE
       assert.deepEqual(access.permissions.sort(), ["app.access", "members.read"]);
       assert.equal(access.roles.length, 3);
       assert.equal(access.member.first_name, "Changed");
+    });
+    // APP baseline access does not depend on a SITE profile row and never creates one.
+    await db.exec(`delete from public.profiles where user_id = '${id(7)}'`);
+    await actor(7, async () => {
+      const access = await value("select public.get_my_app_access() v") as { permissions: string[]; member: { first_name: string } };
+      assert.deepEqual(access.permissions.sort(), ["app.access", "members.read"]);
+      assert.equal(access.member.first_name, "Changed");
+      assert.equal(await value("select public.is_site_admin() v"), false);
     });
     await actor(6, async () => { await db.exec(`select public.set_app_user_roles('${id(7)}', array['TREASURER'])`); });
     await actor(7, async () => { assert.equal(await value("select count(*)::int v from public.app_user_roles"), 1); });

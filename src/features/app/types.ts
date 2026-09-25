@@ -15,5 +15,5 @@ export interface Member {
 }
 export type MemberInput = Pick<Member, "user_id" | "first_name" | "last_name" | "active">;
 export interface AppUserRole { user_id: string; role_key: AppRoleKey; assigned_by: string | null; assigned_at: string }
-export interface AppAccount { user_id: string; email: string; full_name: string; member_id: string | null }
+export interface AppAccount { user_id: string; email_masked: string; full_name: string; member_id: string | null }
 export interface AppAccess { permissions: AppPermission[]; roles: AppRole[]; member: Member | null }

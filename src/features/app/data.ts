@@ -3,9 +3,9 @@ import { requireOnline, networkError } from "./pwa/network.ts";
 import { hasAppPermission } from "./access.ts";
 import type { AppAccess, AppAccount, AppPermission, AppRole, AppRoleKey, AppUserRole, Member, MemberInput } from "./types.ts";
 
-export const roleLabels: Record<AppRoleKey, string> = { APP_ADMIN: "APP-beheerder", RESPONSIBLE: "Verantwoordelijke", TREASURER: "Financiën", MEMBER: "Lid" };
+export const roleLabels: Record<AppRoleKey, string> = { APP_ADMIN: "APP-beheerder", RESPONSIBLE: "Verantwoordelijke", TREASURER: "Financiën", MEMBER: "Leiding" };
 export const roleDescriptions: Record<AppRoleKey, string> = {
-  MEMBER: "Normale toegang tot de Chiro-app.",
+  MEMBER: "Standaardtoegang voor een lid van de leiding.",
   RESPONSIBLE: "Kan activiteiten organiseren en bepaalde taken beheren.",
   TREASURER: "Kan financiële verrichtingen voor de Chiro beheren.",
   APP_ADMIN: "Kan leden, APP-rollen en app-instellingen beheren."
