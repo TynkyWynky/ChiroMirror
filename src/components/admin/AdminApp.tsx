@@ -3,6 +3,7 @@ import { createClient, type Session, type SupabaseClient } from "@supabase/supab
 import { adminDefaultContent } from "@/lib/admin-default-content";
 import { toPublicSiteUrl } from "@/lib/site-url";
 import { getPostPublishError } from "@/lib/posts";
+import { prepareGroupRows, upsertGroupRows } from "@/lib/groups";
 import PostBodyEditor from "./PostBodyEditor";
 import AdminShell, { type Notice } from "./AdminShell";
 import { getAvailableTabs, getNavigationGroups, resolveTab, type TabId } from "./navigation";
@@ -436,28 +437,6 @@ function mapGroup(row: Record<string, unknown>): Group {
     sortOrder: Number(row.sort_order ?? 0),
     leaders: Array.isArray(row.leaders) ? (row.leaders as Person[]) : []
   };
-}
-
-function toGroupRow(group: Group) {
-  const row: Record<string, unknown> = {
-    slug: group.slug,
-    name: group.name,
-    theme_key: group.themeKey,
-    age_range: group.ageRange,
-    birth_years: group.birthYears,
-    school_years: group.schoolYears,
-    description: group.description,
-    image_url: group.imageUrl,
-    image_alt: group.imageAlt,
-    sort_order: group.sortOrder,
-    leaders: group.leaders
-  };
-
-  if (group.id && !group.id.startsWith("temp-")) {
-    row.id = group.id;
-  }
-
-  return row;
 }
 
 function mapContactSection(row: Record<string, unknown>): ContactSection {
@@ -2312,7 +2291,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       countMissingTextValues([
         group.slug,
         group.name,
-        group.ageRange,
         group.description,
         group.imageUrl
       ]) > 0
@@ -2797,6 +2775,14 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       return;
     }
 
+    let rows: Record<string, unknown>[];
+    try {
+      rows = prepareGroupRows(groups);
+    } catch (error) {
+      setNotice({ type: "error", message: error instanceof Error ? error.message : "Controleer de gegevens van je groepen." });
+      return;
+    }
+
     const pageError = await supabase
       .from("page_content")
       .upsert({ slug: "groups", data: pages.groups }, { onConflict: "slug" });
@@ -2806,11 +2792,14 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       return;
     }
 
-    const { error } = await supabase.from("groups").upsert(groups.map(toGroupRow));
+    const { data, error } = await upsertGroupRows(supabase, rows);
     if (error) {
       setNotice({ type: "error", message: error.message });
       return;
     }
+
+    // Keep generated IDs even if deletion or the dashboard refresh fails.
+    setGroups((data ?? []).map((row) => mapGroup(row)).sort((left, right) => left.sortOrder - right.sortOrder));
 
     if (deletedGroupIds.length) {
       const deleteResult = await supabase.from("groups").delete().in("id", deletedGroupIds);
@@ -5247,6 +5236,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
                   Groep toevoegen
                 </button>
               </div>
+              <p class="muted-small">Een lege slug wordt automatisch ingevuld op basis van de naam. Leeftijd, geboortejaren en schooljaren zijn optioneel, bijvoorbeeld voor volwassen begeleiders.</p>
 
               {groups.map((group, index) => (
                 <div class="admin-card-editor" key={group.id ?? group.slug ?? index}>
