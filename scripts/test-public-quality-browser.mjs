@@ -7,6 +7,8 @@ import { chromium } from 'playwright-core';
 
 // Read-only local fixtures; no production network or database mutations.
 const content = JSON.parse(readFileSync(new URL('../src/data/default-content.json', import.meta.url), 'utf8'));
+const artifactDir = process.env.PUBLIC_QA_ARTIFACT_DIR ?? '.test-artifacts/public-quality';
+mkdirSync(artifactDir, { recursive: true });
 let mode = 'empty', reads = 0;
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (input, init) => {
@@ -21,7 +23,7 @@ globalThis.fetch = async (input, init) => {
       {slug:'registration',data:{...content.pages.registration,title:'CMS inschrijven controle'}},
       {slug:'camp',data:{...content.pages.camp,title:'CMS kamp controle'}},
       {slug:'privacy',data:{...content.pages.privacy,title:'CMS privacy controle'}},
-      {slug:'home',data:{...content.pages.home,history:{...content.pages.home.history,body:'CMS geschiedenis controle'}}}
+      {slug:'home',data:{...content.pages.home,practical:{...content.pages.home.practical,items:['Wanneer: CMS zondaginfo']},history:{...content.pages.home.history,body:'CMS geschiedenis controle'}}}
     ]);
   }
   return Response.json([]);
@@ -55,7 +57,6 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  mkdirSync('.test-artifacts/phase5', { recursive: true });
 
 
 
@@ -74,6 +75,20 @@ try {
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),width+' overflow '+route);
       assert.deepEqual(await page.locator('main h1,main h2,main h3').evaluateAll(es=>es.filter(e=>e.getClientRects().length&&e.scrollWidth>e.clientWidth+1).map(e=>e.textContent.trim())),[],width+' clipped heading '+route);
       assert.equal(await page.locator('img:not([alt])').count(),0);
+      if(route==='/') {
+        const normalize=value=>value.replace(/\s+/g,' ').trim().toLocaleLowerCase('nl-BE');
+        const quick=normalize(await page.locator('.home-quick-facts').innerText());
+        for(const item of content.pages.home.practical.items) assert.ok(quick.includes(normalize(item.replace(':',' '))),'Early practical source content');
+        assert.equal(await page.locator('.home-atmosphere a[href="/leiding.html"]').count(),1);
+        assert.equal(await page.locator('.home-invitation a.btn').getAttribute('href'),content.pages.home.banner.primaryCtaHref.startsWith('/')?content.pages.home.banner.primaryCtaHref:'/'+content.pages.home.banner.primaryCtaHref);
+        const bounds=await page.locator('.home-hero-actions .btn').first().boundingBox();
+        assert.ok(bounds.y+bounds.height<900,'Signup visible in first viewport');
+        if(width>=900) {
+          const title=await page.locator('.home-hero h1').boundingBox(),image=await page.locator('.home-hero-photo').boundingBox();
+          assert.ok(image.x>=title.x+title.width,'Desktop hero columns do not overlap');
+        }
+      }
+      if(route==='/groepen.html') for(const group of content.groups) if(group.ageRange) assert.ok((await page.locator(`.department-jump-nav a[href="#${group.slug}"]`).innerText()).includes(group.ageRange));
       assert.equal(new URL(await page.locator('link[rel="canonical"]').getAttribute('href')).pathname,route);
       assert.ok((await page.locator('meta[name="description"]').getAttribute('content')).trim());
       assert.ok((await page.locator('meta[property="og:image"]').getAttribute('content')).startsWith('https://'));
@@ -106,7 +121,7 @@ try {
         else if(href.startsWith('/')&&!href.startsWith('/api/')) links.add(href.split('#')[0].split('?')[0]);
       }
       await page.evaluate(()=>scrollTo(0,0));
-      if([320,1024,1920].includes(width)&&['/','/activiteiten.html','/kamp.html','/privacy.html','/groepen/ribbels/'].includes(route)) await page.screenshot({path:'.test-artifacts/phase6/final-'+(route==='/'?'home':route.slice(1).replaceAll('/','-').replace('.html',''))+'-'+width+'.png',fullPage:true});
+      if([320,375,430,768,1440].includes(width)&&['/','/groepen.html'].includes(route)) await page.screenshot({path:artifactDir+'/final-'+(route==='/'?'home':route.slice(1).replaceAll('/','-').replace('.html',''))+'-'+width+'.png',fullPage:true});
       if(route==='/') metrics.push({width,...await page.evaluate(()=>({...window.__quality,resources:performance.getEntriesByType('resource').length,bytes:performance.getEntriesByType('resource').reduce((n,e)=>n+e.transferSize,0)}))});
     }
     await page.goto(base+'/');
@@ -134,7 +149,8 @@ try {
   assert.ok(!/leiding-login|api\/|netlify-form|admin|auth|app\//.test(xml));
   if(reads) {
     mode='populated'; xml=await (await context.request.get(base+'/sitemap.xml')).text();
-    assert.ok(xml.includes('/groepen/cms-testgroep/'));assert.ok(!xml.includes('/groepen/ribbels/')); mode='empty';
+    assert.ok(xml.includes('/groepen/cms-testgroep/'));assert.ok(!xml.includes('/groepen/ribbels/'));
+    await page.goto(base+'/');assert.ok((await page.locator('.home-quick-facts').innerText()).includes('CMS zondaginfo'));assert.ok((await page.locator('.home-practical .home-facts').innerText()).includes('CMS zondaginfo'));mode='empty';
   }
   const robots=await (await context.request.get(base+'/robots.txt')).text();assert.ok(robots.includes('Sitemap: https://www.chironegenmanneke.be/sitemap.xml'));
   await page.goto(base+'/');await page.keyboard.press('Tab');assert.equal(await page.locator('.skip-link').evaluate(e=>e===document.activeElement),true);
@@ -147,7 +163,7 @@ try {
   assert.equal(await plain.locator('.nav-fallback a[href="/inschrijven.html"]').isVisible(),true);assert.equal(await plain.locator('#burger').isVisible(),false);
   await nojs.close();
   assert.deepEqual(errors,[]);
-  const {writeFileSync}=await import('node:fs');writeFileSync('.test-artifacts/phase6/local-metrics.json',JSON.stringify(metrics,null,2));
+  const {writeFileSync}=await import('node:fs');writeFileSync(artifactDir+'/local-metrics.json',JSON.stringify(metrics,null,2));
   console.log('PASS internal links, sitemap/CMS/privacy boundaries, skip/focus/menu resize/no-JS/reduced motion, contrast; zero page errors. Local timings are not production Web Vitals.');
 } finally {
   await browser?.close();await new Promise(resolve=>server?server.close(resolve):resolve());globalThis.fetch=realFetch;

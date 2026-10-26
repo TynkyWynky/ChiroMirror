@@ -11,6 +11,7 @@
 .departments .department-jump-nav { display: flex; flex-wrap: wrap; gap: .6rem; margin-block: 2rem 3rem; }
 .departments .department-jump-nav a { display: inline-flex; align-items: center; gap: .5rem; min-height: 46px; padding: .6rem .9rem; background: var(--cream); color: var(--text); border: 1px solid var(--border); border-radius: 999px; font-weight: 700; }
 .departments .department-jump-nav a::before { content: ""; width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: var(--department); }
+.departments .department-jump-nav small { display: block; font-size: .8rem; font-weight: 600; line-height: 1.4; }
 .departments .department-jump-nav [aria-current="page"] { outline: 2px solid var(--burgundy); outline-offset: 2px; }
 .departments .department-overview { display: grid; gap: 2rem; }
 .departments .department-preview { min-width: 0; background: color-mix(in srgb, var(--department) 16%, var(--cream)); border-bottom: 6px solid var(--department); }

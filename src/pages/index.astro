@@ -48,10 +48,15 @@ const extraGallery = home.gallery.filter((image) => !groupImages.has(homeImage(i
         <a class="home-address" href={siteSettings.mapGoogleUrl} target="_blank" rel="noreferrer"><span aria-hidden="true">↗</span> {siteSettings.address}</a>
       </div>
       <div class="home-hero-scene">
-        <PublicImage sizes="(max-width: 1240px) 100vw, 1160px" class="home-hero-photo" src={homeImage(home.banner.imageUrl)} alt={home.banner.imageAlt} width="1836" height="1224" fetchpriority="high" decoding="async" />
+        <PublicImage sizes="(max-width: 899px) 100vw, 580px" class="home-hero-photo" src={homeImage(home.banner.imageUrl)} alt={home.banner.imageAlt} width="1836" height="1224" fetchpriority="high" decoding="async" />
         <p class="home-paper-badge">{home.hero.badge}</p>
         <p class="home-photo-caption">{home.banner.subtitle}</p>
       </div>
+    </section>
+
+    <section class="home-first-sunday" aria-labelledby="home-first-sunday-title">
+      <div class="home-first-sunday-heading"><p class="home-kicker">Nieuw hier? Welkom!</p><h2 id="home-first-sunday-title">Jouw eerste<br />Chirozondag.</h2><a class="home-text-link" href={withDevFresh("/praktisch.html")}>Zo werkt onze Chiro <span aria-hidden="true">→</span></a></div>
+      <dl class="home-facts home-quick-facts">{home.practical.items.map(item => { const split = item.indexOf(":"); return <div><dt>{split < 0 ? item : item.slice(0, split)}</dt>{split >= 0 && <dd>{item.slice(split + 1).trim()}</dd>}</div>; })}</dl>
     </section>
 
     <section class="home-intro home-section" aria-labelledby="home-intro-title">
@@ -74,9 +79,9 @@ const extraGallery = home.gallery.filter((image) => !groupImages.has(homeImage(i
         <a class="home-text-link" href={withDevFresh("/groepen.html")}>Maak kennis met de groepen <span aria-hidden="true">↗</span></a>
       </div>
       <p class="home-section-lead">{pages.groups.lead}</p>
-      <div class="home-department-grid">
+      <div class:list={["home-department-grid", groups.length === 6 && ["ribbels", "speelclub", "rakwi", "tito", "keti", "aspi"].every(slug => groups.some(group => group.slug === slug)) && "home-department-orbit"]}>
         {groups.map((group, index) => (
-          <a class="home-department" href={withDevFresh(groupHref(group.slug))} style={`--department: var(--${group.themeKey}, var(--burgundy))`} aria-label={`Ontdek ${group.name}${group.ageRange ? ` (${groupAgeLabel(group.ageRange)})` : ""}`}>
+          <a class="home-department" data-department={group.slug} href={withDevFresh(groupHref(group.slug))} style={`--department: var(--${group.themeKey}, var(--burgundy))`} aria-label={`Ontdek ${group.name}${group.ageRange ? ` (${groupAgeLabel(group.ageRange)})` : ""}`}>
             <div class="home-department-photo">
               {group.imageUrl ? <PublicImage src={homeImage(group.imageUrl)} alt={group.imageAlt || group.name} width="1920" height="1080" loading="lazy" decoding="async" /> : <span class="home-department-placeholder" aria-hidden="true">✳</span>}
             </div>
@@ -84,6 +89,7 @@ const extraGallery = home.gallery.filter((image) => !groupImages.has(homeImage(i
             {group.ageRange && <p class="home-department-age">{groupAgeLabel(group.ageRange)}</p>}
           </a>
         ))}
+        <div class="home-department-center" aria-hidden="true"><img src={siteSettings.logoUrl} alt="" width="700" height="700" loading="lazy" decoding="async" /><p>Onze<br />afdelingen</p></div>
       </div>
     </section>
 
@@ -103,7 +109,7 @@ const extraGallery = home.gallery.filter((image) => !groupImages.has(homeImage(i
     <section class="home-atmosphere home-section" aria-labelledby="home-atmosphere-title">
       <div class="home-section-heading">
         <div><p class="home-kicker">04 / Dat is Chiro</p><h2 id="home-atmosphere-title">Grote avonturen.<br />Kleine gelukskes.</h2></div>
-        <a class="btn btn-light" href={withDevFresh("/kamp.html")}>Mee op kamp <span aria-hidden="true">↗</span></a>
+        <div class="home-atmosphere-actions"><a class="btn btn-light" href={withDevFresh("/kamp.html")}>Mee op kamp <span aria-hidden="true">↗</span></a><a class="home-text-link" href={withDevFresh("/leiding.html")}>Ontmoet de leiding <span aria-hidden="true">→</span></a></div>
       </div>
       <div class="home-photo-collage">
         {pages.camp.heroImageUrl && <figure class="home-collage-main"><PublicImage src={homeImage(pages.camp.heroImageUrl)} alt={pages.camp.heroImageAlt} width="1080" height="945" loading="lazy" decoding="async" /><figcaption>{pages.camp.title}</figcaption></figure>}
@@ -131,6 +137,10 @@ const extraGallery = home.gallery.filter((image) => !groupImages.has(homeImage(i
           return <div><dt>{separator < 0 ? item : item.slice(0, separator)}</dt>{separator >= 0 && <dd>{item.slice(separator + 1).trim()}</dd>}</div>;
         })}
       </dl>
+    </section>
+    <section class="home-invitation home-section" aria-labelledby="home-invitation-title">
+      <div><p class="home-kicker">Samen maken we Chiro</p><h2 id="home-invitation-title">Tot op de Chiro?</h2><p>Ontdek hoe je je inschrijft. Zit je nog met een vraag? Spreek ons gerust aan.</p></div>
+      <div class="home-invitation-actions"><a class="btn" href={primaryCtaHref}>{home.banner.primaryCtaLabel} <span aria-hidden="true">↗</span></a><a class="home-text-link" href={withDevFresh("/contact.html")}>Contacteer de leiding <span aria-hidden="true">→</span></a></div>
     </section>
   </div>
 </PublicLayout>
