@@ -1,38 +1,20 @@
----
+﻿---
 import PublicLayout from "@/layouts/PublicLayout.astro";
+import PracticalLinks from "@/components/PracticalLinks.astro";
 import { loadSiteContent } from "@/lib/content";
-
-const content = await loadSiteContent();
-const { siteSettings, pages, songs } = content;
+import "@/styles/public-info.css";
+const { siteSettings, pages, songs } = await loadSiteContent();
+const query = (Astro.url.searchParams.get("zoek") ?? "").trim().slice(0, 120);
+const visibleSongs = songs.filter(song => !query || `${song.title}\n${song.lyrics}`.toLocaleLowerCase("nl-BE").includes(query.toLocaleLowerCase("nl-BE")));
 ---
 
-<PublicLayout
-  title="Chiroliedjes • Chiro Negenmanneke"
-  description="Chiroliedjes en tradities van Chiro Negenmanneke om mee te zingen."
-  siteSettings={siteSettings}
->
-  <section class="hero">
-    <h1>{pages.songs.title}</h1>
-    <p class="lead">{pages.songs.lead}</p>
-
-    <div class="grid">
-      <div class="card span-12">
-        <h2>Liedjes</h2>
-        <p class="muted song-count">{songs.length} liedjes in de bundel.</p>
-
-        {
-          songs.map((song) => (
-            <details class="song">
-              <summary>
-                <span class="song-title">{song.title}</span>
-              </summary>
-              <div class="song-body">
-                <pre class="lyrics">{song.lyrics}</pre>
-              </div>
-            </details>
-          ))
-        }
-      </div>
-    </div>
-  </section>
+<PublicLayout title="Chiroliedjes • Chiro Negenmanneke" description="Chiroliedjes en tradities van Chiro Negenmanneke om mee te zingen." siteSettings={siteSettings}>
+  <div class="info-page songbook-page">
+    <header class="info-heading"><p class="info-kicker">Zing maar mee</p><h1>{pages.songs.title}</h1><p class="info-lead">{pages.songs.lead}</p></header>
+    <form class="song-search" action="/chiroliedjes.html#liedjes" method="GET" aria-label="Liedjes zoeken"><div><label for="song-query">Zoek op titel of liedtekst</label><input id="song-query" type="search" name="zoek" maxlength="120" value={query} /></div><button class="btn" type="submit">Zoek liedjes <span aria-hidden="true">→</span></button>{query && <a class="info-text-link" href="/chiroliedjes.html#liedjes">Alle liedjes tonen</a>}</form>
+    <section class="songbook" id="liedjes" aria-labelledby="songs-title"><div class="info-section-heading"><h2 id="songs-title">Liedjes</h2><p class="song-count" role="status">{query ? `${visibleSongs.length} van ${songs.length}` : songs.length} liedjes in de bundel.</p></div>
+      {visibleSongs.length ? visibleSongs.map((song, index) => <details class="song" id={`lied-${index + 1}`}><summary><span class="song-title">{song.title}</span></summary><div class="song-body"><pre class="lyrics">{song.lyrics}</pre></div></details>) : <div class="info-note"><p>Geen liedjes gevonden. Probeer een andere zoekterm.</p><a class="info-text-link" href="/chiroliedjes.html#liedjes">Alle liedjes tonen</a></div>}
+    </section>
+    <PracticalLinks />
+  </div>
 </PublicLayout>

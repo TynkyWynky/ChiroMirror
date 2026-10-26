@@ -1,0 +1,23 @@
+﻿---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import DepartmentImage from "@/components/DepartmentImage.astro";
+import LeaderCards from "@/components/LeaderCards.astro";
+import { loadSiteContent } from "@/lib/content";
+import { groupHref } from "@/lib/group-presentation";
+import { withDevFresh } from "@/lib/href";
+import "@/styles/departments.css";
+
+const { siteSettings, groups } = await loadSiteContent();
+---
+
+<PublicLayout title="Leiding • Chiro Negenmanneke" description="Ontmoet de leiding van Chiro Negenmanneke, per afdeling." siteSettings={siteSettings}>
+  <div class="departments leaders-page">
+    <header class="departments-intro"><a class="department-text-link" href={withDevFresh("/groepen.html")}>← Alle afdelingen</a><p class="department-kicker">Samen maken we Chiro</p><h1>Onze leiding<span aria-hidden="true">.</span></h1><p class="department-lead">De gezichten achter de afdelingen. Leer de leiding kennen en vind hier hoe je hen bereikt.</p></header>
+    <nav class="department-jump-nav" aria-label="Leiding per afdeling">{groups.map((group) => <a href={`#${group.slug}`} style={`--department: var(--${group.themeKey}, var(--burgundy))`}>{group.name}</a>)}</nav>
+    {groups.map((group) => <section class="department-team" id={group.slug} aria-labelledby={`team-${group.slug}`} style={`--department: var(--${group.themeKey}, var(--burgundy))`}>
+      <div class="department-team-heading"><h2 id={`team-${group.slug}`}>{group.name}</h2><a class="department-text-link" href={withDevFresh(groupHref(group.slug))}>Naar de afdeling <span aria-hidden="true">↗</span></a></div>
+      <div class="department-team-content"><DepartmentImage group={group} /><LeaderCards people={group.leaders} /></div>
+    </section>)}
+    <aside class="department-help"><div><h2>Nog een vraag?</h2><p>Op de contactpagina vind je ook de andere contactpersonen van onze Chiro.</p></div><a class="btn btn-light" href={withDevFresh("/contact.html")}>Alle contactgegevens <span aria-hidden="true">→</span></a></aside>
+  </div>
+</PublicLayout>

@@ -1,93 +1,21 @@
----
+﻿---
 import PublicLayout from "@/layouts/PublicLayout.astro";
+import PracticalLinks from "@/components/PracticalLinks.astro";
 import { loadSiteContent } from "@/lib/content";
-
-const content = await loadSiteContent();
-const { siteSettings, pages, groups } = content;
+import { groupHref } from "@/lib/group-presentation";
+import { withDevFresh } from "@/lib/href";
+import "@/styles/public-info.css";
+const { siteSettings, pages, groups } = await loadSiteContent();
 const registration = pages.registration;
 ---
 
-<PublicLayout
-  title="Inschrijven • Chiro Negenmanneke"
-  description="Schrijf je in bij Chiro Negenmanneke. Alle praktische info voor nieuwe en bestaande leden."
-  siteSettings={siteSettings}
->
-  <section class="hero">
-    <h1>{registration.title}</h1>
-    <p class="lead">{registration.lead}</p>
-
-    <div class="stacked">
-      <div class="card steps">
-        <h2>{registration.stepsTitle}</h2>
-        <ol>
-          {registration.steps.map((step) => <li>{step}</li>)}
-        </ol>
-        <p class="callout">
-          <strong>Tip:</strong> {registration.tip.replace(/^Tip:\s*/i, "")}
-        </p>
-      </div>
-
-      <div class="card">
-        <h2>{registration.groupsTitle}</h2>
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Afdeling</th>
-                <th>Geboortejaar</th>
-                <th>Leeftijd</th>
-                <th>Klas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {
-                groups.map((group) => (
-                  <tr>
-                    <td>{group.name}</td>
-                    <td>{group.birthYears}</td>
-                    <td>{group.ageRange}</td>
-                    <td>{group.schoolYears}</td>
-                  </tr>
-                ))
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>{registration.clothesTitle}</h2>
-        <p>{registration.clothesBody}</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="merch">
-    <div class="section-title">
-      <h2>{registration.merch.title}</h2>
-      <div class="line" aria-hidden="true"></div>
-    </div>
-
-    <div class="card merch-card">
-      <div class="merch-img-wrap">
-        <img src={registration.merch.imageUrl} alt={registration.merch.imageAlt} />
-        {
-          registration.merch.prices.map((price, index) => (
-            <span class={`price-pill ${index % 2 === 0 ? "left" : "right"}`}>{price}</span>
-          ))
-        }
-      </div>
-
-      <div>
-        <h3>{registration.merch.subtitle}</h3>
-        <ul>
-          {registration.merch.body.split("\n").filter(Boolean).map((line) => <li>{line}</li>)}
-        </ul>
-        <p class="muted-small">{registration.merch.note}</p>
-        <div class="inline-actions">
-          {registration.merch.actions.map((action) => <a class="btn" href={action.href}>{action.label}</a>)}
-        </div>
-      </div>
-    </div>
-  </section>
+<PublicLayout title="Inschrijven • Chiro Negenmanneke" description="Schrijf je in bij Chiro Negenmanneke. Alle praktische info voor nieuwe en bestaande leden." siteSettings={siteSettings}>
+  <div class="info-page registration-page">
+    <header class="info-heading"><p class="info-kicker">Een nieuw avontuur begint hier</p><h1>{registration.title}</h1><p class="info-lead">{registration.lead}</p><div class="info-actions"><a class="btn" href="#inschrijfstappen">Zo schrijf je je in <span aria-hidden="true">↓</span></a><a class="info-text-link" href={withDevFresh("/contact.html")}>Hulp bij inschrijven <span aria-hidden="true">→</span></a></div></header>
+    <nav class="info-jump-nav" aria-label="Inschrijfinformatie"><a href="#inschrijfstappen">Inschrijfstappen</a><a href="#afdelingen">Afdelingen & leeftijden</a><a href="#kledij">Chirokledij</a></nav>
+    <section class="registration-steps" id="inschrijfstappen" aria-labelledby="registration-steps-title"><h2 id="registration-steps-title">{registration.stepsTitle}</h2><ol>{registration.steps.map(step => <li>{step}</li>)}</ol><p class="info-note"><strong>Tip:</strong> {registration.tip.replace(/^Tip:\s*/i, "")}</p></section>
+    <section class="registration-groups" id="afdelingen" aria-labelledby="registration-groups-title"><h2 id="registration-groups-title">{registration.groupsTitle}</h2><div class="table-wrap" role="region" aria-label={registration.groupsTitle} tabindex="0"><table class="table"><thead><tr><th scope="col">Afdeling</th><th scope="col">Geboortejaar</th><th scope="col">Leeftijd</th><th scope="col">Klas</th></tr></thead><tbody>{groups.map(group => <tr><th scope="row"><a href={withDevFresh(groupHref(group.slug))}>{group.name}</a></th><td>{group.birthYears}</td><td>{group.ageRange}</td><td>{group.schoolYears}</td></tr>)}</tbody></table></div></section>
+    <section class="registration-merch" id="kledij" aria-labelledby="registration-merch-title"><p class="info-kicker">Helemaal Chiro</p><h2 id="registration-merch-title">{registration.merch.title}</h2><div class="merch-layout"><div class="merch-visual">{registration.merch.imageUrl && <img src={registration.merch.imageUrl} alt={registration.merch.imageAlt} width="278" height="181" loading="lazy" decoding="async" />}<ul class="merch-prices">{registration.merch.prices.map(price => <li>{price}</li>)}</ul></div><div class="merch-info"><h3>{registration.merch.subtitle}</h3><ul>{registration.merch.body.split("\n").filter(Boolean).map(line => <li>{line}</li>)}</ul><p>{registration.merch.note}</p><div class="info-actions">{registration.merch.actions.map(action => <a class="btn btn-light" href={action.href}>{action.label}</a>)}</div><div class="merch-clothes-note"><h3>{registration.clothesTitle}</h3><p>{registration.clothesBody}</p></div></div></div></section>
+    <PracticalLinks />
+  </div>
 </PublicLayout>

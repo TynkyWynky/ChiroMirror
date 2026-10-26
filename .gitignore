@@ -10,3 +10,4 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .test-artifacts/
+docs/REDESIGN_PLAN.md

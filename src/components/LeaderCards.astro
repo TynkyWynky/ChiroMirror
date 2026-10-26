@@ -1,0 +1,22 @@
+---
+import type { Person } from "@/types/content";
+import { withDevFresh } from "@/lib/href";
+
+interface Props { people: Person[]; headingLevel?: "h3" | "h4"; }
+const { people, headingLevel: Heading = "h3" } = Astro.props;
+const visiblePeople = people.filter((person) => person.name?.trim() || person.phone?.trim());
+const initials = (name?: string) => (name ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((word) => Array.from(word)[0]).join("").toLocaleUpperCase("nl-BE");
+function phoneHref(phone: string) {
+  const number = phone.replace(/[^\d+]/g, "");
+  return /^\+?\d{6,}$/.test(number) ? `tel:${number}` : undefined;
+}
+---
+
+{visiblePeople.length ? <ul class="leader-cards">
+  {visiblePeople.map((person) => <li class="leader-card">
+    <span class="leader-initials" aria-hidden="true">{initials(person.name) || "✳"}</span>
+    <div><Heading>{person.name || "Leiding"}</Heading>
+      {person.phone && <p>{phoneHref(person.phone) ? <a href={phoneHref(person.phone)}>{person.phone}</a> : person.phone}</p>}
+    </div>
+  </li>)}
+</ul> : <div class="leaders-empty"><p>De leidinginformatie is nog niet beschikbaar.</p><a href={withDevFresh("/contact.html")}>Een vraag? Contacteer ons <span aria-hidden="true">→</span></a></div>}

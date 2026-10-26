@@ -1,0 +1,32 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import DepartmentImage from "@/components/DepartmentImage.astro";
+import LeaderCards from "@/components/LeaderCards.astro";
+import { loadSiteContent } from "@/lib/content";
+import { groupHref, groupAgeLabel, groupImageUrl } from "@/lib/group-presentation";
+import { withDevFresh } from "@/lib/href";
+import "@/styles/departments.css";
+
+const { siteSettings, pages, groups } = await loadSiteContent();
+const group = groups.find((item) => item.slug === Astro.params.slug);
+if (!group) Astro.response.status = 404;
+---
+
+<PublicLayout title={group ? `${group.name} • Chiro Negenmanneke` : "Afdeling niet gevonden • Chiro Negenmanneke"} description={group?.description || "Ontdek de afdelingen van Chiro Negenmanneke."} siteSettings={siteSettings} socialImage={group?.imageUrl ? groupImageUrl(group.imageUrl) : siteSettings.logoUrl} socialImageAlt={group?.imageAlt || group?.name || siteSettings.siteName} noIndex={!group}>
+  {group ? <div class="departments department-detail" style={`--department: var(--${group.themeKey}, var(--burgundy))`}>
+    <nav class="department-breadcrumb" aria-label="Broodkruimel"><a href={withDevFresh("/groepen.html")}>Alle afdelingen</a><span aria-hidden="true">/</span><span aria-current="page">{group.name}</span></nav>
+    <header class:list={["department-hero", group.sortOrder % 2 === 0 && "department-hero-reverse"]}>
+      <div class="department-hero-copy"><p class="department-kicker">Jouw plek bij Chiro Negenmanneke</p><h1>{group.name}</h1>{group.ageRange && <p class="department-age">{groupAgeLabel(group.ageRange)}</p>}{group.description && <p class="department-lead department-description">{group.description}</p>}
+        <div class="department-actions"><a class="btn" href={withDevFresh("/inschrijven.html")}>Schrijf je in <span aria-hidden="true">↗</span></a><a class="department-text-link" href="#onze-leiding">Ontmoet de leiding <span aria-hidden="true">↓</span></a></div>
+      </div>
+      <DepartmentImage group={group} priority />
+    </header>
+    {(group.ageRange || group.birthYears || group.schoolYears) && <section class="department-facts" aria-labelledby="department-facts-title">
+      <div><p class="department-kicker">Over onze afdeling</p><h2 id="department-facts-title">Iets voor jou?</h2><p>Geboortejaren veranderen per werkjaar. <a href={withDevFresh("/contact.html")}>Vraag de leiding om de indeling voor dit werkjaar te bevestigen.</a></p></div>
+      <dl>{group.ageRange && <div><dt>Leeftijd</dt><dd>{groupAgeLabel(group.ageRange)}</dd></div>}{group.birthYears && <div><dt>Geboortejaren</dt><dd>{group.birthYears}</dd></div>}{group.schoolYears && <div><dt>Schooljaren</dt><dd>{group.schoolYears}</dd></div>}</dl>
+    </section>}
+    <section class="department-leaders" id="onze-leiding" aria-labelledby="department-leaders-title"><div class="department-team-heading"><div><p class="department-kicker">Samen op avontuur</p><h2 id="department-leaders-title">De leiding van {group.name}</h2></div><a class="department-text-link" href={withDevFresh(`/leiding.html#${encodeURIComponent(group.slug)}`)}>Alle leiding <span aria-hidden="true">↗</span></a></div><LeaderCards people={group.leaders} /></section>
+    <section class="department-practical" aria-labelledby="department-practical-title"><div><p class="department-kicker">Goed om te weten</p><h2 id="department-practical-title">{pages.home.practical.title}</h2><p>{pages.home.practical.note}</p><a class="btn" href={withDevFresh("/contact.html")}>Contact opnemen <span aria-hidden="true">→</span></a></div><dl>{pages.home.practical.items.map((item) => { const separator = item.indexOf(":"); return <div><dt>{separator < 0 ? item : item.slice(0, separator)}</dt>{separator >= 0 && <dd>{item.slice(separator + 1).trim()}</dd>}</div>; })}</dl></section>
+    <nav class="department-jump-nav" aria-label="Ontdek de andere afdelingen">{groups.map((item) => <a href={withDevFresh(groupHref(item.slug))} aria-current={item.slug === group.slug ? "page" : undefined} style={`--department: var(--${item.themeKey}, var(--burgundy))`}>{item.name}</a>)}</nav>
+  </div> : <section class="departments department-not-found"><p class="department-kicker">Even de weg kwijt?</p><h1>Afdeling niet gevonden</h1><p>Deze afdeling is niet beschikbaar. Ontdek de groepen in ons overzicht.</p><a class="btn" href={withDevFresh("/groepen.html")}>Naar alle afdelingen <span aria-hidden="true">→</span></a></section>}
+</PublicLayout>

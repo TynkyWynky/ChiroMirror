@@ -1,0 +1,17 @@
+---
+import { withDevFresh } from "@/lib/href";
+const links = [
+  { label: "Praktisch overzicht", href: "/praktisch.html" },
+  { label: "Inschrijven", href: "/inschrijven.html" },
+  { label: "Chirokledij", href: "/inschrijven.html#kledij" },
+  { label: "Kamp", href: "/kamp.html" },
+  { label: "Contact", href: "/contact.html" },
+  { label: "Verzekering", href: "/verzekering.html" },
+  { label: "Privacy", href: "/privacy.html" },
+  { label: "Verhuur", href: "/verhuur.html" },
+  { label: "Chiroliedjes", href: "/chiroliedjes.html" },
+  { label: "Geschiedenis", href: "/geschiedenis.html" }
+].filter(link => link.href.split("#")[0] !== Astro.url.pathname);
+---
+
+<nav class="practical-links" aria-label="Gerelateerde praktische pagina's"><h2>Ook handig</h2><ul>{links.map(link => <li><a href={withDevFresh(link.href)}>{link.label}<span aria-hidden="true">↗</span></a></li>)}</ul></nav>

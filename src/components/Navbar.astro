@@ -1,66 +1,58 @@
----
-import { primaryNav } from "@/lib/routes";
+﻿---
+import { primaryNav, publicNavLinks } from "@/lib/routes";
 import { withDevFresh } from "@/lib/href";
+
+const isCurrent = (href: string) => Astro.url.pathname === href;
 ---
 
-<nav class="navbar">
+<header class="navbar">
   <div class="container inner">
-    <a class="brand" href="/">
-      <img class="brand-logo" src="/assets/Chirologo_700px.png" alt="Chiro logo" />
-      Chiro Negenmanneke
+    <a class="brand" href="/" aria-label="Chiro Negenmanneke — home">
+      <img class="brand-logo" src="/assets/Chirologo_700px.png" width="700" height="700" alt="" />
+      <span class="brand-name"><span>Chiro</span><strong>Negenmanneke</strong></span>
     </a>
-    <div class="menu desktop">
-      {
-        primaryNav.map((item) =>
-          "children" in item ? (
-            <details class="nav-dropdown">
-              <summary>{item.label}</summary>
-              <div class="nav-dropdown-menu">
-                {item.children.map((child) => (
-                  <a href={withDevFresh(child.href)}>{child.label}</a>
-                ))}
-              </div>
-            </details>
-          ) : (
-            <a href={withDevFresh(item.href)}>{item.label}</a>
-          )
-        )
-      }
-    </div>
-    <button class="burger" id="burger" aria-label="Menu" aria-controls="mobile-nav" aria-expanded="false">
-      <span></span>
+    <nav class="menu desktop" aria-label="Hoofdnavigatie">
+      {primaryNav.map((item) => "children" in item ? (
+        <details class="nav-dropdown">
+          <summary class:list={{ "is-current": item.children.some((child) => isCurrent(child.href)) }}>{item.label}</summary>
+          <div class="nav-dropdown-menu">
+            {item.children.map((child) => <a href={withDevFresh(child.href)} aria-current={isCurrent(child.href) ? "page" : undefined}>{child.label}</a>)}
+          </div>
+        </details>
+      ) : (
+        <a class:list={{ "nav-signup": item.href === "/inschrijven.html" }} href={withDevFresh(item.href)} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>
+      ))}
+    </nav>
+    <button class="burger" id="burger" type="button" aria-label="Menu openen" aria-controls="mobile-nav" aria-expanded="false" hidden>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+      <span class="menu-label">Menu</span>
     </button>
   </div>
-</nav>
-
-<div class="mobile-overlay" id="mobile-nav" role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title" hidden>
-  <div class="mobile-nav-content">
-    <div class="mobile-nav-header">
-      <a class="brand" href="/" id="mobile-nav-title">
-        <img class="brand-logo" src="/assets/Chirologo_700px.png" alt="" />
-        Chiro Negenmanneke
-      </a>
-      <button class="burger" id="mobile-close" aria-label="Close">
-        <span></span>
-      </button>
-    </div>
-    <nav class="mobile-menu">
-      {
-        primaryNav.map((item) =>
-          "children" in item ? (
-            <details class="mobile-dropdown">
-              <summary>{item.label}</summary>
-              <div class="mobile-submenu">
-                {item.children.map((child) => (
-                  <a href={withDevFresh(child.href)}>{child.label}</a>
-                ))}
-              </div>
-            </details>
-          ) : (
-            <a href={withDevFresh(item.href)}>{item.label}</a>
-          )
-        )
-      }
+  <noscript>
+    <nav class="container nav-fallback" aria-label="Mobiele hoofdnavigatie">
+      {publicNavLinks.map((item) => <a href={withDevFresh(item.href)}>{item.label}</a>)}
     </nav>
+  </noscript>
+</header>
+
+<dialog class="public-menu-dialog" id="mobile-nav" aria-labelledby="mobile-nav-title">
+  <div class="public-menu-header">
+    <h2 id="mobile-nav-title">Op ontdekking</h2>
+    <button class="menu-close" id="mobile-close" type="button" aria-label="Menu sluiten" autofocus>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+    </button>
   </div>
-</div>
+  <nav class="public-mobile-menu" aria-label="Mobiele hoofdnavigatie">
+    <a href="/" aria-current={isCurrent("/") ? "page" : undefined}>Home</a>
+    {primaryNav.map((item) => "children" in item ? (
+      <details class="public-mobile-details" open={item.children.some((child) => isCurrent(child.href))}>
+        <summary>{item.label}</summary>
+        <div class="public-mobile-submenu">
+          {item.children.map((child) => <a href={withDevFresh(child.href)} aria-current={isCurrent(child.href) ? "page" : undefined}>{child.label}</a>)}
+        </div>
+      </details>
+    ) : (
+      <a class:list={{ "nav-signup": item.href === "/inschrijven.html" }} href={withDevFresh(item.href)} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>
+    ))}
+  </nav>
+</dialog>

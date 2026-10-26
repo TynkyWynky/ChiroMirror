@@ -1,0 +1,20 @@
+﻿---
+import PublicImage from "@/components/PublicImage.astro";
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import RichText from "@/components/RichText.astro";
+import PracticalLinks from "@/components/PracticalLinks.astro";
+import { loadSiteContent } from "@/lib/content";
+import { withDevFresh } from "@/lib/href";
+import "@/styles/public-info.css";
+const { siteSettings, pages } = await loadSiteContent();
+const home = pages.home;
+---
+
+<PublicLayout title="Geschiedenis • Chiro Negenmanneke" description="Lees de geschiedenis van Chiro Negenmanneke en de verbondenheid met de wijk." siteSettings={siteSettings} socialImage={home.banner.imageUrl} socialImageAlt={home.banner.imageAlt}>
+  <div class="info-page history-page">
+    <header class="info-heading"><a class="info-back" href={withDevFresh("/praktisch.html")}>← Praktisch overzicht</a><p class="info-kicker">Het verhaal van Negenmanneke</p><h1>{home.history.title}</h1></header>
+    {home.banner.imageUrl && <figure class="history-photo"><PublicImage sizes="(max-width: 1240px) 100vw, 1160px" src={home.banner.imageUrl} alt={home.banner.imageAlt} width="1836" height="1224" decoding="async" /><figcaption>{home.banner.imageAlt}</figcaption></figure>}
+    <article class="history-story" aria-label={home.history.title}><RichText content={home.history.body} /></article>
+    <PracticalLinks />
+  </div>
+</PublicLayout>

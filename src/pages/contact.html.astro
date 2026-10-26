@@ -3,6 +3,12 @@ import PublicLayout from "@/layouts/PublicLayout.astro";
 import RichText from "@/components/RichText.astro";
 import ContactForm from "@/components/ContactForm";
 import { loadSiteContent } from "@/lib/content";
+import PracticalLinks from "@/components/PracticalLinks.astro";
+import LeaderCards from "@/components/LeaderCards.astro";
+import { groupHref } from "@/lib/group-presentation";
+import { withDevFresh } from "@/lib/href";
+import "@/styles/departments.css";
+import "@/styles/public-info.css";
 
 const content = await loadSiteContent();
 const { siteSettings, pages, groups, contactSections } = content;
@@ -45,50 +51,18 @@ const orderedGroups = [...groups].sort((left, right) => {
     <input name="website" />
   </form>
 
-  <section class="hero">
-    <h1>{contactPage.title}</h1>
-
-    <div class="grid">
-      <div class="card span-6">
-        <h2>{contactPage.generalTitle}</h2>
-        <RichText content={contactPage.generalBody} />
-
-        <h3>{contactPage.formTitle}</h3>
-        <ContactForm
-          client:load
-          categories={contactPage.formCategories}
-          successMessage={contactPage.successMessage}
-          errorMessage={contactPage.errorMessage}
-          fallbackEmail={siteSettings.email}
-        />
-      </div>
-
-      <div class="card span-6">
-        <h2>{contactPage.sectionsTitle}</h2>
-        <div class="grid">
-          {
-            orderedGroups.map((group) => (
-              <div class="card" style={`border-top: 4px solid var(--${group.themeKey})`}>
-                <h3>{group.name}</h3>
-                <p class="contact-card-people">
-                  {group.leaders.map((leader) => `${leader.name}: ${leader.phone}`).join("\n")}
-                </p>
-              </div>
-            ))
-          }
-
-          {
-            contactSections.map((section) => (
-              <div class="card" style={`border-top: 4px solid ${section.accentColor}`}>
-                <h3>{section.title}</h3>
-                <p class="contact-card-people">
-                  {section.people.map((person) => `${person.name}: ${person.phone}`).join("\n")}
-                </p>
-              </div>
-            ))
-          }
-        </div>
-      </div>
+  <div class="info-page contact-page">
+    <header class="info-heading"><p class="info-kicker">We horen graag van je</p><h1>{contactPage.title}</h1><div class="info-actions"><a class="btn" href="#bericht">Stuur een bericht <span aria-hidden="true">↓</span></a><a class="info-text-link" href="#contactpersonen">Contactpersonen <span aria-hidden="true">↓</span></a></div></header>
+    <div class="contact-top-grid">
+      <section class="contact-general" aria-labelledby="contact-general-title"><h2 id="contact-general-title">{contactPage.generalTitle}</h2><RichText content={contactPage.generalBody} /><div class="contact-location"><h3>Hier vind je ons</h3><p>{siteSettings.address}<br /><small>{siteSettings.addressNote}</small></p><a class="info-text-link" href={siteSettings.mapGoogleUrl} target="_blank" rel="noreferrer">Plan je route <span aria-hidden="true">↗</span></a></div></section>
+      <section class="contact-message" id="bericht" aria-labelledby="contact-form-title"><h2 id="contact-form-title">{contactPage.formTitle}</h2><p class="contact-form-note">Velden met * zijn verplicht.</p><ContactForm client:load categories={contactPage.formCategories} successMessage={contactPage.successMessage} errorMessage={contactPage.errorMessage} fallbackEmail={siteSettings.email} /></section>
     </div>
-  </section>
+    <section class="contact-directory-section" id="contactpersonen" aria-labelledby="contact-directory-title"><div class="info-section-heading"><h2 id="contact-directory-title">{contactPage.sectionsTitle}</h2><a class="info-text-link" href={withDevFresh("/leiding.html")}>Ontmoet de leiding <span aria-hidden="true">↗</span></a></div>
+      <div class="departments contact-directory">
+        {orderedGroups.map(group => <section class="contact-team" aria-labelledby={`contact-${group.slug}`} style={`--department: var(--${group.themeKey}, var(--burgundy))`}><h3 id={`contact-${group.slug}`}><a href={withDevFresh(groupHref(group.slug))}>{group.name}</a></h3><div class="contact-card-people"><LeaderCards people={group.leaders} headingLevel="h4" /></div></section>)}
+        {contactSections.map((section, index) => <section class="contact-team" aria-labelledby={`contact-extra-${index}`} style={`--department: ${section.accentColor || "var(--burgundy)"}`}><h3 id={`contact-extra-${index}`}>{section.title}</h3><div class="contact-card-people"><LeaderCards people={section.people} headingLevel="h4" /></div></section>)}
+      </div>
+    </section>
+    <PracticalLinks />
+  </div>
 </PublicLayout>

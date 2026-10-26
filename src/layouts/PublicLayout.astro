@@ -2,12 +2,14 @@
 import Footer from "@/components/Footer.astro";
 import Navbar from "@/components/Navbar.astro";
 import type { SiteSettings } from "@/types/content";
+import "@/styles/public-theme.css";
 
 interface Props {
   title: string;
   description: string;
   siteSettings: SiteSettings;
   socialImage?: string;
+  socialImageAlt?: string;
   showMapFooter?: boolean;
   noIndex?: boolean;
 }
@@ -17,6 +19,7 @@ const {
   description,
   siteSettings,
   socialImage = siteSettings.logoUrl,
+  socialImageAlt = siteSettings.siteName,
   showMapFooter = false,
   noIndex = false
 } = Astro.props;
@@ -45,7 +48,7 @@ const socialImageUrl = socialImage.startsWith("http")
 ---
 
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="nl" class="public-document">
   <head>
     <link rel="canonical" href={canonicalUrl} />
 
@@ -58,7 +61,9 @@ const socialImageUrl = socialImage.startsWith("http")
     <link rel="icon" type="image/png" href={siteSettings.logoUrl} />
     <link rel="apple-touch-icon" href={siteSettings.logoUrl} />
     <link rel="stylesheet" href="/assets/styles.css" />
-    <script is:inline defer src="/assets/script.js"></script>
+    <script>
+      import "@/scripts/public-navigation";
+    </script>
 
     {siteSettings.analyticsId && (
       <>
@@ -79,18 +84,21 @@ const socialImageUrl = socialImage.startsWith("http")
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:alt" content={socialImageAlt} />
 
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImageUrl} />
+    <meta name="twitter:image:alt" content={socialImageAlt} />
 
   </head>
 
-  <body>
+  <body class="public-site">
+    <a class="skip-link" href="#main-content">Naar de inhoud</a>
     <Navbar />
     <slot name="afterNav" />
-    <main class="container">
+    <main class="container" id="main-content" tabindex="-1">
       <slot />
     </main>
     <Footer siteSettings={siteSettings} showMap={showMapFooter} />

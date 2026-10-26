@@ -1,18 +1,30 @@
----
+﻿---
+import PublicImage from "@/components/PublicImage.astro";
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import RichText from "@/components/RichText.astro";
 import PostCard from "@/components/PostCard.astro";
 import { loadSiteContent } from "@/lib/content";
 import { getPublishedPosts } from "@/lib/posts";
 import { withDevFresh } from "@/lib/href";
+import { groupHref, groupImageUrl as homeImage, groupAgeLabel } from "@/lib/group-presentation";
+import "@/styles/homepage.css";
 
 const content = await loadSiteContent();
-const { siteSettings, pages } = content;
+const { siteSettings, pages, groups } = content;
 const home = pages.home;
-const featuredPosts = getPublishedPosts(content.posts, true);
+const publishedPosts = getPublishedPosts(content.posts);
+const homePosts = getPublishedPosts(content.posts, true);
 const primaryCtaHref = withDevFresh(`/${home.banner.primaryCtaHref.replace(/^\//, "")}`);
 const secondaryCtaHref = withDevFresh(`/${home.banner.secondaryCtaHref.replace(/^\//, "")}`);
 const aboutCtaHref = withDevFresh(`/${home.about.ctaHref.replace(/^\//, "")}`);
+const headlineBreak = home.banner.title.indexOf(",");
+const headlineStart = headlineBreak < 0 ? home.banner.title : home.banner.title.slice(0, headlineBreak + 1);
+const headlineEnd = headlineBreak < 0 ? "" : home.banner.title.slice(headlineBreak + 1).trim();
+const foundingYear = /\bIn\s+(\d{4})\s+was Chiro\b/.exec(home.history.body)?.[1];
+
+const groupImages = new Set(groups.map((group) => homeImage(group.imageUrl)));
+// Existing gallery photos shown by a department need not be downloaded/displayed twice.
+const extraGallery = home.gallery.filter((image) => !groupImages.has(homeImage(image.imageUrl)));
 ---
 
 <PublicLayout
@@ -20,74 +32,105 @@ const aboutCtaHref = withDevFresh(`/${home.about.ctaHref.replace(/^\//, "")}`);
   description="Welkom bij Chiro Negenmanneke in Sint-Pieters-Leeuw. Info voor leden en ouders: inschrijven, activiteiten, groepen, verhuur en contact."
   siteSettings={siteSettings}
   socialImage={home.banner.imageUrl}
+  socialImageAlt={home.banner.imageAlt}
   showMapFooter={true}
 >
-  <section slot="afterNav" class="banner">
-    <img class="banner-image" src={home.banner.imageUrl} alt={home.banner.imageAlt} />
-    <div class="banner-content">
-      <div class="container">
-        <p class="banner-eyebrow">{home.banner.eyebrow}</p>
-        <h2 class="banner-title">{home.banner.title}</h2>
-        <p class="banner-sub">{home.banner.subtitle}</p>
-        <div class="banner-actions">
-          <a class="btn" href={primaryCtaHref}>
-            {home.banner.primaryCtaLabel}
-          </a>
-          <a class="btn btn-light" href={secondaryCtaHref}>
-            {home.banner.secondaryCtaLabel}
-          </a>
-        </div>
+  <div class="homepage">
+    <section class="home-hero" aria-labelledby="home-title">
+      <div class="home-eyebrow-row">
+        <p class="home-kicker"><span class="home-mark" aria-hidden="true">✳</span> {home.banner.eyebrow}</p>
+        <a class="home-text-link" href="#home-practical">Nieuw hier? <span aria-hidden="true">↘</span></a>
       </div>
-    </div>
-  </section>
-
-  {featuredPosts.length > 0 && (
-    <section class="posts-section home-featured-posts" aria-labelledby="featured-posts-title">
-      <div class="section-title">
-        <h2 id="featured-posts-title">In de kijker</h2>
-        <div class="line"></div>
-        <a href={withDevFresh("/activiteiten.html")}>Alle berichten <span aria-hidden="true">→</span></a>
+      <h1 id="home-title"><span>{headlineStart}</span>{headlineEnd && <span class="home-title-accent">{headlineEnd}</span>}</h1>
+      <div class="home-hero-actions">
+        <a class="btn" href={primaryCtaHref}>{home.banner.primaryCtaLabel} <span aria-hidden="true">↗</span></a>
+        <a class="btn btn-light" href={secondaryCtaHref}>{home.banner.secondaryCtaLabel} <span aria-hidden="true">→</span></a>
+        <a class="home-address" href={siteSettings.mapGoogleUrl} target="_blank" rel="noreferrer"><span aria-hidden="true">↗</span> {siteSettings.address}</a>
       </div>
-      <div class="grid posts-grid">
-        {featuredPosts.map((post) => <PostCard post={post} compact />)}
+      <div class="home-hero-scene">
+        <PublicImage sizes="(max-width: 1240px) 100vw, 1160px" class="home-hero-photo" src={homeImage(home.banner.imageUrl)} alt={home.banner.imageAlt} width="1836" height="1224" fetchpriority="high" decoding="async" />
+        <p class="home-paper-badge">{home.hero.badge}</p>
+        <p class="home-photo-caption">{home.banner.subtitle}</p>
       </div>
     </section>
-  )}
 
-  <section class="hero">
-    <span class="badge">{home.hero.badge}</span>
-    <h1>{home.hero.title}</h1>
-    <p class="lead">{home.hero.lead}</p>
-
-    <div class="gallery">
-      {
-        home.gallery.map((image) => (
-          <img class={`photo span-${image.span}`} src={image.imageUrl} alt={image.alt} />
-        ))
-      }
-    </div>
-
-    <div class="grid">
-      <div class="card span-6">
-        <h2>{home.about.title}</h2>
+    <section class="home-intro home-section" aria-labelledby="home-intro-title">
+      <div class="home-intro-heading">
+        <p class="home-kicker">01 / Dit zijn wij</p>
+        <h2 id="home-intro-title">{home.hero.title}</h2>
+        {foundingYear && <a class="home-since" href="#home-history"><span>Samen Chiro sinds</span><strong>{foundingYear}</strong><span>Ons verhaal <span aria-hidden="true">↗</span></span></a>}
+      </div>
+      <div class="home-intro-body">
+        <p class="home-lead">{home.hero.lead}</p>
+        <h3>{home.about.title}</h3>
         <RichText content={home.about.body} />
-        <a class="btn" href={aboutCtaHref}>
-          {home.about.ctaLabel}
-        </a>
+        <a class="home-text-link" href={aboutCtaHref}>{home.about.ctaLabel} <span aria-hidden="true">→</span></a>
       </div>
+    </section>
 
-      <div class="card span-6">
-        <h2>{home.practical.title}</h2>
-        <ul>
-          {home.practical.items.map((item) => <li><strong>{item.split(":")[0]}:</strong> {item.split(":").slice(1).join(":").trim()}</li>)}
-        </ul>
-        <p class="muted">{home.practical.note}</p>
+    <section class="home-departments home-section" aria-labelledby="home-departments-title">
+      <div class="home-section-heading">
+        <div><p class="home-kicker">02 / Vind jouw plek</p><h2 id="home-departments-title">Onze afdelingen<span class="home-heading-dot" aria-hidden="true">.</span></h2></div>
+        <a class="home-text-link" href={withDevFresh("/groepen.html")}>Maak kennis met de groepen <span aria-hidden="true">↗</span></a>
       </div>
+      <p class="home-section-lead">{pages.groups.lead}</p>
+      <div class="home-department-grid">
+        {groups.map((group, index) => (
+          <a class="home-department" href={withDevFresh(groupHref(group.slug))} style={`--department: var(--${group.themeKey}, var(--burgundy))`} aria-label={`Ontdek ${group.name}${group.ageRange ? ` (${groupAgeLabel(group.ageRange)})` : ""}`}>
+            <div class="home-department-photo">
+              {group.imageUrl ? <PublicImage src={homeImage(group.imageUrl)} alt={group.imageAlt || group.name} width="1920" height="1080" loading="lazy" decoding="async" /> : <span class="home-department-placeholder" aria-hidden="true">✳</span>}
+            </div>
+            <div class="home-department-label"><span class="home-department-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><h3>{group.name}</h3><span class="home-department-arrow" aria-hidden="true">↗</span></div>
+            {group.ageRange && <p class="home-department-age">{groupAgeLabel(group.ageRange)}</p>}
+          </a>
+        ))}
+      </div>
+    </section>
 
-      <div class="card">
-        <h2>{home.history.title}</h2>
+    <section class="home-news home-section" aria-labelledby="home-news-title">
+      <div class="home-section-heading">
+        <div><p class="home-kicker">03 / Het leeft hier</p><h2 id="home-news-title">{pages.activities.postsTitle}</h2></div>
+        <a class="home-text-link" href={withDevFresh("/activiteiten.html")}>Alle berichten & activiteiten <span aria-hidden="true">↗</span></a>
+      </div>
+      {homePosts.length ? <div class="home-news-grid">{homePosts.map((post) => <PostCard post={post} compact />)}</div> : (
+        <div class="home-news-empty">
+          <span class="home-empty-mark" aria-hidden="true">↗</span>
+          <div><h3>Even bijpraten?</h3><p>{publishedPosts.length ? "Meer nieuws en activiteiten vind je op de activiteitenpagina." : pages.activities.postsEmptyText}</p><a class="home-text-link" href={withDevFresh("/activiteiten.html")}>Bekijk de activiteiten <span aria-hidden="true">→</span></a></div>
+        </div>
+      )}
+    </section>
+
+    <section class="home-atmosphere home-section" aria-labelledby="home-atmosphere-title">
+      <div class="home-section-heading">
+        <div><p class="home-kicker">04 / Dat is Chiro</p><h2 id="home-atmosphere-title">Grote avonturen.<br />Kleine gelukskes.</h2></div>
+        <a class="btn btn-light" href={withDevFresh("/kamp.html")}>Mee op kamp <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="home-photo-collage">
+        {pages.camp.heroImageUrl && <figure class="home-collage-main"><PublicImage src={homeImage(pages.camp.heroImageUrl)} alt={pages.camp.heroImageAlt} width="1080" height="945" loading="lazy" decoding="async" /><figcaption>{pages.camp.title}</figcaption></figure>}
+        <figure class="home-collage-fire"><PublicImage src={homeImage(home.banner.imageUrl)} alt={home.banner.imageAlt} width="1836" height="1224" loading="lazy" decoding="async" /><figcaption>{home.banner.eyebrow}</figcaption></figure>
+        {extraGallery.map((image) => <figure class="home-collage-extra"><PublicImage src={homeImage(image.imageUrl)} alt={image.alt} width="1920" height="1080" loading="lazy" decoding="async" />{image.alt && <figcaption>{image.alt}</figcaption>}</figure>)}
+      </div>
+      <details class="home-history" id="home-history">
+        <summary>{home.history.title}<span class="home-history-hint">Lees ons verhaal</span></summary>
         <RichText content={home.history.body} />
+        <a class="btn btn-light" href={withDevFresh("/geschiedenis.html")}>Lees de geschiedenis op een aparte pagina <span aria-hidden="true">↗</span></a>
+      </details>
+    </section>
+
+    <section class="home-practical home-section" id="home-practical" aria-labelledby="home-practical-title">
+      <div class="home-practical-intro">
+        <p class="home-kicker">05 / Voor leden & ouders</p>
+        <h2 id="home-practical-title">{home.practical.title}<span class="home-heading-dot" aria-hidden="true">.</span></h2>
+        <p class="home-lead">{home.hero.badge}</p>
+        <p>{home.practical.note}</p>
+        <div class="home-practical-actions"><a class="btn" href={primaryCtaHref}>{home.banner.primaryCtaLabel} <span aria-hidden="true">↗</span></a><a class="home-text-link" href={withDevFresh("/contact.html")}>Nog een vraag? <span aria-hidden="true">→</span></a></div>
       </div>
-    </div>
-  </section>
+      <dl class="home-facts">
+        {home.practical.items.map((item) => {
+          const separator = item.indexOf(":");
+          return <div><dt>{separator < 0 ? item : item.slice(0, separator)}</dt>{separator >= 0 && <dd>{item.slice(separator + 1).trim()}</dd>}</div>;
+        })}
+      </dl>
+    </section>
+  </div>
 </PublicLayout>

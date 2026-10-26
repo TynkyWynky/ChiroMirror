@@ -1,0 +1,42 @@
+{
+  "/assets/banner.jpg": {
+    "width": 1836,
+    "height": 1224,
+    "srcset": "/assets/optimized/banner-480.webp 480w, /assets/optimized/banner-960.webp 960w, /assets/optimized/banner-1600.webp 1600w"
+  },
+  "/assets/kampfoto.jpg": {
+    "width": 1080,
+    "height": 945,
+    "srcset": "/assets/optimized/kampfoto-480.webp 480w, /assets/optimized/kampfoto-960.webp 960w"
+  },
+  "/assets/ribbels.jpg": {
+    "width": 1920,
+    "height": 1080,
+    "srcset": "/assets/optimized/ribbels-480.webp 480w, /assets/optimized/ribbels-960.webp 960w, /assets/optimized/ribbels-1600.webp 1600w"
+  },
+  "/assets/speelclub.jpg": {
+    "width": 1920,
+    "height": 1080,
+    "srcset": "/assets/optimized/speelclub-480.webp 480w, /assets/optimized/speelclub-960.webp 960w, /assets/optimized/speelclub-1600.webp 1600w"
+  },
+  "/assets/rakwi.jpg": {
+    "width": 1920,
+    "height": 1080,
+    "srcset": "/assets/optimized/rakwi-480.webp 480w, /assets/optimized/rakwi-960.webp 960w, /assets/optimized/rakwi-1600.webp 1600w"
+  },
+  "/assets/tito-cover.jpg": {
+    "width": 1920,
+    "height": 1080,
+    "srcset": "/assets/optimized/tito-cover-480.webp 480w, /assets/optimized/tito-cover-960.webp 960w, /assets/optimized/tito-cover-1600.webp 1600w"
+  },
+  "/assets/keti-cover.jpg": {
+    "width": 1920,
+    "height": 1080,
+    "srcset": "/assets/optimized/keti-cover-480.webp 480w, /assets/optimized/keti-cover-960.webp 960w, /assets/optimized/keti-cover-1600.webp 1600w"
+  },
+  "/assets/aspi.jpg": {
+    "width": 1920,
+    "height": 1080,
+    "srcset": "/assets/optimized/aspi-480.webp 480w, /assets/optimized/aspi-960.webp 960w, /assets/optimized/aspi-1600.webp 1600w"
+  }
+}

@@ -1,71 +1,67 @@
----
+﻿---
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import RichText from "@/components/RichText.astro";
 import PostCard from "@/components/PostCard.astro";
 import { loadSiteContent } from "@/lib/content";
 import { getPublishedPosts } from "@/lib/posts";
+import { filterPublicPosts, getPostMonths } from "@/lib/public-posts";
+import { withDevFresh } from "@/lib/href";
+import "@/styles/activities.css";
 
-const content = await loadSiteContent();
-const { siteSettings, pages, posts } = content;
+const { siteSettings, pages, posts } = await loadSiteContent();
 const activities = pages.activities;
 const bookletDownloadHref = activities.bookletUrl ? "/api/booklet" : "";
 
 function renderActivityCardBody(title: string, body: string) {
-  if (!bookletDownloadHref || title.trim().toLowerCase() !== "boekje") {
-    return body;
-  }
-
-  if (/\*boekje\*/i.test(body)) {
-    return body.replace(/\*boekje\*/i, `[boekje](${bookletDownloadHref})`);
-  }
-
-  if (/\bboekje\b/i.test(body)) {
-    return body.replace(/\bboekje\b/i, `[boekje](${bookletDownloadHref})`);
-  }
-
+  if (!bookletDownloadHref || title.trim().toLowerCase() !== "boekje") return body;
+  if (/\*boekje\*/i.test(body)) return body.replace(/\*boekje\*/i, `[boekje](${bookletDownloadHref})`);
+  if (/\bboekje\b/i.test(body)) return body.replace(/\bboekje\b/i, `[boekje](${bookletDownloadHref})`);
   return `${body}\n\n[boekje](${bookletDownloadHref})`;
 }
 
 const orderedPosts = getPublishedPosts(posts);
+const months = getPostMonths(orderedPosts);
+const requestedMonth = Astro.url.searchParams.get("maand") ?? "";
+const filters = {
+  query: (Astro.url.searchParams.get("zoek") ?? "").trim().slice(0, 120),
+  month: months.some(([key]) => key === requestedMonth) ? requestedMonth : "",
+  featured: Astro.url.searchParams.get("uitgelicht") === "1"
+};
+const visiblePosts = filterPublicPosts(orderedPosts, filters);
+const hasFilters = Boolean(filters.query || filters.month || filters.featured);
 ---
 
-<PublicLayout
-  title="Activiteiten • Chiro Negenmanneke"
-  description={activities.description}
-  siteSettings={siteSettings}
->
-  <section class="hero">
-    <h1>{activities.title}</h1>
-    <p class="lead">{activities.lead}</p>
+<PublicLayout title="Activiteiten • Chiro Negenmanneke" description={activities.description} siteSettings={siteSettings}>
+  <div class="activities-page">
+    <header class="activities-hero">
+      <p class="activities-kicker"><span aria-hidden="true">✳</span> Het leeft in Negenmanneke</p>
+      <h1>{activities.title}</h1>
+      <p class="activities-lead">{activities.lead}</p>
+      <div class="activities-actions"><a class="btn" href="#berichten">Naar de berichten <span aria-hidden="true">↓</span></a>{bookletDownloadHref && <a class="btn btn-light" href={bookletDownloadHref}>Download het boekje <span aria-hidden="true">↗</span></a>}</div>
+    </header>
 
-    <div class="grid">
-      {
-        activities.cards.map((card) => (
-          <div class={`card ${card.span === 6 ? "span-6" : "span-12"}`}>
-            <h2>{card.title}</h2>
-            <RichText content={renderActivityCardBody(card.title, card.body)} />
-          </div>
-        ))
-      }
-    </div>
-
-    <section class="posts-section">
-      <div class="section-title">
-        <h2>{activities.postsTitle}</h2>
-        <div class="line"></div>
-      </div>
-
-      {
-        orderedPosts.length ? (
-          <div class="posts-feed">
-            {orderedPosts.map((post) => <PostCard post={post} />)}
-          </div>
-        ) : (
-          <div class="card empty-state">
-            <p>{activities.postsEmptyText}</p>
-          </div>
-        )
-      }
+    <section class="activities-info" aria-label="Kalender en praktische informatie">
+      {activities.cards.map((card, index) => <article class:list={["activities-info-panel", card.span !== 6 && "activities-info-wide"]}>
+        <span class="activities-panel-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><h2>{card.title}</h2>
+        <RichText content={renderActivityCardBody(card.title, card.body)} />
+      </article>)}
     </section>
-  </section>
+
+    <section class="activities-feed" id="berichten" aria-labelledby="activities-posts-title">
+      <div class="activities-feed-heading"><div><p class="activities-kicker">Van onze Chiro</p><h2 id="activities-posts-title">{activities.postsTitle}</h2></div><p class="activities-feed-note">Nieuws, foto's en aankondigingen op één plek.</p></div>
+      {orderedPosts.length > 0 && <form class="activities-filters" action="/activiteiten.html#berichten" method="GET" aria-label="Berichten filteren">
+        <div><label for="posts-search">Zoek een bericht</label><input id="posts-search" name="zoek" type="search" maxlength="120" value={filters.query} placeholder="Bijvoorbeeld kamp of startdag" /></div>
+        {months.length > 0 && <div><label for="posts-month">Maand van het bericht</label><select id="posts-month" name="maand"><option value="">Alle maanden</option>{months.map(([key, label]) => <option value={key} selected={filters.month === key}>{label}</option>)}</select></div>}
+        <label class="activities-highlight-filter"><input type="checkbox" name="uitgelicht" value="1" checked={filters.featured} /> Alleen uitgelicht</label>
+        <button class="btn" type="submit">Toon berichten <span aria-hidden="true">→</span></button>
+        {hasFilters && <a class="activities-reset" href="/activiteiten.html#berichten">Alle berichten tonen</a>}
+      </form>}
+      {orderedPosts.length > 0 && <p class="activities-result-count" role="status">{visiblePosts.length} van {orderedPosts.length} {orderedPosts.length === 1 ? "bericht" : "berichten"}{hasFilters ? " met deze filters" : ""}</p>}
+      {visiblePosts.length ? <div class="activities-posts">{visiblePosts.map((post) => <PostCard post={post} />)}</div> : <div class="activities-empty">
+        <span class="activities-empty-mark" aria-hidden="true">✳</span><div><h3>{hasFilters ? "Niets gevonden met deze filters" : "Hier lees je binnenkort meer"}</h3><p>{hasFilters ? "Probeer een andere zoekterm of bekijk alle berichten." : activities.postsEmptyText}</p>
+        {hasFilters ? <a class="btn btn-light" href="/activiteiten.html#berichten">Alle berichten tonen</a> : <a class="activities-text-link" href={siteSettings.facebookUrl} target="_blank" rel="noreferrer">Volg onze Chiro op Facebook <span aria-hidden="true">↗</span></a>}</div>
+      </div>}
+    </section>
+    <aside class="activities-contact"><div><h2>Een vraag over een activiteit?</h2><p>Onze leiding helpt je graag verder.</p></div><a class="btn btn-light" href={withDevFresh("/contact.html")}>Contact opnemen <span aria-hidden="true">↗</span></a></aside>
+  </div>
 </PublicLayout>

@@ -1,0 +1,13 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import variants from "@/data/public-image-variants.json";
+
+type Props = Omit<HTMLAttributes<"img">, "src" | "alt"> & { src: string; alt: string };
+const { src, alt, sizes = "(max-width: 767px) 100vw, 580px", ...attributes } = Astro.props;
+const local = variants[src as keyof typeof variants];
+---
+
+<picture style="display: contents">
+  {local && <source type="image/webp" srcset={local.srcset} sizes={sizes} />}
+  <img {...attributes} src={src} alt={alt} width={local?.width ?? attributes.width} height={local?.height ?? attributes.height} />
+</picture>

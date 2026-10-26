@@ -1,0 +1,165 @@
+/* Remaining public pages: shared reading patterns, distinct layouts by content type. */
+.info-page { padding-block: clamp(2rem, 5vw, 4rem) 1rem; }
+.info-page :is(h1, h2, h3, h4, p, figure) { margin-top: 0; }
+.info-page :is(h1, h2, h3, h4, a) { overflow-wrap: anywhere; }
+.info-page .info-heading { margin-bottom: 2rem; max-width: 960px; }
+.info-page .info-heading h1 { margin-bottom: 1.5rem; color: var(--burgundy); font-size: clamp(2.3rem, 5.5vw, 4.8rem); line-height: 1.08; }
+.info-page .info-kicker { margin-bottom: 1rem; font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.info-page .info-lead { max-width: 64ch; font-size: clamp(1.05rem, 1.8vw, 1.3rem); line-height: 1.75; }
+.info-page .info-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; margin-top: 1.5rem; }
+.info-page :is(.info-text-link, .info-back) { display: inline-flex; align-items: center; gap: .6rem; min-height: 44px; font-weight: 750; }
+.info-page .info-back { margin-bottom: 1rem; font-size: .9rem; }
+.info-page .info-section-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+.info-page .info-section-heading h2 { margin-bottom: 0; }
+.info-page .info-jump-nav { display: flex; flex-wrap: wrap; gap: .7rem; margin-bottom: 3rem; }
+.info-page .info-jump-nav a { display: inline-flex; align-items: center; min-height: 46px; padding: .6rem 1rem; color: var(--text); background: var(--cream); border: 1px solid var(--border); border-radius: 999px; font-weight: 700; }
+.info-page .info-note { padding: 1rem 1.2rem; border-left: 4px solid var(--gold); background: var(--cream); }
+.info-page .practical-links { margin-top: clamp(3rem, 6vw, 5rem); padding-top: 2rem; border-top: 2px solid var(--text); }
+.info-page .practical-links h2 { font-size: 1.5rem; }
+.info-page .practical-links ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0; gap: .5rem 1.5rem; }
+.info-page .practical-links a { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-height: 48px; padding-block: .6rem; font-weight: 700; border-bottom: 1px solid var(--border); }
+.info-page [tabindex="0"]:focus-visible { outline: 3px solid var(--ring); outline-offset: 4px; }
+
+/* A guide for new parents, entirely sourced from existing content. */
+.info-page .practical-core { display: grid; gap: 2rem; padding: clamp(1.5rem, 4vw, 3rem); background: var(--cream); border-top: 5px solid var(--gold); }
+.info-page .info-facts { margin: 0; }
+.info-page .info-facts > div { padding-block: 1rem; border-top: 1px solid #cbb89d; }
+.info-page .info-facts dt { color: var(--burgundy); font-size: .75rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.info-page .info-facts dd { margin: .4rem 0 0; font-size: 1.2rem; font-weight: 700; overflow-wrap: anywhere; }
+.info-page .info-location { margin-top: 3rem; padding: .5rem 0 .5rem 1.5rem; border-left: 5px solid var(--gold); }
+.info-page .info-questions { margin-top: 3rem; }
+.info-page .info-questions details { margin-top: 1rem; background: #f1e2db; border-bottom: 2px solid #d0b6ab; }
+.info-page .info-questions summary { padding: 1rem 1.2rem; min-height: 52px; cursor: pointer; font-weight: 800; }
+.info-page .info-questions details > :not(summary) { margin: 0 1.2rem 1rem; padding-bottom: .5rem; }
+.info-page .info-download { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.5rem; margin-top: 3rem; background: var(--cream); }
+.info-page .info-download h2 { margin-bottom: 0; }
+
+/* Enrollment remains an ordered set of instructions, not a new form. */
+.info-page.registration-page .info-heading { max-width: none; padding: clamp(1.4rem, 4vw, 3rem); background: var(--burgundy); color: var(--cream); border-radius: .25rem 2.5rem .25rem .25rem; --ring: var(--gold); --surface: var(--burgundy); }
+.info-page.registration-page .info-heading h1 { color: var(--cream); max-width: 24ch; font-size: clamp(2.1rem, 4.8vw, 4.2rem); }
+.info-page.registration-page .info-heading .btn { color: var(--text); background: var(--gold); box-shadow: 0 4px 0 #5b1825; }
+.info-page.registration-page .info-heading .info-text-link { color: var(--cream); }
+.info-page .registration-steps { margin-top: 2rem; }
+.info-page .registration-steps ol { counter-reset: enrollment-step; list-style: none; padding: 0; margin-block: 1.5rem; }
+.info-page .registration-steps li { position: relative; padding: 1.2rem 1rem 1.2rem 4rem; counter-increment: enrollment-step; border-top: 1px solid var(--border); }
+.info-page .registration-steps li::before { content: counter(enrollment-step, decimal-leading-zero); position: absolute; left: 0; top: 1rem; display: grid; place-items: center; width: 2.6rem; height: 2.6rem; background: var(--burgundy); color: var(--cream); font-size: .85rem; font-weight: 900; border-radius: 50%; }
+.info-page .registration-groups { margin-top: 3rem; }
+.info-page .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-small); }
+.info-page .table { min-width: 620px; }
+.info-page .table th { vertical-align: top; }
+.info-page .registration-merch { margin-top: 4rem; padding: clamp(1.3rem, 4vw, 3rem); background: #efdfcf; border-top: 5px solid var(--burgundy); }
+.info-page .registration-merch h2 { font-size: clamp(1.8rem, 3.3vw, 2.8rem); }
+.info-page .merch-layout { display: grid; gap: 2rem; align-items: start; margin-top: 2rem; }
+.info-page .merch-visual { padding: 1.5rem; background: var(--cream); border: 1px solid #cfb99c; }
+.info-page .merch-visual img { width: 100%; max-width: 278px; height: auto; margin: 0 auto; object-fit: contain; }
+.info-page .merch-prices { list-style: none; display: flex; justify-content: center; flex-wrap: wrap; gap: .7rem; margin: 1.5rem 0 0; padding: 0; }
+.info-page .merch-prices li { padding: .5rem .8rem; background: var(--gold); color: var(--text); border: 1px solid var(--text); border-radius: 999px; font-size: .9rem; font-weight: 800; }
+.info-page .merch-clothes-note { padding-top: 1.5rem; margin-top: 1.5rem; border-top: 1px solid #cbb89d; }
+.info-page .merch-clothes-note h3 { font-size: 1.15rem; }
+
+/* Contact handling and fields are preserved; feedback and layout get clearer surfaces. */
+.info-page .contact-top-grid { display: grid; gap: 2rem; align-items: start; }
+.info-page :is(.contact-general, .contact-message) { min-width: 0; padding: clamp(1.2rem, 3vw, 2rem); }
+.info-page .contact-general { background: var(--cream); border-left: 4px solid var(--gold); }
+.info-page .contact-location { padding-top: 1.5rem; margin-top: 1.5rem; border-top: 1px solid var(--border); }
+.info-page .contact-location h3 { font-size: 1.15rem; }
+.info-page .contact-message { background: var(--surface); border: 1px solid var(--border); border-top: 4px solid var(--burgundy); }
+.info-page .contact-form-note { color: var(--muted); font-size: .85rem; }
+.info-page .contact-message textarea { min-height: 170px; resize: vertical; }
+.info-page .contact-message .contact-status { overflow-wrap: anywhere; line-height: 1.6; }
+.info-page .contact-status-success { border-left: 4px solid #065f46; }
+.info-page .contact-status-error { border-left: 4px solid #7f1d1d; }
+.info-page .contact-directory-section { margin-top: 4rem; }
+.info-page .contact-directory { display: grid; gap: 2rem; padding: 0; }
+.info-page .contact-team { min-width: 0; border-top: 4px solid var(--department); padding-top: 1.2rem; }
+.info-page .contact-card-people { white-space: normal; }
+.info-page .leader-card h4 { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 900; line-height: 1.2; letter-spacing: -.02em; margin-bottom: .25rem; }
+
+/* Legal and rental content: original wording, readable sections and native anchors. */
+.info-page .reading-layout { display: grid; gap: 2rem; align-items: start; }
+.info-page .reading-index { padding: 1.2rem; background: var(--cream); border-left: 4px solid var(--burgundy); }
+.info-page .reading-index h2 { font-size: 1rem; margin-bottom: .7rem; }
+.info-page .reading-index ol { padding-left: 1.2rem; margin-bottom: 0; }
+.info-page .reading-index a { display: inline-flex; align-items: center; min-height: 44px; }
+.info-page .reading-content { min-width: 0; max-width: 76ch; }
+.info-page .reading-section { padding-block: 1.5rem; border-top: 1px solid var(--border); }
+.info-page .reading-section:first-child { border-top: 3px solid var(--burgundy); }
+.info-page .reading-section h2 { font-size: clamp(1.4rem, 2.8vw, 2rem); }
+.info-page .reading-section .markdown { line-height: 1.85; }
+.info-page.rental-page .info-heading { padding: clamp(1.3rem, 4vw, 3rem); background: var(--cream); border-top: 5px solid var(--gold); }
+.info-page.legal-page .info-heading { border-bottom: 2px solid var(--text); padding-bottom: 1rem; }
+.info-page.legal-page .info-heading h1 { font-size: clamp(2rem, 4.5vw, 4.2rem); }
+.info-page .history-photo { margin: 0; }
+.info-page .history-photo img { width: 100%; height: auto; aspect-ratio: 21 / 9; object-fit: cover; object-position: center 65%; border-radius: 2rem .25rem 2rem .25rem; }
+.info-page .history-photo figcaption { margin-top: .7rem; color: var(--muted); font-size: .85rem; }
+.info-page .history-story { max-width: 74ch; margin: 3rem auto 0; font-size: clamp(1rem, 1.5vw, 1.12rem); line-height: 1.9; }
+.info-page .history-story .markdown > p:first-child { font-family: var(--font-heading); font-size: 1.7rem; font-weight: 900; line-height: 1.2; }
+
+/* Songs use native disclosure and GET search: readable with or without JavaScript. */
+.info-page.songbook-page .info-heading { padding: clamp(1.3rem, 4vw, 3rem); background: #efe0df; border-bottom: 5px solid var(--burgundy); }
+.info-page .song-search { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem; padding: 1.3rem; margin-bottom: 3rem; background: var(--cream); }
+.info-page .song-search > div { flex: 1 1 200px; min-width: 0; }
+.info-page .song-search label { margin-top: 0; }
+.info-page .song-count { margin: 0; color: var(--muted); }
+.info-page .song { border-radius: .25rem; border: 1px solid var(--border); border-left: 4px solid var(--burgundy); background: var(--surface); margin-top: 1rem; }
+.info-page .song summary { min-height: 58px; padding: 1rem 1.2rem; }
+.info-page .song[open] summary { background: var(--cream); }
+.info-page .song .song-title { color: var(--text); font-size: 1.1rem; }
+.info-page .song .song-body { padding: 1rem 1.2rem; }
+.info-page .song .lyrics { padding: 0; margin: 0; border: 0; background: transparent; color: var(--text); font-family: var(--font-body); line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Existing camp sections and anchor destinations, with a warmer visual hierarchy. */
+.info-page .camp-shell { padding: 0; }
+.info-page .camp-masthead { background: var(--burgundy); border-radius: .25rem 2.5rem .25rem .25rem; box-shadow: none; gap: 2rem; padding: clamp(1.4rem, 4vw, 3rem); }
+.info-page .camp-masthead::before, .info-page .camp-masthead-visual::after { display: none; }
+.info-page .camp-masthead h1 { color: var(--cream); max-width: none; font-size: clamp(2.3rem, 4.8vw, 4rem); overflow-wrap: anywhere; }
+.info-page .camp-masthead-copy { padding: 0; }
+.info-page .camp-masthead-copy .lead { color: var(--cream); line-height: 1.7; }
+.info-page .camp-kicker { color: var(--text); background: var(--gold); border-radius: .25rem; }
+.info-page .camp-masthead-visual { min-height: 260px; border-radius: 1.5rem .25rem 1.5rem .25rem; box-shadow: none; border: 0; }
+.info-page .camp-masthead-visual img { width: 100%; height: 100%; object-fit: cover; object-position: center 65%; }
+.info-page .camp-masthead .btn { background: var(--gold); color: var(--text); box-shadow: 0 4px 0 #5b1825; }
+.info-page .camp-masthead .btn.btn-light { background: var(--cream); color: var(--burgundy); border-color: var(--cream); }
+.info-page .camp-masthead { --ring: var(--gold); --surface: var(--burgundy); }
+.info-page .camp-masthead:not(:has(.camp-masthead-visual)) { grid-template-columns: 1fr; }
+.info-page .camp-jumpbar { margin-top: 1.5rem; gap: .7rem; }
+.info-page .camp-jumpbar a { display: inline-flex; align-items: center; min-height: 46px; background: var(--cream); border-color: var(--border); box-shadow: none; }
+.info-page :is(.camp-overview-grid, .camp-main-grid) { margin-top: 2rem; }
+.info-page :is(.camp-hero-card, .camp-note-card, .camp-panel) { padding: clamp(1.3rem, 3vw, 2rem); border: 1px solid var(--border); border-radius: .25rem; box-shadow: none; background: var(--surface); min-width: 0; }
+.info-page .camp-hero-card { background: var(--cream); border-top: 5px solid var(--gold); }
+.info-page .camp-note-card { background: #efe0df; }
+.info-page .camp-card-kicker { color: var(--burgundy); }
+.info-page .camp-pill-grid { grid-template-columns: 1fr; }
+.info-page .camp-pill { padding: 1rem 0; border: 0; border-top: 1px solid #cbb89d; border-radius: 0; background: transparent; }
+.info-page .camp-pill strong { font-size: 1.2rem; }
+.info-page .camp-pill span { color: var(--muted); }
+.info-page .camp-inline-photo { aspect-ratio: 16 / 10; object-fit: cover; object-position: center 65%; border-radius: .25rem; box-shadow: none; }
+.info-page .camp-price-list > div { flex-wrap: wrap; gap: .5rem 1rem; background: var(--cream); border-color: var(--border); border-radius: .25rem; }
+.info-page .camp-price-list strong { color: var(--burgundy); }
+.info-page .camp-bank-box { background: var(--cream); border-color: var(--border); border-radius: .25rem; overflow-wrap: anywhere; }
+.info-page .camp-soft-box { background: #f1e6db; border-radius: .25rem; border-color: var(--border); }
+.info-page .camp-step-list li { background: var(--cream); border-radius: .25rem; box-shadow: inset 4px 0 var(--burgundy); }
+.info-page .camp-step-list span { color: var(--muted); }
+.info-page .camp-panel-checklist { background: var(--text); color: var(--cream); --ring: var(--gold); --surface: var(--text); }
+.info-page .camp-panel-checklist .camp-card-kicker { color: var(--gold); }
+.info-page :is(.camp-pack-card, .camp-pack-note) { align-self: start; background: var(--cream); color: var(--text); border-color: var(--border); border-radius: .25rem; }
+.info-page .camp-pack-card summary { min-height: 54px; }
+.info-page .camp-pack-card summary::after { color: var(--burgundy); }
+
+@media (min-width: 700px) {
+  .info-page .practical-links ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .info-page :is(.practical-core, .merch-layout) { grid-template-columns: 1fr 1fr; gap: 2rem; }
+  .info-page .contact-directory { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1000px) {
+  .info-page .contact-top-grid { grid-template-columns: .8fr 1.2fr; gap: 2.5rem; }
+  .info-page .reading-layout { grid-template-columns: 240px minmax(0, 1fr); gap: 3rem; }
+  .info-page .reading-index { position: sticky; top: 110px; }
+  .info-page .camp-overview-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+  .info-page .camp-pill-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .info-page .song-search .btn { width: 100%; }
+  .info-page .camp-cta-row .btn { width: 100%; }
+  .info-page .history-photo img { aspect-ratio: 4 / 3; }
+}

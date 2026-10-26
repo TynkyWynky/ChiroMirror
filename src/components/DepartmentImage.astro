@@ -1,0 +1,11 @@
+---
+import PublicImage from "@/components/PublicImage.astro";
+import type { Group } from "@/types/content";
+import { groupImageUrl } from "@/lib/group-presentation";
+interface Props { group: Group; priority?: boolean; }
+const { group, priority = false } = Astro.props;
+---
+
+<div class="department-image">
+  {group.imageUrl ? <PublicImage src={groupImageUrl(group.imageUrl)} alt={group.imageAlt || `De afdeling ${group.name}`} width="1920" height="1080" loading={priority ? "eager" : "lazy"} fetchpriority={priority ? "high" : undefined} decoding="async" /> : <div class="department-image-empty"><span aria-hidden="true">✳</span><span>{group.name}</span></div>}
+</div>

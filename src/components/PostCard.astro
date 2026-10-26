@@ -1,7 +1,9 @@
 ---
+import PublicImage from "@/components/PublicImage.astro";
 import type { Post } from "@/types/content";
 import { getPostPreview, renderPostMarkdown } from "@/lib/post-markdown";
 import { withDevFresh } from "@/lib/href";
+import { getPublicPostDate } from "@/lib/public-posts";
 
 interface Props {
   post: Post;
@@ -10,23 +12,21 @@ interface Props {
 
 const { post, compact = false } = Astro.props;
 const preview = compact ? getPostPreview(post.body) : undefined;
-const date = new Date(post.eventDate || post.createdAt || "");
-const formattedDate = Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("nl-BE", {
-  day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Brussels"
-}).format(date);
+const date = getPublicPostDate(post);
 const postAnchor = post.id ? `post-${post.id}` : undefined;
 const href = withDevFresh(`/activiteiten.html${postAnchor ? `#${postAnchor}` : ""}`);
 ---
 
-<article class:list={["card post-card", compact && "span-6 post-card-compact"]} id={compact ? undefined : postAnchor}>
+<article class:list={["card post-card", compact ? "span-6 post-card-compact" : "post-card-full", !compact && date && "has-date-stamp", post.featured && "post-is-featured"]} id={compact ? undefined : postAnchor}>
+  {!compact && date && <div class="post-date-stamp" aria-hidden="true"><strong>{date.day}</strong><span>{date.monthShort}</span><small>{date.year}</small></div>}
   {preview?.image && (
     <a class="post-cover" href={href} aria-label={post.title}>
-      <img src={preview.image.url} alt={preview.image.alt} loading="lazy" decoding="async" />
+      <PublicImage src={preview.image.url} alt={preview.image.alt} loading="lazy" decoding="async" />
     </a>
   )}
   <div class="post-meta-row">
     {post.featured && <span class="badge">Uitgelicht</span>}
-    {formattedDate && <time class="post-date" datetime={post.eventDate || post.createdAt}>{formattedDate}</time>}
+    {date && <span class="post-date"><span class="post-date-label">{date.source === "created" ? "Aangemaakt op" : "Datum"} </span><time datetime={date.datetime}>{date.label}</time></span>}
   </div>
   <h3>{compact ? <a href={href}>{post.title}</a> : post.title}</h3>
   {compact ? (
@@ -38,6 +38,7 @@ const href = withDevFresh(`/activiteiten.html${postAnchor ? `#${postAnchor}` : "
     <>
       {post.summary && <p class="lead-small">{post.summary}</p>}
       <div class="markdown post-body" set:html={renderPostMarkdown(post.body)} />
+      <a class="post-permalink" href={href} aria-label={`Vaste link naar ${post.title}`}>Link naar dit bericht <span aria-hidden="true">↗</span></a>
     </>
   )}
 </article>

@@ -1,52 +1,39 @@
----
+﻿---
 import PublicLayout from "@/layouts/PublicLayout.astro";
+import DepartmentImage from "@/components/DepartmentImage.astro";
 import { loadSiteContent } from "@/lib/content";
+import { groupHref, groupAgeLabel } from "@/lib/group-presentation";
+import { withDevFresh } from "@/lib/href";
+import "@/styles/departments.css";
 
-const content = await loadSiteContent();
-const { siteSettings, pages, groups } = content;
+const { siteSettings, pages, groups } = await loadSiteContent();
 ---
 
-<PublicLayout
-  title="Groepen • Chiro Negenmanneke"
-  description="Maak kennis met onze afdelingen: Ribbels, Speelclub, Rakwi, Tito, Keti en Aspi."
-  siteSettings={siteSettings}
->
-  <section class="hero">
-    <h1>{pages.groups.title}</h1>
-    <p class="lead">{pages.groups.lead}</p>
-
-    <div class="grid groepen-grid">
-      {
-        groups.map((group) => (
-          <article class={`card groep ${group.themeKey}`} style={`--groepkleur: var(--${group.themeKey})`}>
-            <div
-              class="groep-head"
-              style="background: color-mix(in srgb, var(--groepkleur) 16%, white);"
-            >
-              <h2>{group.name}</h2>
-              {group.ageRange && <span class="tag">{group.ageRange}</span>}
-            </div>
-            {group.imageUrl && <img class="cover" src={group.imageUrl} alt={group.imageAlt || group.name} loading="lazy" />}
-            <div class="groep-body">
-              {(group.ageRange || group.birthYears || group.schoolYears) && (
-                <p class="meta">
-                  {[
-                    group.ageRange && `Leeftijd: ${group.ageRange}`,
-                    group.birthYears && `Geboortejaar: ${group.birthYears}`,
-                    group.schoolYears
-                  ].filter(Boolean).join(" · ")}
-                </p>
-              )}
-              {group.description && <p>{group.description}</p>}
-              {group.leaders.length > 0 && <ul class="groep-list">
-                <li>
-                  <strong>Leiding:</strong> {group.leaders.map((leader) => leader.name).join(" · ")}
-                </li>
-              </ul>}
-            </div>
-          </article>
-        ))
-      }
+<PublicLayout title="Groepen • Chiro Negenmanneke" description="Maak kennis met onze afdelingen en hun leiding bij Chiro Negenmanneke." siteSettings={siteSettings}>
+  <div class="departments">
+    <header class="departments-intro">
+      <p class="department-kicker">Een eigen kleur. Een eigen avontuur.</p>
+      <h1>{pages.groups.title}<span aria-hidden="true">.</span></h1>
+      <p class="department-lead">{pages.groups.lead}</p>
+      <div class="department-actions"><a class="btn" href={withDevFresh("/inschrijven.html")}>Inschrijven <span aria-hidden="true">↗</span></a><a class="department-text-link" href={withDevFresh("/leiding.html")}>Ontmoet onze leiding <span aria-hidden="true">→</span></a></div>
+    </header>
+    <nav class="department-jump-nav" aria-label="Kies je afdeling">
+      {groups.map((group) => <a href={`#${group.slug}`} style={`--department: var(--${group.themeKey}, var(--burgundy))`}>{group.name}</a>)}
+    </nav>
+    <div class="department-overview">
+      {groups.map((group, index) => <article class="department-preview" id={group.slug} style={`--department: var(--${group.themeKey}, var(--burgundy))`}>
+        <a class="department-preview-link" href={withDevFresh(groupHref(group.slug))}>
+          <div class="department-preview-heading"><span class="department-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><h2>{group.name}</h2><span class="department-arrow" aria-hidden="true">↗</span></div>
+          <DepartmentImage group={group} />
+          <div class="department-preview-copy">
+            {group.ageRange && <p class="department-age">{groupAgeLabel(group.ageRange)}</p>}
+            {group.description && <p class="department-description">{group.description}</p>}
+            {group.leaders.some((person) => person.name?.trim()) && <p class="department-preview-leaders"><strong>Leiding:</strong> {group.leaders.map((person) => person.name).filter(Boolean).join(" · ")}</p>}
+            <span class="department-link-label">Ontdek {group.name} <span aria-hidden="true">→</span></span>
+          </div>
+        </a>
+      </article>)}
     </div>
-  </section>
+    <aside class="department-help"><div><h2>Waar voelt jouw kind zich thuis?</h2><p>Twijfel je over de juiste afdeling? We helpen je graag verder.</p></div><a class="btn btn-light" href={withDevFresh("/contact.html")}>Stel je vraag <span aria-hidden="true">↗</span></a></aside>
+  </div>
 </PublicLayout>

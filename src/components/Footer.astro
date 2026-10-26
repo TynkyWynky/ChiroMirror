@@ -1,83 +1,54 @@
----
+﻿---
 import type { SiteSettings } from "@/types/content";
 import { getAdminBasePath } from "@/lib/admin-path";
+import { publicNavLinks } from "@/lib/routes";
 import { withDevFresh } from "@/lib/href";
 
-interface Props {
-  siteSettings: SiteSettings;
-  showMap?: boolean;
-}
-
+interface Props { siteSettings: SiteSettings; showMap?: boolean; }
 const { siteSettings, showMap = false } = Astro.props;
 const adminLinkLabel = siteSettings.footerAdminLabel.trim();
 ---
 
-<footer>
+<footer class="site-footer">
   <div class="container">
-    <div class="grid">
-      <div class={`card ${showMap ? "span-12" : "span-6"}`}>
-        <div class="section-title">
-          <h3>Adres</h3>
-          <div class="line"></div>
-        </div>
-        {siteSettings.address}<br />
-        <small>{siteSettings.addressNote}</small>
-
-        {
-          showMap && (
-            <>
-              <div class="map-wrapper">
-                <iframe
-                  title="Kaart – Chiro Negenmanneke"
-                  src={siteSettings.mapEmbedUrl}
-                  allowfullscreen
-                  loading="lazy"
-                  referrerpolicy="no-referrer-when-downgrade"
-                ></iframe>
-              </div>
-
-              <div class="map-actions">
-                <a class="btn" target="_blank" rel="noreferrer" href={siteSettings.mapGoogleUrl}>
-                  Route (Google Maps)
-                </a>
-                <a class="btn btn-light" target="_blank" rel="noreferrer" href={siteSettings.mapAppleUrl}>
-                  Open in Apple Maps
-                </a>
-              </div>
-            </>
-          )
-        }
-      </div>
-
-      <div class={`card ${showMap ? "span-12" : "span-6"}`}>
-        <div class="section-title">
-          <h3>Volg ons</h3>
-          <div class="line"></div>
-        </div>
-        <div class="logo-row">
-          <a href={siteSettings.facebookUrl} target="_blank" rel="noreferrer">
-            Facebook
-          </a>
-          ·
-          <a href={siteSettings.instagramUrl} target="_blank" rel="noreferrer">
-            Instagram
-          </a>
-          ·
-          <a href={`mailto:${siteSettings.email}`}>{siteSettings.email}</a>
-        </div>
-      </div>
+    <div class="footer-top">
+      <a class="brand footer-brand" href="/">
+        <img class="brand-logo" src="/assets/Chirologo_700px.png" width="700" height="700" alt="" loading="lazy" />
+        <span class="brand-name"><span>Chiro</span><strong>Negenmanneke</strong></span>
+      </a>
+      <a class="btn footer-signup" href={withDevFresh("/inschrijven.html")}>Inschrijven <span aria-hidden="true">↗</span></a>
     </div>
-
-    <p class="muted">{siteSettings.footerCopyright}</p>
-    <p class="muted">{siteSettings.footerDeveloper}</p>
-    {
-      adminLinkLabel && (
-        <p class="footer-meta">
-          <a class="admin-link" href={withDevFresh(getAdminBasePath())} rel="nofollow">
-            {adminLinkLabel}
-          </a>
-        </p>
-      )
-    }
+    <div class="footer-columns">
+      <section aria-labelledby="footer-address">
+        <h2 id="footer-address">Hier vind je ons</h2>
+        <p>{siteSettings.address}<br /><small>{siteSettings.addressNote}</small></p>
+        <a href={`mailto:${siteSettings.email}`}>{siteSettings.email}</a>
+      </section>
+      <nav aria-label="Snel naar">
+        <h2>Snel naar</h2>
+        <ul class="footer-links">{publicNavLinks.map((item) => <li><a href={withDevFresh(item.href)}>{item.label}</a></li>)}</ul>
+      </nav>
+      <section aria-labelledby="footer-social">
+        <h2 id="footer-social">Volg ons</h2>
+        <ul class="footer-social">
+          <li><a href={siteSettings.facebookUrl} target="_blank" rel="noreferrer">Facebook <span aria-hidden="true">↗</span></a></li>
+          <li><a href={siteSettings.instagramUrl} target="_blank" rel="noreferrer">Instagram <span aria-hidden="true">↗</span></a></li>
+          <li><a href={withDevFresh("/contact.html")}>Contact opnemen <span aria-hidden="true">→</span></a></li>
+        </ul>
+      </section>
+    </div>
+    {showMap && <div class="footer-map">
+      <div class="map-wrapper">
+        <iframe title="Kaart — Chiro Negenmanneke" src={siteSettings.mapEmbedUrl} allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+      <div class="map-actions">
+        <a class="btn" target="_blank" rel="noreferrer" href={siteSettings.mapGoogleUrl}>Route (Google Maps)</a>
+        <a class="btn btn-light" target="_blank" rel="noreferrer" href={siteSettings.mapAppleUrl}>Open in Apple Maps</a>
+      </div>
+    </div>}
+    <div class="footer-bottom">
+      <div><p>{siteSettings.footerCopyright}</p><p>{siteSettings.footerDeveloper}</p></div>
+      {adminLinkLabel && <a class="admin-link" href={withDevFresh(getAdminBasePath())} rel="nofollow">{adminLinkLabel}</a>}
+    </div>
   </div>
 </footer>

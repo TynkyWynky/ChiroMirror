@@ -1,6 +1,9 @@
 ---
 import RichText from "@/components/RichText.astro";
 import type { SimplePage } from "@/types/content";
+import PracticalLinks from "@/components/PracticalLinks.astro";
+import { withDevFresh } from "@/lib/href";
+import "@/styles/public-info.css";
 
 interface Props {
   page: SimplePage;
@@ -9,18 +12,11 @@ interface Props {
 const { page } = Astro.props;
 ---
 
-<section class="hero">
-  <h1>{page.title}</h1>
-  {page.lead && <p class="lead">{page.lead}</p>}
-
-  <div class="grid">
-    {
-      page.cards.map((card) => (
-        <div class={`card ${card.span === 6 ? "span-6" : "span-12"}`}>
-          <h2>{card.title}</h2>
-          <RichText content={card.body} />
-        </div>
-      ))
-    }
+<div class:list={["info-page", "reading-page", page.slug === "privacy" && "legal-page", page.slug === "verhuur" && "rental-page"]}>
+  <header class="info-heading"><a class="info-back" href={withDevFresh("/praktisch.html")}>← Praktisch overzicht</a><h1>{page.title}</h1>{page.lead && <p class="info-lead">{page.lead}</p>}</header>
+  <div class="reading-layout">
+    <nav class="reading-index" aria-label="Op deze pagina"><h2>Op deze pagina</h2><ol>{page.cards.map((card, index) => <li><a href={`#info-${index + 1}`}>{card.title}</a></li>)}</ol></nav>
+    <div class="reading-content">{page.cards.map((card, index) => <section class="reading-section" id={`info-${index + 1}`} aria-labelledby={`info-title-${index + 1}`}><h2 id={`info-title-${index + 1}`}>{card.title}</h2><RichText content={card.body} /></section>)}</div>
   </div>
-</section>
+  <PracticalLinks />
+</div>
