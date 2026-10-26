@@ -1,8 +1,10 @@
 ---
 import Footer from "@/components/Footer.astro";
 import Navbar from "@/components/Navbar.astro";
+import PublicMotion from "@/components/PublicMotion.astro";
 import type { SiteSettings } from "@/types/content";
 import "@/styles/public-theme.css";
+import "@/styles/public-motion.css";
 
 interface Props {
   title: string;
@@ -61,8 +63,29 @@ const socialImageUrl = socialImage.startsWith("http")
     <link rel="icon" type="image/png" href={siteSettings.logoUrl} />
     <link rel="apple-touch-icon" href={siteSettings.logoUrl} />
     <link rel="stylesheet" href="/assets/styles.css" />
+    <!-- Native pagereveal runs before deferred modules: register synchronously. -->
+    <script is:inline>
+      (() => {
+        if (document.documentElement.dataset.pageTransitionsReady) return;
+        document.documentElement.dataset.pageTransitionsReady = "true";
+        const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+        let transition;
+        const handle = event => {
+          transition = event.viewTransition;
+          if (!transition) return;
+          transition.ready.catch(() => {});
+          transition.finished.catch(() => {});
+          transition.updateCallbackDone.catch(() => {});
+          if (reduced.matches || document.body?.classList.contains("signup-motion-open")) transition.skipTransition();
+        };
+        addEventListener("pageswap", handle);
+        addEventListener("pagereveal", handle);
+        reduced.addEventListener("change", () => { if (reduced.matches) transition?.skipTransition(); });
+      })();
+    </script>
     <script>
       import "@/scripts/public-navigation";
+      import "@/scripts/public-motion";
     </script>
 
     {siteSettings.analyticsId && (
@@ -102,5 +125,6 @@ const socialImageUrl = socialImage.startsWith("http")
       <slot />
     </main>
     <Footer siteSettings={siteSettings} showMap={showMapFooter} />
+    <PublicMotion logoUrl={siteSettings.logoUrl} />
   </body>
 </html>

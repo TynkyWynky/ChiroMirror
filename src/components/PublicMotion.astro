@@ -1,0 +1,14 @@
+---
+interface Props { logoUrl: string; }
+const { logoUrl } = Astro.props;
+---
+
+<dialog class="signup-motion" id="signup-motion" aria-labelledby="signup-motion-title" aria-describedby="signup-motion-description">
+  <div class="signup-motion-wash" aria-hidden="true"></div>
+  <div class="signup-motion-brand">
+    <img src={logoUrl} alt="" width="700" height="700" decoding="async" loading="lazy" />
+    <p id="signup-motion-title">KLAAR VOOR<br />AVONTUUR?</p>
+    <p id="signup-motion-description">Je gaat naar de inschrijfpagina.</p>
+  </div>
+  <button class="btn btn-light signup-motion-skip" type="button" autofocus>Animatie overslaan <span aria-hidden="true">→</span></button>
+</dialog>

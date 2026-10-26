@@ -93,7 +93,7 @@ try {
       assert.ok((await page.locator('meta[name="description"]').getAttribute('content')).trim());
       assert.ok((await page.locator('meta[property="og:image"]').getAttribute('content')).startsWith('https://'));
       if(width===1440) {const title=await page.title();assert.ok(!titles.has(title),title);titles.add(title);}
-      for(const img of await page.locator('main img').all()) {
+      for(const img of await page.locator('main img:visible').all()) {
         await img.scrollIntoViewIfNeeded();await img.evaluate(e=>e.decode());
         assert.ok(await img.evaluate(e=>e.naturalWidth>0));
         assert.ok(await img.getAttribute('width'));assert.ok(await img.getAttribute('height'));

@@ -43,7 +43,7 @@ const extraGallery = home.gallery.filter((image) => !groupImages.has(homeImage(i
       </div>
       <h1 id="home-title"><span>{headlineStart}</span>{headlineEnd && <span class="home-title-accent">{headlineEnd}</span>}</h1>
       <div class="home-hero-actions">
-        <a class="btn" href={primaryCtaHref}>{home.banner.primaryCtaLabel} <span aria-hidden="true">↗</span></a>
+        <a class="btn" data-signup-motion={home.banner.primaryCtaLabel.trim().toLocaleLowerCase("nl-BE") === "inschrijven" || undefined} href={primaryCtaHref}>{home.banner.primaryCtaLabel} <span aria-hidden="true">↗</span></a>
         <a class="btn btn-light" href={secondaryCtaHref}>{home.banner.secondaryCtaLabel} <span aria-hidden="true">→</span></a>
         <a class="home-address" href={siteSettings.mapGoogleUrl} target="_blank" rel="noreferrer"><span aria-hidden="true">↗</span> {siteSettings.address}</a>
       </div>
@@ -129,7 +129,7 @@ const extraGallery = home.gallery.filter((image) => !groupImages.has(homeImage(i
         <h2 id="home-practical-title">{home.practical.title}<span class="home-heading-dot" aria-hidden="true">.</span></h2>
         <p class="home-lead">{home.hero.badge}</p>
         <p>{home.practical.note}</p>
-        <div class="home-practical-actions"><a class="btn" href={primaryCtaHref}>{home.banner.primaryCtaLabel} <span aria-hidden="true">↗</span></a><a class="home-text-link" href={withDevFresh("/contact.html")}>Nog een vraag? <span aria-hidden="true">→</span></a></div>
+        <div class="home-practical-actions"><a class="btn" data-signup-motion={home.banner.primaryCtaLabel.trim().toLocaleLowerCase("nl-BE") === "inschrijven" || undefined} href={primaryCtaHref}>{home.banner.primaryCtaLabel} <span aria-hidden="true">↗</span></a><a class="home-text-link" href={withDevFresh("/contact.html")}>Nog een vraag? <span aria-hidden="true">→</span></a></div>
       </div>
       <dl class="home-facts">
         {home.practical.items.map((item) => {
@@ -140,7 +140,7 @@ const extraGallery = home.gallery.filter((image) => !groupImages.has(homeImage(i
     </section>
     <section class="home-invitation home-section" aria-labelledby="home-invitation-title">
       <div><p class="home-kicker">Samen maken we Chiro</p><h2 id="home-invitation-title">Tot op de Chiro?</h2><p>Ontdek hoe je je inschrijft. Zit je nog met een vraag? Spreek ons gerust aan.</p></div>
-      <div class="home-invitation-actions"><a class="btn" href={primaryCtaHref}>{home.banner.primaryCtaLabel} <span aria-hidden="true">↗</span></a><a class="home-text-link" href={withDevFresh("/contact.html")}>Contacteer de leiding <span aria-hidden="true">→</span></a></div>
+      <div class="home-invitation-actions"><a class="btn" data-signup-motion={home.banner.primaryCtaLabel.trim().toLocaleLowerCase("nl-BE") === "inschrijven" || undefined} href={primaryCtaHref}>{home.banner.primaryCtaLabel} <span aria-hidden="true">↗</span></a><a class="home-text-link" href={withDevFresh("/contact.html")}>Contacteer de leiding <span aria-hidden="true">→</span></a></div>
     </section>
   </div>
 </PublicLayout>

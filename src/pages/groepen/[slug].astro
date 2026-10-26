@@ -17,7 +17,7 @@ if (!group) Astro.response.status = 404;
     <nav class="department-breadcrumb" aria-label="Broodkruimel"><a href={withDevFresh("/groepen.html")}>Alle afdelingen</a><span aria-hidden="true">/</span><span aria-current="page">{group.name}</span></nav>
     <header class:list={["department-hero", group.sortOrder % 2 === 0 && "department-hero-reverse"]}>
       <div class="department-hero-copy"><p class="department-kicker">Jouw plek bij Chiro Negenmanneke</p><h1>{group.name}</h1>{group.ageRange && <p class="department-age">{groupAgeLabel(group.ageRange)}</p>}{group.description && <p class="department-lead department-description">{group.description}</p>}
-        <div class="department-actions"><a class="btn" href={withDevFresh("/inschrijven.html")}>Schrijf je in <span aria-hidden="true">↗</span></a><a class="department-text-link" href="#onze-leiding">Ontmoet de leiding <span aria-hidden="true">↓</span></a></div>
+        <div class="department-actions"><a class="btn" data-signup-motion href={withDevFresh("/inschrijven.html")}>Schrijf je in <span aria-hidden="true">↗</span></a><a class="department-text-link" href="#onze-leiding">Ontmoet de leiding <span aria-hidden="true">↓</span></a></div>
       </div>
       <DepartmentImage group={group} priority />
     </header>

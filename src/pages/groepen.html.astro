@@ -15,7 +15,7 @@ const { siteSettings, pages, groups } = await loadSiteContent();
       <p class="department-kicker">Een eigen kleur. Een eigen avontuur.</p>
       <h1>{pages.groups.title}<span aria-hidden="true">.</span></h1>
       <p class="department-lead">{pages.groups.lead}</p>
-      <div class="department-actions"><a class="btn" href={withDevFresh("/inschrijven.html")}>Inschrijven <span aria-hidden="true">↗</span></a><a class="department-text-link" href={withDevFresh("/leiding.html")}>Ontmoet onze leiding <span aria-hidden="true">→</span></a></div>
+      <div class="department-actions"><a class="btn" data-signup-motion href={withDevFresh("/inschrijven.html")}>Inschrijven <span aria-hidden="true">↗</span></a><a class="department-text-link" href={withDevFresh("/leiding.html")}>Ontmoet onze leiding <span aria-hidden="true">→</span></a></div>
     </header>
     <nav class="department-jump-nav" aria-label="Kies je afdeling">
       {groups.map((group) => <a href={`#${group.slug}`} style={`--department: var(--${group.themeKey}, var(--burgundy))`}><span>{group.name}{group.ageRange && <small>{groupAgeLabel(group.ageRange)}</small>}</span></a>)}

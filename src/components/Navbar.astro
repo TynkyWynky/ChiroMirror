@@ -20,7 +20,7 @@ const isCurrent = (href: string) => Astro.url.pathname === href;
           </div>
         </details>
       ) : (
-        <a class:list={{ "nav-signup": item.href === "/inschrijven.html" }} href={withDevFresh(item.href)} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>
+        <a class:list={{ "nav-signup": item.href === "/inschrijven.html" }} data-signup-motion={item.href === "/inschrijven.html" || undefined} href={withDevFresh(item.href)} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>
       ))}
     </nav>
     <button class="burger" id="burger" type="button" aria-label="Menu openen" aria-controls="mobile-nav" aria-expanded="false" hidden>
@@ -52,7 +52,7 @@ const isCurrent = (href: string) => Astro.url.pathname === href;
         </div>
       </details>
     ) : (
-      <a class:list={{ "nav-signup": item.href === "/inschrijven.html" }} href={withDevFresh(item.href)} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>
+      <a class:list={{ "nav-signup": item.href === "/inschrijven.html" }} data-signup-motion={item.href === "/inschrijven.html" || undefined} href={withDevFresh(item.href)} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>
     ))}
   </nav>
 </dialog>
