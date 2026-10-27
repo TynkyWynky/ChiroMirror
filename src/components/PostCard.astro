@@ -17,7 +17,7 @@ const postAnchor = post.id ? `post-${post.id}` : undefined;
 const href = withDevFresh(`/activiteiten.html${postAnchor ? `#${postAnchor}` : ""}`);
 ---
 
-<article class:list={["card post-card", compact ? "span-6 post-card-compact" : "post-card-full", !compact && date && "has-date-stamp", post.featured && "post-is-featured"]} id={compact ? undefined : postAnchor}>
+<article class:list={["card post-card", compact ? "post-card-compact" : "post-card-full", !compact && date && "has-date-stamp", post.featured && "post-is-featured"]} id={compact ? undefined : postAnchor}>
   {!compact && date && <div class="post-date-stamp" aria-hidden="true"><strong>{date.day}</strong><span>{date.monthShort}</span><small>{date.year}</small></div>}
   {preview?.image && (
     <a class="post-cover" href={href} aria-label={post.title}>
