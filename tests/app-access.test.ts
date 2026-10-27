@@ -5,16 +5,14 @@ import { hasPermission, type Profile } from "../src/lib/auth/access.ts";
 import { hasAppPermission, emptyAppAccess } from "../src/features/app/access.ts";
 import { roleDescriptions, roleLabels, validateMember } from "../src/features/app/data.ts";
 import { handleAppInvite, type AppInviteServices } from "../src/server/app-invite.ts";
-import type { AppPermission } from "../src/features/app/types.ts";
 
-test("APP navigation requires explicit permissions and grants no SITE rights", () => {
+test("retired APP permissions do not expose website admin navigation", () => {
   const profile: Profile = { user_id: "test", email: "", full_name: "", role: "none", managedGroupSlugs: [], created_at: "" };
-  const permissions: AppPermission[] = ["app.access", "members.read", "members.manage", "roles.read", "roles.manage"];
-  assert.deepEqual(getAvailableTabs(profile, permissions).map(tab => tab.id), ["app-home", "app-tasks", "app-members", "app-notifications", "app-settings"]);
+  assert.deepEqual(getAvailableTabs(profile).map(tab => tab.id), []);
   assert.equal(hasPermission(profile, "site.manage"), false);
   assert.equal(hasAppPermission(["members.read"], "members.read"), false);
-  assert.deepEqual(getAvailableTabs(profile, ["app.access"]).map(tab => tab.id), ["app-home", "app-tasks", "app-notifications", "app-settings"]);
-  assert.deepEqual(getAvailableTabs(null, permissions), []);
+  assert.deepEqual(getAvailableTabs(profile).map(tab => tab.id), []);
+  assert.deepEqual(getAvailableTabs(null), []);
 });
 
 test("member validation trims names and rejects invalid account/status/name", () => {

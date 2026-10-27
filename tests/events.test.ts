@@ -5,7 +5,6 @@ import { expandEvents, occurrenceDates } from "../src/features/app/events/recurr
 import { makeDraft, validateEvent } from "../src/features/app/events/validation.ts";
 import { EVENT_ZONE, type CalendarEvent, type EventOverride } from "../src/features/app/events/types.ts";
 import { getAvailableTabs } from "../src/components/admin/navigation.ts";
-import type { AppPermission } from "../src/features/app/types.ts";
 
 const categories = [{ key: "ACTIVITY", label: "Activité" }];
 function event(patch: Partial<CalendarEvent> = {}): CalendarEvent {
@@ -87,10 +86,9 @@ test("overrides move in/out of windows, cancel one occurrence, and leave the ser
   assert.equal(startDay(movedIn[0]), "2026-03-27");
 });
 
-test("Agenda navigation requires APP plus events.read, independent of SITE", () => {
+test("retired Agenda does not expose website admin navigation", () => {
   const profile = { user_id: "x", email: "", full_name: "", role: "admin" as const, managedGroupSlugs: [], created_at: "" };
   assert.equal(getAvailableTabs(profile).some(tab => tab.id === "app-agenda"), false);
-  assert.equal(getAvailableTabs(profile, ["events.read"]).some(tab => tab.id === "app-agenda"), false);
-  const permissions: AppPermission[] = ["app.access", "events.read", "members.read"];
-  assert.deepEqual(getAvailableTabs({ ...profile, role: "none" }, permissions).map(tab => tab.id), ["app-home", "app-agenda", "app-tasks", "app-members", "app-notifications", "app-settings"]);
+  assert.equal(getAvailableTabs(profile).some(tab => tab.id === "app-agenda"), false);
+  assert.deepEqual(getAvailableTabs({ ...profile, role: "none" }).map(tab => tab.id), []);
 });

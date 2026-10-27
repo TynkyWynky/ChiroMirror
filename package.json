@@ -10,39 +10,28 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:smoke": "node ./scripts/smoke-local.mjs",
     "test:netlify": "node ./scripts/check-client-syntax.mjs && node --no-experimental-require-module ./scripts/smoke-netlify-build.mjs",
-    "test:agenda:browser": "node --experimental-strip-types ./scripts/test-agenda-browser.mjs",
-    "test:tasks:browser": "node --experimental-strip-types ./scripts/test-tasks-browser.mjs",
-    "test:finance:browser": "node --experimental-strip-types ./scripts/test-finance-browser.mjs",
     "test:posts": "node --experimental-strip-types --test tests/posts.test.ts",
     "preview": "astro preview",
     "import:legacy": "node ./scripts/extract-legacy-content.mjs",
     "seed": "node ./scripts/seed-supabase.mjs",
-    "test:notifications:browser": "node --experimental-strip-types ./scripts/test-notifications-browser.mjs",
-    "test:pwa:browser": "node --experimental-strip-types ./scripts/test-pwa-browser.mjs",
-    "dev:app": "node ./scripts/start-app.mjs",
-    "doctor:app": "node ./scripts/check-app-setup.mjs",
     "test:auth:browser": "node --experimental-strip-types ./scripts/test-auth-browser.mjs",
-    "test:build:browser": "node --no-experimental-require-module ./scripts/test-built-browser.mjs",
-    "prepare:app-install": "node ./scripts/prepare-app-install.mjs"
+    "test:build:browser": "node --no-experimental-require-module ./scripts/test-built-browser.mjs"
   },
   "dependencies": {
     "@astrojs/netlify": "^8.2.6",
     "@astrojs/preact": "^6.0.5",
-    "@js-temporal/polyfill": "^0.5.1",
     "@supabase/supabase-js": "^2.117.1",
     "astro": "^7.3.5",
     "dayjs": "^1.11.23",
     "marked": "^18.0.14",
     "preact": "^10.29.8",
-    "sanitize-html": "^2.17.7",
-    "web-push": "^3.6.7"
+    "sanitize-html": "^2.17.7"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
     "@electric-sql/pglite": "^0.5.8",
     "@types/node": "^25.6.0",
     "@types/sanitize-html": "^2.16.1",
-    "@types/web-push": "^3.6.4",
     "cheerio": "^1.2.0",
     "playwright-core": "^1.63.0",
     "typescript": "^5.9.3"

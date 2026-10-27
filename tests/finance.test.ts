@@ -87,8 +87,8 @@ test("Finance UI authorization: treasury permission is explicit, SITE and techni
   assert.equal(financeAccess({...access,permissions:["finance.access"]}),false);
   assert.equal(ownEntity([{id:"e1",type:"MEMBER",member_id:"m1"}],access),"e1");
   const profile={user_id:"u1",email:"test@example.test",full_name:"Test",role:"none" as const,managedGroupSlugs:[],created_at:""};
-  assert.ok(getAvailableTabs(profile,access.permissions).some(t=>t.id==="app-finance"));
-  assert.ok(!getAvailableTabs({...profile,role:"admin"},[]).some(t=>t.id==="app-finance"));
+  assert.ok(!getAvailableTabs(profile).some(t=>t.id==="app-finance"));
+  assert.ok(!getAvailableTabs({...profile,role:"admin"}).some(t=>t.id==="app-finance"));
 });
 
 test("Finance validation: self debt, archived member, exact shares and treasury involvement",()=>{

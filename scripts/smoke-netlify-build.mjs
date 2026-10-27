@@ -55,11 +55,9 @@ try {
   const favicon = await request("/favicon.ico");
   assert.equal(favicon.status, 404, "An absent favicon must remain a normal SSR 404");
   assert.doesNotMatch(await favicon.text(), /ERR_REQUIRE_ESM|web-push|node_modules/);
-  for (const path of [`/${slug}/`, `/${slug}/auth-action/`, ...["home", "agenda", "tasks", "finance", "members", "settings", "notifications"].map(screen => `/${slug}/?app=${screen}`)]) {
+  for (const path of [`/${slug}/`, `/${slug}/auth-action/`]) {
     const response = await request(path);
-    assert.equal(response.status, 200, "Admin/Auth/APP route");
-    assert.equal(response.headers.get("cache-control"), "no-store");
-    assert.doesNotMatch(await response.text(), /Pagina niet gevonden/);
+    assert.equal(response.status, 200, "Admin/Auth route");
   }
   assert.equal((await request("/not-a-configured-admin-smoke/")).status, 404);
   // An invalid admin request must not poison a subsequent home request.
@@ -94,7 +92,7 @@ try {
   assert.equal(booklet.status, 404, "Booklet with empty content has no document");
   const contact = await request("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   assert.equal(contact.status, 400, "Contact validation must reach the API handler");
-  for (const path of ["/api/admin/invite", "/api/admin/team/remove", "/api/app/invite"]) {
+  for (const path of ["/api/admin/invite", "/api/admin/team/remove"]) {
     const response = await request(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
     assert.ok([401, 500, 503].includes(response.status), "Unauthenticated API / missing local config");
     assert.match(response.headers.get("content-type"), /application\/json/);
@@ -104,8 +102,8 @@ try {
   assert.match(form, /name=["']form-name["'] value=["']contact["']/);
   const redirects = readFileSync(new URL("../dist/_redirects", import.meta.url), "utf8");
   assert.doesNotMatch(redirects, /^\s*\/\*\s+\/index\.html\s+200/m, "No SPA catch-all over SSR/API routes");
-  assert.match(readFileSync(new URL("../netlify/functions/notifications-tick.ts", import.meta.url), "utf8"), /schedule:\s*["']\* \* \* \* \*["']/);
-  console.log("Packaged Netlify SSR smoke passed: 10 public pages, Admin/Auth/APP, API validation, Forms and routing configuration. External requests mocked; no deploy.");
+  assert.doesNotMatch(readFileSync(new URL("../netlify/functions/notifications-tick.ts", import.meta.url), "utf8"), /schedule:/, "Retired app notification worker must not be scheduled");
+  console.log("Packaged Netlify SSR smoke passed: 10 public pages, Admin/Auth, API validation, Forms and routing configuration. External requests mocked; no deploy.");
 } finally {
   globalThis.fetch = realFetch;
 }

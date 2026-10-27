@@ -1,15 +1,6 @@
 import { defineConfig } from "astro/config";
 import netlify from "@astrojs/netlify";
 import preact from "@astrojs/preact";
-import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
-// Deterministic release identity, shared by client UI and the single service worker.
-const buildHash = createHash("sha256");
-for (const folder of ["src", "public", "netlify"]) {
-  for (const file of readdirSync(folder, { recursive: true, withFileTypes: true }).filter(entry => entry.isFile()).map(entry => `${entry.parentPath}/${entry.name}`).sort()) buildHash.update(file.replaceAll("\\", "/")).update(readFileSync(file));
-}
-for (const file of ["package-lock.json", "astro.config.mjs"]) buildHash.update(readFileSync(file));
-const appBuild = `app-${buildHash.digest("hex").slice(0,12)}`;
 
 // CJS dependencies must stay native in development. Only the Lambda bundle
 // needs this boundary inlined, because Lambda disables require(ESM).
@@ -51,7 +42,6 @@ export default defineConfig({
     host: "127.0.0.1"
   },
   vite: {
-    define: { "import.meta.env.PUBLIC_APP_BUILD": JSON.stringify(appBuild) },
     build: {
       // Work around a Linux-only esbuild minification failure on Netlify
       // while keeping the generated client bundle functionally identical.

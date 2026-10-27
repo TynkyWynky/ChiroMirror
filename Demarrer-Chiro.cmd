@@ -11,5 +11,5 @@ if not exist node_modules\astro\package.json (
   pause
   exit /b 1
 )
-call npm.cmd run dev:app
+call npm.cmd run dev
 if errorlevel 1 pause

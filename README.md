@@ -1,23 +1,3 @@
-# Chiro Negenmanneke Website
-
-## Accès APP sur PC et diagnostic
-
-Ouvrir `https://www.chironegenmanneke.be/leiding-login/?app=home` pour accéder à
-l'APP dans le navigateur. Les comptes autorisés aux deux espaces disposent de
-boutons **SITE / APP** en tête du menu. Les rôles APP sont distincts des droits SITE.
-
-Pour démarrer la version locale sous Windows : double-cliquer sur
-`Demarrer-Chiro.cmd`, ou exécuter `npm.cmd run dev:app`. Le navigateur s'ouvre sur
-`http://127.0.0.1:4321/leiding-login/?app=home`. Garder le terminal ouvert.
-Le serveur écoute uniquement sur ce PC. Node.js >= 22.12 et `npm.cmd ci` sont
-nécessaires au premier démarrage; configurer les clés publiques dans `.env.local`.
-
-`npm.cmd run doctor:app` vérifie la connexion et la disponibilité du schéma APP
-sans lire les données métier ni attribuer de droits. Si l'installation manque,
-suivre [la procédure et le rapport de vérification](docs/checkup-2026-09-24.md).
-La clé serveur est nécessaire aux invitations et au stockage des contacts via
-les API locales; elle n'est pas nécessaire à la connexion et à la navigation APP.
-
 Nieuwe Astro/Supabase-versie van de site met:
 
 - gewone login voor de leiding via een verborgen admin-pad
@@ -44,22 +24,6 @@ Nieuwe Astro/Supabase-versie van de site met:
 - **Post nu** publiceert; **Concept opslaan** bewaart een privéconcept. **Terug naar concept** haalt een gepubliceerd bericht van beide publieke pagina's.
 
 Dit gebruikt de bestaande `posts.body`, `posts.featured` en `site-media`-opslag; er is geen extra databasemigratie nodig.
-
-## SITE / APP foundation
-
-Phase 6 : installation APP, liens persistants, navigation mobile, updates contrôlées et écran
-offline générique sans cache privé. Guide et recette physique : [docs/app-pwa.md](docs/app-pwa.md).
-
-Phase 5 : cloche privée, **APP → Paramètres → Notifications**, rappels Agenda/Tâches et
-worker Netlify Web Push. Configuration, migration, garanties et recette HTTPS :
-[docs/app-notifications.md](docs/app-notifications.md). Aucun déploiement ni Push réel validé ici.
-
-De bestaande onderdelen staan onder **SITE**. **APP** bevat Accueil, Agenda, Tâches, Comptes en Membres.
-Nieuwe accounts krijgen geen SITE-rechten zonder expliciete toekenning. Bestaande accounts behouden hun rol.
-Pas vóór uitrol de beoordeelde migration toe volgens [supabase/README.md](supabase/README.md).
-De architectuur, veiligheidsgrenzen en resterende punten staan in [docs/app-foundation.md](docs/app-foundation.md).
-
-Tests: `npm test` en `npm run test:smoke` (lokale fallback-data, geen Supabase-verbinding).
 
 ## Lokale start
 
@@ -207,24 +171,6 @@ Database-tabellen:
 - `profiles`
 
 ## Opmerking
-
-Le module [APP Comptes](docs/app-finance.md) suit les dettes, dépenses partagées et remboursements
-en centimes exacts, avec confidentialité PRIVATE et trésorerie séparée. Il est indépendant de la
-finance SITE. Migration `20260923000300_app_finance.sql`, après Tasks, non exécutée à distance.
-Test navigateur local : `npm run test:finance:browser`.
-
-L’APP intègre les [Tâches collaboratives et personnelles](docs/app-tasks.md), avec responsables,
-participants, progression, confidentialité et résumé d’accueil. La migration
-`20260923000200_app_tasks.sql` suit Agenda ; elle n’a pas été exécutée à distance.
-Test navigateur local : `npm run test:tasks:browser`.
-
-L’APP dispose maintenant d’un [Agenda interne](docs/app-agenda.md) en français : vues Mois/Liste,
-récurrences, exceptions, participants et permissions séparées du SITE. La nouvelle migration
-`20260923000100_app_agenda.sql` doit suivre les deux migrations de fondation.
-
-De APP heeft afzonderlijke rollen en een ledenbeheer. SITE-adminrechten geven geen
-automatische APP-toegang. Migratievolgorde en expliciete eerste APP-beheerder:
-[Membres et accès APP](docs/app-members.md), [SQL-procedure](supabase/README.md).
 
 - Het contactformulier verstuurt opnieuw via Netlify Forms een mailnotificatie en slaat het bericht tegelijk op in de admin-tab `Berichten`.
 - Publieke pagina's lezen bewust via de publieke Supabase-sleutel; de service key wordt alleen server-side gebruikt voor admin-acties en het contact endpoint.

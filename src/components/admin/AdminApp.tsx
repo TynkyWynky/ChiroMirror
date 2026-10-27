@@ -9,23 +9,6 @@ import AdminShell, { type Notice } from "./AdminShell";
 import { getAvailableTabs, getNavigationGroups, resolveTab, type TabId } from "./navigation";
 import { canAccessFinance, canManageFinanceGroup, hasPermission, parseSiteRole, type Profile, type SiteRole as Role } from "@/lib/auth/access";
 import { AUTH_ACTION_TIMEOUT_MS, createSafeAuthStorage, createTimedFetch, withTimeout } from "@/lib/auth/client";
-import AppHome from "@/features/app/AppHome";
-import MembersPage from "@/features/app/members/MembersPage";
-import { lazy, Suspense } from "preact/compat";
-const AgendaPage = lazy(() => import("@/features/app/events/AgendaPage"));
-const NotificationBell = lazy(() => import("@/features/app/notifications/NotificationBell"));
-const NotificationSettings = lazy(() => import("@/features/app/notifications/NotificationSettings"));
-import type { NotificationTarget } from "@/features/app/notifications/types";
-import { useAppNavigation } from "@/features/app/pwa/useAppNavigation";
-const PwaExperience = lazy(() => import("@/features/app/pwa/PwaExperience"));
-const TasksPage = lazy(() => import("@/features/app/tasks/TasksPage"));
-const TaskSummary = lazy(() => import("@/features/app/tasks/TaskSummary"));
-const FinancePage = lazy(() => import("@/features/app/finance/FinancePage"));
-const FinanceSummary = lazy(() => import("@/features/app/finance/FinanceSummary"));
-const AgendaSummary = lazy(() => import("@/features/app/events/AgendaSummary"));
-import { emptyAppAccess } from "@/features/app/access";
-import { loadAppAccess } from "@/features/app/data";
-import type { AppAccess } from "@/features/app/types";
 import InboxPanel from "@/features/site/InboxPanel";
 import AdminOverview from "./AdminOverview";
 import AdminIcon from "./AdminIcon";
@@ -222,7 +205,7 @@ function clearAuthUrlState() {
   }
 
   const clean = new URL(window.location.href);
-  for (const key of [...clean.searchParams.keys()]) if (!["app","task","event","occurrence","notification"].includes(key)) clean.searchParams.delete(key);
+  clean.search = "";
   clean.hash = "";
   window.history.replaceState({}, document.title, clean.pathname + clean.search);
 }
@@ -1573,12 +1556,8 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   const dashboardGeneration = useRef(0);
   currentUser.current = session?.user.id ?? null;
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [appAccess, setAppAccess] = useState<AppAccess>(emptyAppAccess);
-  const [appAccessError, setAppAccessError] = useState("");
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const { activeTab, route: appRoute, navigate: navigateApp } = useAppNavigation();
-  const setActiveTab = (tab: TabId) => navigateApp(tab);
-  const openNotificationTarget = (target: NotificationTarget) => navigateApp(target.type === "EVENT" ? "app-agenda" : "app-tasks", target.type === "EVENT" ? { screen:"agenda",event:target.id,occurrence:target.occurrence } : { screen:"tasks",task:target.id });
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [postQuery, setPostQuery] = useState("");
   const [postFilter, setPostFilter] = useState("all");
@@ -1672,24 +1651,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     }
   }, []);
 
-  async function refreshAppAccess() {
-    if (!supabase || !session) return;
-    const userId = session.user.id;
-    try {
-      const access = await withTimeout(loadAppAccess(supabase), DASHBOARD_TIMEOUT_MS, "APP-toegang laden duurt te lang.");
-      if(currentUser.current !== userId)return;
-      setAppAccess(access);
-      setAppAccessError("");
-    } catch (error) {
-      if(currentUser.current !== userId)return;
-      setAppAccess(emptyAppAccess);
-      const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
-      setAppAccessError(["PGRST202", "PGRST205", "42883", "42P01"].includes(code)
-        ? "De APP-omgeving is nog niet ingesteld op de server. Vraag de beheerder om de installatie te voltooien."
-        : "Je APP-toegang kon niet worden geladen. Controleer je verbinding en ververs de pagina. Neem contact op met de beheerder als het probleem blijft bestaan.");
-    }
-  }
-
   async function loadDashboard() {
     if (!supabase || !session) {
       return false;
@@ -1712,9 +1673,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       );
       if(!current())return false;
       if (actorError) throw actorError;
-      // SITE identity is optional for APP access. A missing profile is treated
-      // as a neutral in-memory SITE profile; it grants no SITE permission and
-      // never creates a database row or a linked member automatically.
+      // A missing profile is represented in memory with no SITE permissions.
       const actor = actorRow
         ? mapProfile(actorRow)
         : {
@@ -1726,8 +1685,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
             created_at: session.user.created_at ?? ""
           };
       setProfile(actor);
-      await refreshAppAccess();
-      if(!current())return false;
       if (!hasPermission(actor, "site.manage")) {
         setProfiles([actor]);
         setMessages([]);
@@ -1782,8 +1739,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       );
       const currentProfile = profileRows.find((item) => item.user_id === session.user.id) ?? null;
 
-      // A profile can be missing unexpectedly. Keep the account usable in APP
-      // while preserving the neutral SITE boundary.
+      // A missing profile remains in memory with no SITE permissions.
       const safeCurrentProfile = currentProfile ?? {
         user_id: session.user.id,
         email: session.user.email ?? "",
@@ -1947,13 +1903,10 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       setAuthStalled(false);
       if (!currentSession && currentUser.current && !explicitLogout.current) {
         setNotice({type:"error",message:"Je sessie is verlopen. Meld je opnieuw aan om verder te gaan."});
-        void import("@/features/app/pwa/device").then(({setPushDevice})=>setPushDevice(true)).catch(()=>{});
       }
       if(currentUser.current !== (currentSession?.user.id ?? null)) {
         dashboardGeneration.current++;
         setProfile(null);
-        setAppAccess(emptyAppAccess);
-        setAppAccessError("");
       }
       currentUser.current = currentSession?.user.id ?? null;
       setSession(currentSession);
@@ -1977,8 +1930,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
       void loadDashboard();
     } else {
       setProfile(null);
-      setAppAccess(emptyAppAccess);
-      setAppAccessError("");
       setProfiles([]);
       setMessages([]);
       setFinanceTransactions([]);
@@ -1995,10 +1946,10 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
   }, [supabase, session?.user.id, authMode]);
 
   const canUseFinance = canAccessFinance(profile);
-  const availableTabs = getAvailableTabs(profile, appAccess.permissions);
-  const visibleTab = resolveTab(activeTab, profile, appAccess.permissions);
+  const availableTabs = getAvailableTabs(profile);
+  const visibleTab = resolveTab(activeTab, profile);
   const activeAdminTab = availableTabs.find(tab => tab.id === visibleTab);
-  const adminSidebarGroups = getNavigationGroups(profile, appAccess.permissions);
+  const adminSidebarGroups = getNavigationGroups(profile);
   const orderedContactGroups = orderGroupsForContact(groups, pages.contact.groupCards);
   const adminDateLabel = new Date().toLocaleDateString("nl-BE", {
     weekday: "long",
@@ -2569,13 +2520,12 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
 
   useEffect(() => {
     if (!profile || dataLoading) return;
-    const nextTab = resolveTab(activeTab, profile, appAccess.permissions);
+    const nextTab = resolveTab(activeTab, profile);
     if (nextTab && nextTab !== activeTab) {
-      const fallback = activeTab.startsWith("app-") && appAccess.permissions.includes("app.access") ? "app-home" : nextTab;
-      navigateApp(fallback, undefined, true);
+      setActiveTab(nextTab);
       setNotice({ type:"error",message:"Cette rubrique n’est pas accessible avec votre compte." });
     }
-  }, [activeTab, profile, appAccess, dataLoading]);
+  }, [activeTab, profile, dataLoading]);
 
   useEffect(() => {
     if (!canAccessFinance(profile)) {
@@ -2675,13 +2625,6 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
 
     explicitLogout.current = true;
     dashboardGeneration.current++;
-    let pushCleanupFailed = false;
-    if (session) {
-      try {
-        const { disableCurrentPush } = await import("@/features/app/notifications/push");
-        await withTimeout(disableCurrentPush(supabase, session.user.id), 12000, "PUSH_CLEANUP_TIMEOUT");
-      } catch { pushCleanupFailed = true; }
-    }
     try { await withTimeout(supabase.auth.signOut({scope:"local"}),5000,"LOGOUT_TIMEOUT"); } catch { /* Local credentials are always removed below. */ }
     clearStoredAdminAuth(supabaseStorageKey);
     for (const key of [supabaseStorageKey, `${supabaseStorageKey}-code-verifier`, `${supabaseStorageKey}-user`]) authStorage.current?.removeItem(key);
@@ -2690,9 +2633,8 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     setNewPassword("");
     setConfirmPassword("");
     setLoginPassword("");
-    setSession(null); setProfile(null); setAppAccess(emptyAppAccess);
-    navigateApp("app-home",undefined,true);
-    setNotice(pushCleanupFailed ? { type:"error",message:"Je bent uitgelogd. Het uitschakelen van pushmeldingen kon niet overal worden bevestigd. Schakel op een gedeeld apparaat ook de meldingen uit in de browserinstellingen voordat je het doorgeeft. Probeer het uitschakelen via je account opnieuw zodra je online bent." } : { type:"success",message:"Je bent uitgelogd op dit apparaat." });
+    setSession(null); setProfile(null);
+    setNotice({ type:"success",message:"Je bent uitgelogd op dit apparaat." });
     setFinanceTransactions([]);
     setFinanceDraft(null);
     setFinanceEditingId(null);
@@ -3658,7 +3600,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
 
   if (!activeAdminTab) return <div class="admin-app admin-auth-wrap"><div class="admin-auth-card">
     <h1>{dataLoading ? "Toegang laden…" : "Nog geen toegang"}</h1>
-    <p role={appAccessError ? "alert" : "status"}>{appAccessError || "Je account heeft geen SITE- of APP-toegang. Vraag een beheerder om de juiste rollen."}</p>
+    <p role="status">Je account heeft geen toegang tot websitebeheer. Vraag een beheerder om SITE-rechten.</p>
     <div class="admin-auth-actions"><button class="btn" disabled={dataLoading} onClick={() => void loadDashboard()}>Opnieuw proberen</button>
       <button class="btn btn-light" onClick={() => void signOut()}>Afmelden</button></div>
   </div></div>;
@@ -3667,27 +3609,7 @@ export default function AdminApp(props: { adminAuthActionPath: string }) {
     <AdminShell groups={adminSidebarGroups} activeTab={activeAdminTab} badges={adminTabBadges}
       userName={adminUserLabel} role={profile.role} notice={notice} loading={dataLoading}
       refreshDisabled={dataLoading || postsBusy} onNavigate={setActiveTab}
-      applicationControl={<Suspense fallback={null}><PwaExperience settings={visibleTab === "app-settings"} home={visibleTab === "app-home"} accountName={adminUserLabel} email={session?.user.email ?? ""} access={appAccess} onNotifications={()=>document.getElementById("notification-settings")?.scrollIntoView({behavior:"smooth"})} /></Suspense>}
-      notificationControl={supabase && appAccess.permissions.includes("app.access") && <Suspense fallback={null}><NotificationBell client={supabase} userId={session.user.id} centerOpen={visibleTab === "app-notifications"} onOpenCenter={()=>setActiveTab("app-notifications")} onCloseCenter={()=>setActiveTab("app-home")} notificationId={appRoute?.notification} onTarget={target => {
-        if (target.type === "EVENT" && !appAccess.permissions.includes("events.read")) { setNotice({ type: "error", message: "Deze activiteit is niet meer toegankelijk." }); return; }
-        openNotificationTarget(target);
-      }} /></Suspense>}
       onSignOut={() => void signOut()} onRefresh={() => void loadDashboard()}>
-      {visibleTab === "app-settings" && supabase && <div id="notification-settings"><Suspense fallback={<p role="status">Instellingen laden…</p>}><NotificationSettings client={supabase} userId={session.user.id} /></Suspense></div>}
-      {visibleTab === "app-notifications" && <section class="admin-panel"><h1>Meldingen</h1><p>Je herinneringen staan in het meldingencentrum. Gebruik het belletje om het opnieuw te openen.</p></section>}
-      {appAccessError && <p role="alert">{appAccessError}</p>}
-      {!dataLoading && !appAccessError && !appAccess.permissions.includes("app.access") && <p role="status">
-        Je account heeft SITE-toegang. Vraag een APP-beheerder om je een APP-rol toe te kennen om de APP-omgeving op deze computer te openen.
-      </p>}
-      {visibleTab === "app-home" && <><AppHome userName={adminUserLabel} access={appAccess} />{supabase && <>
-        {appAccess.permissions.includes("events.read") && <Suspense fallback={<p role="status">Agenda laden…</p>}><AgendaSummary client={supabase} onOpen={() => setActiveTab("app-agenda")} /></Suspense>}
-        <Suspense fallback={<p role="status">Taken laden…</p>}><TaskSummary client={supabase} access={appAccess} userId={session.user.id} onOpen={() => setActiveTab("app-tasks")} /></Suspense>
-        {appAccess.permissions.includes("finance.access") && <Suspense fallback={<p role="status">Rekeningen laden…</p>}><FinanceSummary client={supabase} access={appAccess} onOpen={() => setActiveTab("app-finance")} /></Suspense>}
-      </>}</>}
-      {visibleTab === "app-finance" && supabase && <Suspense fallback={<p role="status">Rekeningen laden…</p>}><FinancePage client={supabase} access={appAccess} userId={session.user.id} /></Suspense>}
-      {visibleTab === "app-tasks" && supabase && <Suspense fallback={<p role="status">Taken laden…</p>}><TasksPage client={supabase} access={appAccess} userId={session.user.id} openTaskId={appRoute?.task} onResourceOpen={id=>openNotificationTarget({type:"TASK",id})} onResourceClose={()=>setActiveTab("app-tasks")} /></Suspense>}
-      {visibleTab === "app-agenda" && supabase && <Suspense fallback={<p role="status">Agenda laden…</p>}><AgendaPage client={supabase} access={appAccess} openTarget={appRoute?.event ? {id:appRoute.event,occurrence:appRoute.occurrence} : undefined} onResourceOpen={(id,occurrence)=>openNotificationTarget({type:"EVENT",id,occurrence})} onResourceClose={()=>setActiveTab("app-agenda")} /></Suspense>}
-      {visibleTab === "app-members" && supabase && <MembersPage client={supabase} access={appAccess} onAccessChanged={refreshAppAccess} />}
       {hasPermission(profile, "site.manage") && activeAdminTab.domain === "site" && <>
           {activeTab === "overview" && <AdminOverview userName={adminUserLabel} date={adminDateLabel} posts={posts} messages={overviewRecentMessages} groupCount={groups.length} pendingCount={financePendingTransactions.length} canUseFinance={canUseFinance} warnings={overviewWarningItems} onNavigate={tab => setActiveTab(tab as TabId)} onNewPost={newPost} onEditPost={id => { setSelectedPostId(id); setActiveTab("posts"); }} />}
 
