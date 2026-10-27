@@ -84,6 +84,8 @@
 .homepage .home-facts > div { padding-block: 1.25rem; border-top: 1px solid #cbb89d; }
 .homepage .home-facts dt { margin-bottom: .3rem; color: var(--burgundy); font-size: .8rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .homepage .home-facts dd { margin: 0; font-size: clamp(1.1rem, 1.6vw, 1.4rem); font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+.homepage .home-quick-facts dd a { color: inherit; text-decoration: underline; text-decoration-color: var(--burgundy); text-underline-offset: .16em; }
+.homepage .home-quick-facts dd a:hover { color: var(--burgundy); }
 .homepage .home-first-sunday { display: grid; gap: 1.5rem 3rem; margin-top: 2.5rem; padding: clamp(1.2rem, 3vw, 2rem); background: var(--cream); border-left: 5px solid var(--gold); }
 .homepage .home-first-sunday .home-kicker { margin-bottom: .6rem; color: var(--burgundy); }
 .homepage .home-first-sunday h2 { font-size: clamp(1.7rem, 3vw, 2.5rem); margin-bottom: .5rem; }

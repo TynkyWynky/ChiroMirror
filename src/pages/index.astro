@@ -56,7 +56,7 @@ const extraGallery = home.gallery.filter((image) => !groupImages.has(homeImage(i
 
     <section class="home-first-sunday" aria-labelledby="home-first-sunday-title">
       <div class="home-first-sunday-heading"><p class="home-kicker">Nieuw hier? Welkom!</p><h2 id="home-first-sunday-title">Jouw eerste<br />Chirozondag.</h2><a class="home-text-link" href={withDevFresh("/praktisch.html")}>Zo werkt onze Chiro <span aria-hidden="true">→</span></a></div>
-      <dl class="home-facts home-quick-facts">{home.practical.items.map(item => { const split = item.indexOf(":"); return <div><dt>{split < 0 ? item : item.slice(0, split)}</dt>{split >= 0 && <dd>{item.slice(split + 1).trim()}</dd>}</div>; })}</dl>
+      <dl class="home-facts home-quick-facts">{home.practical.items.map(item => { const split = item.indexOf(":"); const label = split < 0 ? "" : item.slice(0, split).trim(); const value = split < 0 ? "" : item.slice(split + 1).trim(); const isAddress = label.toLocaleLowerCase("nl-BE") === "waar"; const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(value)}`; return <div><dt>{split < 0 ? item : label}</dt>{split >= 0 && <dd>{isAddress ? <a href={mapUrl} target="_blank" rel="noopener noreferrer">{value}</a> : value}</dd>}</div>; })}</dl>
     </section>
 
     <section class="home-intro home-section" aria-labelledby="home-intro-title">
